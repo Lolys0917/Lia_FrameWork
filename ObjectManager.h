@@ -106,24 +106,24 @@ int GetCameraIndex();
 
 //2DUI ________________________
 //外部用関数
-void AddSpriteWindow(
+void AddSpriteScreen(
         const char* TextureName,
         const char* ObjectName);
-void SetSpriteWindowPos(
+void SetSpriteScreenPos(
         const char* ObjectName,
         float PosX, float PosY);
-void SetSpriteWindowSize(
+void SetSpriteScreenSize(
         const char* ObjectName,
         float SizeX, float SizeY, float SizeZ);
-void SetSpriteWindowAngle(
+void SetSpriteScreenAngle(
         const char* ObjectName,
         float AngleX, float AngleY);
-void SetSpriteWindowColor(
+void SetSpriteScreenColor(
         const char* ObjectName,
         float R, float G, float B, float A);
 //内部用関数
-void CreateSpriteWindow();
-void SettingSpriteWindow();
+void CreateSpriteScreen();
+void SettingSpriteScreen();
 
 //3DSprite_____________________
 //外部用関数
