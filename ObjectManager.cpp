@@ -39,6 +39,7 @@ static Vec4Vector BoxColliderAngleVec4;
 static Vec4Vector GridBoxPosVec4;   //Box___
 static Vec4Vector GridBoxSizeVec4;
 static Vec4Vector GridBoxAngleVec4;
+static Vec4Vector GridBoxColorVec4;
 
 //CharVec宣言 __________________
 static CharVector TexturePath;
@@ -288,6 +289,7 @@ KeyMap TextureMap;
 KeyMap World2dMap;
 KeyMap UIMap;
 KeyMap BoxColliderMap;
+KeyMap GridBoxMap;
 
 // KeyMap 関数
 void KeyMap_Init(KeyMap* map) {
@@ -424,6 +426,9 @@ static int ModelOldIndex = 0;
 static int BoxColliderIndex = 0;
 static int BoxColliderOldIndex = 0;
 
+static int GridBoxIndex = 0;
+static int GridBoxOldIndex = 0;
+
 int GetCameraIndex() { return CameraIndex; }
 int GetUseCamera() { return UseCamera; }
 int GetUIIndex() { return UIIndex; }
@@ -488,6 +493,69 @@ void SettingCamera()
 
 
 //グリッド=========================
+
+//ボックス型グリッド
+void AddGridBox(const char* Name)
+{
+    Vec4_PushBack(&GridBoxPosVec4, Vec4{ 0.0f,0.0f,0.0f,0.0f });
+    Vec4_PushBack(&GridBoxSizeVec4, Vec4{ 1.0f, 1.0f, 1.0f, 1.0f });
+    Vec4_PushBack(&GridBoxAngleVec4, Vec4{ 0.0f, 0.0f, 0.0f, 0.0f });
+    Vec4_PushBack(&GridBoxColorVec4, Vec4{ 1.0f, 1.0f, 1.0f, 1.0f });
+
+    KeyMap_Add(&GridBoxMap, Name);
+
+    GridBoxIndex++;
+}
+void SetGridBoxPos(const char* Name, float posX, float posY, float posZ)
+{
+    Vec4_Set(&GridBoxPosVec4, KeyMap_GetIndex(&GridBoxMap, Name),
+        Vec4{ posX, posY, posZ, 0.0f });
+}
+void SetGridBoxSize(const char* Name, float sizeX, float sizeY, float sizeZ)
+{
+    Vec4_Set(&GridBoxSizeVec4, KeyMap_GetIndex(&GridBoxMap, Name),
+        Vec4{ sizeX, sizeY, sizeZ, 0.0f });
+}
+void SetGridBoxAngle(const char* Name, float angleX, float angleY, float angleZ)
+{
+    Vec4_Set(&GridBoxAngleVec4, KeyMap_GetIndex(&GridBoxMap, Name),
+        Vec4{ angleX, angleY, angleZ, 0.0f });
+}
+void SetGridBoxColor(const char* Name, float R, float G, float B, float A)
+{
+    Vec4_Set(&GridBoxColorVec4, KeyMap_GetIndex(&GridBoxMap, Name),
+        Vec4{ R, G, B, A });
+}
+void CreateGridBox()
+{
+    while (GridBoxOldIndex < GridBoxIndex)
+    {
+        GridBoxOldIndex++;
+    }
+}
+void SettingGridBox()
+{
+    for (int i = 0; i < GridBoxIndex; i++)
+    {
+        Vec4 vec4Pos = Vec4_Get(&GridBoxPosVec4, i);
+        Vec4 vec4Size = Vec4_Get(&GridBoxSizeVec4, i);
+        Vec4 vec4Angle = Vec4_Get(&GridBoxAngleVec4, i);
+        Vec4 vec4Color = Vec4_Get(&GridBoxColorVec4, i);
+
+        XMFLOAT4 GridBoxPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
+        XMFLOAT4 GridBoxSize = { vec4Size.X, vec4Size.Y, vec4Size.Z, 0.0f };
+        XMFLOAT4 GridBoxAngle = { vec4Angle.X, vec4Angle.Y, vec4Angle.Z, 0.0f };
+        XMFLOAT4 GridBoxColor = { vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W };
+
+        grid->SetColor({ vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W });
+        grid->DrawBox(
+            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
+            { vec4Size.X, vec4Size.Y, vec4Size.Z },
+            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
+            );
+    }
+}
+
 void DrawGridBase()
 {
     // グリッド表示 //=====
@@ -583,18 +651,25 @@ void InitDo()
 	SetCameraPos("MainCamera", 0.0f, 5.0f, -10.0f);
 	SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
 
+    AddGridBox("Box01");
+    AddGridBox("Box02");
+    SetGridBoxPos("Box02", 1, 0, 0);
+    SetGridBoxColor("Box02", 1, 0, 0, 1);
 }
 void UpdateDo()
 {
-	static float camPosX = -10.0f;
+	static float camPosX = -5.0f;
 
-	camPosX += 0.1f;
+	//camPosX += 0.1f;
 
-	SetCameraPos("MainCamera", camPosX, 5.0f, -10.0f);
+	SetCameraPos("MainCamera", camPosX, 5.0f, -5.0f);
 
     //カメラ_________
     CreateCamera();
     SettingCamera();
+
+    CreateGridBox();
+    SettingGridBox();
 
     object->Update();
 
@@ -604,8 +679,8 @@ void DrawDo()
 {
     DrawGridBase();
     
-    DrawGridBox({ 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f });
-    DrawGridBox({ 2.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f });
+    //DrawGridBox({ 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f });
+    //DrawGridBox({ 2.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f });
 
     object->Draw();
     //MessageBoxA(NULL, "テストメッセージ", "タイトル", MB_OK);
