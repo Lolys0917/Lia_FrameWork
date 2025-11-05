@@ -1,6 +1,11 @@
 #pragma once
 
 #include "Component.h"
+#include "ComponentCamera.h"
+#include "Grid.h"
+#include "ComponentSpriteScreen.h"
+#include "ComponentSpriteWorld.h"
+#include "ComponentModel.h"
 #include <vector>
 
 class Object
@@ -46,7 +51,7 @@ public:
     }
 
     template<typename T = Component>
-    __declspec(dllexport) T* AddComponent()
+    T* AddComponent()
     {
         //static_assert(std::is_base_of<Component, T>::value, "T must be a Component");
 
@@ -73,7 +78,7 @@ public:
         return component;
     }
     template <typename T = Component>
-    __declspec(dllexport) T* GetComponent(int index)
+    T* GetComponent(int index)
     {
         int type = -1;
 

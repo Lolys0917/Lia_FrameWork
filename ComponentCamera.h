@@ -8,7 +8,7 @@ using namespace DirectX;
 
 class Camera : public Component
 {
-private:
+protected:
     XMMATRIX view;
     XMMATRIX proj;
 public:

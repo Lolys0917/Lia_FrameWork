@@ -22,6 +22,12 @@
     <Filter Include="ソース ファイル\Object">
       <UniqueIdentifier>{22cbce6e-5121-4828-bd4d-60cda55cdce2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\Debug">
+      <UniqueIdentifier>{a9dd2fbf-ca98-44f7-9734-d1534965229d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\Scene">
+      <UniqueIdentifier>{3ffba046-bf44-41ed-8c56-795e43f8e300}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -36,6 +42,18 @@
     <ClCompile Include="ComponentCamera.cpp">
       <Filter>ソース ファイル\Component</Filter>
     </ClCompile>
+    <ClCompile Include="ComponentSpriteScreen.cpp">
+      <Filter>ソース ファイル\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Grid.cpp">
+      <Filter>ソース ファイル\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneManager.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="TestScene.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ComponentCamera.h">
@@ -44,7 +62,7 @@
     <ClInclude Include="ComponentSpriteScreen.h">
       <Filter>ソース ファイル\Component</Filter>
     </ClInclude>
-    <ClInclude Include="ComponetModel.h">
+    <ClInclude Include="ComponentModel.h">
       <Filter>ソース ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Component.h">
@@ -58,6 +76,15 @@
     </ClInclude>
     <ClInclude Include="Main.h">
       <Filter>ソース ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Grid.h">
+      <Filter>ソース ファイル\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneManager.h">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="TestScene.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

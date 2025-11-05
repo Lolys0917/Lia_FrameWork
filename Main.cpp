@@ -16,6 +16,8 @@
 
 #include "Main.h"
 
+#include "ObjectManager.h"
+
  //
 //ライブラリ_______________
 #pragma comment (lib, "d3d11.lib")
@@ -62,69 +64,72 @@ HRESULT InitD3D(HWND hWnd) {
 
     DXGI_SWAP_CHAIN_DESC scd = {};
     scd.BufferCount = 1;
-    scd.BufferDesc.Width = ScreenWidth;
-    scd.BufferDesc.Height = ScreenHeight;
     scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    scd.BufferDesc.RefreshRate.Numerator = 0;
-    scd.BufferDesc.RefreshRate.Denominator = 1;
     scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     scd.OutputWindow = hWnd;
     scd.SampleDesc.Count = 1;
     scd.Windowed = TRUE;
-    scd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
-    D3D_FEATURE_LEVEL featureLevel;
-
-    // ✅ STEP.1 D3D11CreateDeviceAndSwapChain(HW)
     HRESULT hr = D3D11CreateDeviceAndSwapChain(
-        nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-        0, nullptr, 0, D3D11_SDK_VERSION,
-        &scd, &g_pSwapChain, &g_pd3dDevice,
-        &featureLevel, &g_pImmediateContext
+        nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0,
+        nullptr, 0, D3D11_SDK_VERSION,
+        &scd, &g_pSwapChain, &g_pd3dDevice, nullptr, &g_pImmediateContext
     );
-    if (FAILED(hr)) {
-        char msg[256];
-        sprintf_s(msg, "STEP 1 failed: HW CreateDeviceAndSwapChain\nHRESULT = 0x%08X", hr);
-        MessageBoxA(hWnd, msg, "Error", MB_OK | MB_ICONERROR);
-    }
+    if (FAILED(hr)) return hr;
 
-    // ✅ STEP.2 WARP fallback
-    if (FAILED(hr)) {
-        hr = D3D11CreateDeviceAndSwapChain(
-            nullptr, D3D_DRIVER_TYPE_WARP, nullptr,
-            0, nullptr, 0, D3D11_SDK_VERSION,
-            &scd, &g_pSwapChain, &g_pd3dDevice,
-            &featureLevel, &g_pImmediateContext
-        );
-        if (FAILED(hr)) {
-            char msg[256];
-            sprintf_s(msg, "STEP 2 failed: WARP CreateDeviceAndSwapChain\nHRESULT = 0x%08X", hr);
-            MessageBoxA(hWnd, msg, "Error", MB_OK | MB_ICONERROR);
-            return hr;
-        }
-    }
-
-    // ✅ STEP.3 バックバッファ
+    // ================================
+    // バックバッファ取得
+    // ================================
     ID3D11Texture2D* pBackBuffer = nullptr;
-    hr = g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D),
-        (LPVOID*)&pBackBuffer);
-    if (FAILED(hr)) {
-        char msg[256];
-        sprintf_s(msg, "STEP 3 failed: SwapChain->GetBuffer\nHRESULT = 0x%08X", hr);
-        MessageBoxA(hWnd, msg, "Error", MB_OK | MB_ICONERROR);
-        return hr;
-    }
+    hr = g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
+    if (FAILED(hr)) return hr;
 
-    // ✅ STEP.4 RenderTargetView
-    hr = g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr,
-        &g_pRenderTargetView);
+    // レンダーターゲットビュー作成
+    hr = g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &g_pRenderTargetView);
     pBackBuffer->Release();
-    if (FAILED(hr)) {
-        char msg[256];
-        sprintf_s(msg, "STEP 4 failed: CreateRenderTargetView\nHRESULT = 0x%08X", hr);
-        MessageBoxA(hWnd, msg, "Error", MB_OK | MB_ICONERROR);
-        return hr;
-    }
+    if (FAILED(hr)) return hr;
+
+    // ================================
+    // 深度バッファ (Zバッファ) 作成
+    // ================================
+
+    D3D11_TEXTURE2D_DESC descDepth = {};
+    descDepth.Width = ScreenWidth;
+    descDepth.Height = ScreenHeight;
+    descDepth.MipLevels = 1;
+    descDepth.ArraySize = 1;
+    descDepth.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    descDepth.SampleDesc.Count = 1;
+    descDepth.Usage = D3D11_USAGE_DEFAULT;
+    descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    hr = g_pd3dDevice->CreateTexture2D(&descDepth, nullptr, &g_pTexture2D);
+    if (FAILED(hr)) return hr;
+
+    D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
+    descDSV.Format = descDepth.Format;
+    descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+
+    hr = g_pd3dDevice->CreateDepthStencilView(g_pTexture2D, &descDSV, &g_pDepthStencilView);
+    g_pTexture2D->Release();
+    if (FAILED(hr)) return hr;
+
+    // ================================
+    // レンダーターゲットとZバッファをセット
+    // ================================
+    g_pImmediateContext->OMSetRenderTargets(1, &g_pRenderTargetView, g_pDepthStencilView);
+
+    // ================================
+    // ビューポート設定
+    // ================================
+    D3D11_VIEWPORT vp = {};
+    vp.Width = (FLOAT)ScreenWidth;
+    vp.Height = (FLOAT)ScreenHeight;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = 0;
+    vp.TopLeftY = 0;
+    g_pImmediateContext->RSSetViewports(1, &vp);
 
     return S_OK;
 }
@@ -178,6 +183,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     unsigned long frameCount = 0;
     const UINT64 updateIntervalMs = 1000; // タイトル更新間隔（ms） --- 1000ms = 1秒
 
+    InitDo();
+
     // 主ループ
     bool running = true;
     while (running) {
@@ -193,10 +200,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 
         // --- レンダリング（ここに描画処理を入れる） ---
         const float clearColor[4] = { 0.1f, 0.2f, 0.3f, 1.0f };
-        g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, clearColor);
-
+        GetContext()->ClearRenderTargetView(GetRenderTargetView(), clearColor);
+        GetContext()->ClearDepthStencilView(GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+        UpdateDo();
+        DrawDo();
         // swap
-        g_pSwapChain->Present(1, 0);
+        GetSwapChain()->Present(1, 0);
         // -----------------------------------------------
 
         // FPS カウント
