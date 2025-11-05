@@ -9,11 +9,12 @@
  //
 //インクルード_____________
 #include <Windows.h>
-#include <d3d11.h>
 #include <DirectXMath.h>
 
 #include <string>
 #include <sstream>
+
+#include "Main.h"
 
  //
 //ライブラリ_______________
@@ -40,6 +41,9 @@ IDXGISwapChain* GetSwapChain() { return g_pSwapChain; }
 ID3D11RenderTargetView* GetRenderTargetView() { return g_pRenderTargetView; }
 ID3D11Texture2D* GetDepthStencil() { return g_pTexture2D; }
 ID3D11DepthStencilView* GetDepthStencilView() { return g_pDepthStencilView; }
+
+int GetScreenWidth() { return ScreenWidth; }
+int GetScreenHeight() { return ScreenHeight; }
 
 // ウィンドウプロシージャ
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {

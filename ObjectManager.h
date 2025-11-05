@@ -77,8 +77,24 @@ const char* KeyMap_GetKey(KeyMap* map, int index);
 KeyMap* GetKeyMapByType(int type);
 
 //雑入れ関数群
-void GridDrawJudge(bool Judge);
+void GridDrawJudge(bool Judge);     //グリッド描画判定
 
+  ////////////////////////
+ // アセット読込関数群 //
+////////////////////////
+
+void LoadModel_OBJ(          //OBJモデル読込
+	const char* ModelDataName,
+	const char* ModelUniqueName);
+void LoadModel_FBX(         //FBXモデル読込
+	const char* ModelDataName,
+	const char* ModelUniqueName);
+void LoadTexture(           //テクスチャ読込
+	const char* TextureDataName,
+	const char* TextureUniqueName);
+void LoadSound(             //サウンド読込
+	const char* SoundDataName,
+	const char* SoundUniqueName);
 
 
   ////////////////////////
@@ -160,9 +176,33 @@ void SetModelSize(
 void SetModelAngle(
         const char* ObjectName,
         float AngleX, float AngleY, float AngleZ);
-//内部用関数 __________________
+//内部用関数
 void CreateModel();
 void SettingModel();
+
+//Speaker&Sound ________________
+//外部用関数
+void AddSpeaker(
+        const char* SoundName,
+        const char* ObjectName);
+void SetSpeakerPos(
+        const char* ObjectName,
+        float PosX, float PosY, float PosZ);
+
+void SetSoundVolume(    //音量の設定
+        const char* ObjectName,
+        float Volume);
+void SoundStart(        //音の再生
+        const char* ObjectName);
+void SoundReStart(      //音の再開
+        const char* ObjectName);
+void SoundStop(         //音の停止
+        const char* ObjectName);
+void SoundPause(        //音の一時停止
+        const char* ObjectName);
+//内部用関数
+void CreateSpeaker();
+void SettingSpeaker();
 
   //////////////////
  // 全体共通処理 //
