@@ -1,21 +1,30 @@
 #include "SceneManager.h"
 
-// ========================================================
-// 内部グローバル状態
-// ========================================================
+// ==========================================
+// 内部管理
+// ==========================================
 static std::vector<std::unique_ptr<Scene>> SceneList;
 static KeyMap SceneMap;
 static int CurrentSceneIndex = -1;
-
-// 現在構築中のシーン情報
 static bool SceneIsBuilding = false;
 static int SceneBuildIndex = -1;
 
-// ========================================================
-// シーン管理関数群
-// ========================================================
+// ==========================================
+// 初期化
+// ==========================================
+void InitSceneManager()
+{
+    KeyMap_Init(&SceneMap);
+    SceneList.clear();
+    CurrentSceneIndex = -1;
+    SceneIsBuilding = false;
+    SceneBuildIndex = -1;
+    AddMessage("SceneManager: 初期化完了\n");
+}
 
+// ==========================================
 // シーン追加（構築開始）
+// ==========================================
 void AddScene(const char* SceneName)
 {
     if (SceneIsBuilding)
@@ -25,17 +34,18 @@ void AddScene(const char* SceneName)
     }
 
     KeyMap_Add(&SceneMap, SceneName);
-
     SceneList.push_back(std::make_unique<Scene>());
     SceneList.back()->Init();
 
     SceneIsBuilding = true;
     SceneBuildIndex = static_cast<int>(SceneList.size() - 1);
 
-    AddMessage(("Scene追加: " + std::string(SceneName) + "\n").c_str());
+    AddMessage(ConcatCStr("AddScene: シーン追加 -> ", SceneName));
 }
 
+// ==========================================
 // シーン構築終了
+// ==========================================
 void SceneEndPoint()
 {
     if (!SceneIsBuilding)
@@ -46,47 +56,53 @@ void SceneEndPoint()
 
     SceneIsBuilding = false;
     SceneBuildIndex = -1;
-    AddMessage("SceneEndPoint: シーン構築を終了しました。\n");
+    AddMessage("SceneEndPoint: シーン構築終了\n");
 }
 
+// ==========================================
 // シーン切り替え
+// ==========================================
 void ChangeScene(const char* SceneName)
 {
     int idx = KeyMap_GetIndex(&SceneMap, SceneName);
     if (idx == -1)
     {
-        AddMessage(("Error: 指定されたシーンが存在しません -> " + std::string(SceneName) + "\n").c_str());
+        AddMessage(ConcatCStr("Error: ChangeScene() 指定シーンが存在しません -> ", SceneName));
         return;
     }
 
     // 現在のシーンをリリース
     if (CurrentSceneIndex >= 0 && CurrentSceneIndex < (int)SceneList.size())
-    {
         SceneList[CurrentSceneIndex]->Release();
-    }
 
     CurrentSceneIndex = idx;
-    AddMessage(("ChangeScene: 現在のシーンを " + std::string(SceneName) + " に変更しました。\n").c_str());
+
+    AddMessage(ConcatCStr("ChangeScene: シーン切り替え -> ", SceneName));
 }
 
+// ==========================================
 // シーン削除
+// ==========================================
 void DeleteScene(const char* SceneName)
 {
     int idx = KeyMap_GetIndex(&SceneMap, SceneName);
     if (idx == -1)
     {
-        AddMessage(("Error: DeleteScene: 指定されたシーンが存在しません -> " + std::string(SceneName) + "\n").c_str());
+        AddMessage(ConcatCStr("Error: DeleteScene() 指定シーンが存在しません -> ", SceneName));
         return;
     }
 
     SceneList[idx]->Release();
     SceneList.erase(SceneList.begin() + idx);
-    AddMessage(("DeleteScene: シーン " + std::string(SceneName) + " を削除しました。\n").c_str());
+    AddMessage(ConcatCStr("DeleteScene: シーン削除 -> ", SceneName));
 
-    if (CurrentSceneIndex == idx) CurrentSceneIndex = -1;
+    if (CurrentSceneIndex == idx)
+        CurrentSceneIndex = -1;
 }
 
-// 現在のシーン取得
+// ==========================================
+// 現在シーン取得
+// ==========================================
 Scene* GetCurrentScene()
 {
     if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneList.size())
@@ -94,22 +110,35 @@ Scene* GetCurrentScene()
     return SceneList[CurrentSceneIndex].get();
 }
 
-// シーン更新
+// ==========================================
+// 更新・描画
+// ==========================================
 void UpdateScene()
 {
     Scene* scene = GetCurrentScene();
     if (scene)
         scene->Update();
-    else
-        AddMessage("UpdateScene: 現在有効なシーンがありません。\n");
 }
-
-// シーン描画
 void DrawScene()
 {
     Scene* scene = GetCurrentScene();
     if (scene)
         scene->Draw();
-    else
-        AddMessage("DrawScene: 現在有効なシーンがありません。\n");
+}
+
+// ==========================================
+// 終了処理
+// ==========================================
+void ReleaseSceneManager()
+{
+    for (auto& scene : SceneList)
+        scene->Release();
+
+    SceneList.clear();
+    KeyMap_Free(&SceneMap);
+    CurrentSceneIndex = -1;
+    SceneIsBuilding = false;
+    SceneBuildIndex = -1;
+
+    AddMessage("SceneManager: 解放完了\n");
 }

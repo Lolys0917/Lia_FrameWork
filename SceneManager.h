@@ -30,21 +30,15 @@ public:
     }
 };
 
-// シーン追加（構築開始）
-void AddScene(const char* SceneName);
-
-// シーン構築終了
-void SceneEndPoint();
-
-// シーン切り替え
-void ChangeScene(const char* SceneName);
-
-// シーン削除
-void DeleteScene(const char* SceneName);
-
-// 現在のシーン取得
-Scene* GetCurrentScene();
-
-// 現在のシーン更新／描画
-void UpdateScene();
-void DrawScene();
+// ==========================================
+// SceneManager関数群
+// ==========================================
+void InitSceneManager();              // 初期化
+void AddScene(const char* SceneName); // シーン追加（構築開始）
+void SceneEndPoint();                 // 構築終了
+void ChangeScene(const char* SceneName); // シーン切り替え
+void DeleteScene(const char* SceneName); // シーン削除
+Scene* GetCurrentScene();             // 現在シーン取得
+void UpdateScene();                   // 更新
+void DrawScene();                     // 描画
+void ReleaseSceneManager();           // 解放

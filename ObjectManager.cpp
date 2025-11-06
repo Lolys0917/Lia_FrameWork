@@ -3,6 +3,7 @@
 #include "Main.h"
 #include "Object.h"
 #include "Grid.h"
+#include "SceneManager.h"
 
 //コンポーネントインクルード
 #include "ComponentCamera.h"
@@ -730,6 +731,8 @@ void InitDo()
 	SetCameraPos("MainCamera", 0.0f, 5.0f, -10.0f);
 	SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
 
+    AddScene("Scene1");
+
     AddGridBox("Box01");
     AddGridBox("Box02");
     SetGridBoxPos("Box02", 1, 0, 0);
@@ -739,10 +742,19 @@ void InitDo()
     SetGridBoxPos("Box03", 3, 0, 0);
     SetGridBoxColor("Box03", 1, 1, 0, 1);
 
+    SceneEndPoint();
+
+    AddScene("Scene2");
+
     AddGridPolygon("Polygon01");
     SetGridPolygonPos("Polygon01", 5, 0, 0);
     SetGridPolygonColor("Polygon01", 0, 1, 1, 1);
     SetGridPolygonSides("Polygon01", 6);
+
+    SceneEndPoint();
+
+    ChangeScene("Scene1");
+
 }
 void UpdateDo()
 {
@@ -766,6 +778,8 @@ void UpdateDo()
 
     object->Update();
 
+    UpdateScene();
+
 	//MessageBoxA(NULL, "テストメッセージ", "タイトル", MB_OK);
 }
 void DrawDo()
@@ -777,6 +791,8 @@ void DrawDo()
 
     object->Draw();
     //MessageBoxA(NULL, "テストメッセージ", "タイトル", MB_OK);
+
+    DrawScene();
 }
 void ReleaseDo()
 {

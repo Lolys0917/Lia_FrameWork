@@ -68,6 +68,7 @@ typedef struct {
 
 //雑入れ関数群
 void GridDrawJudge(bool Judge);     //グリッド描画判定
+const char* ConcatCStr(const char* str1, const char* str2);
 void AddMessage(const char* sent);  //メッセージ追加
 
   //////////////////////
