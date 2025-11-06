@@ -36,10 +36,14 @@ static Vec4Vector BoxColliderPosVec4;
 static Vec4Vector BoxColliderSizeVec4;
 static Vec4Vector BoxColliderAngleVec4;
 //Grid用Vec4
-static Vec4Vector GridBoxPosVec4;   //Box___
+static Vec4Vector GridBoxPosVec4;       //Box___
 static Vec4Vector GridBoxSizeVec4;
 static Vec4Vector GridBoxAngleVec4;
 static Vec4Vector GridBoxColorVec4;
+static Vec4Vector GridPolygonPosVec4;   //Polygon_______
+static Vec4Vector GridPolygonSizeVec4;
+static Vec4Vector GridPolygonAngleVec4;
+static Vec4Vector GridPolygonColorVec4;
 
 //CharVec宣言 __________________
 static CharVector TexturePath;
@@ -48,6 +52,8 @@ static CharVector ModelPath;
 //IntVec宣言 __________________
 static IntVector NumberOfScenes;
 static IntVector ModelType;
+//Grid用
+static IntVector GridPolygonSides;
 
 //BoolVector宣言 _________________
 static BoolVector BillboardW2d;
@@ -167,7 +173,7 @@ void VecC_Set(CharVector* vec, size_t index, const char* str) {
         AddMessage("\nerror : charvector_set/インデックス範囲外\n");
         return;
     }
-    free((void*)vec->data[index]); // 古いコピーを解放
+    vec->data[index] = NULL;
 
     size_t len = strlen(str) + 1;
     char* copy = (char*)malloc(len);
@@ -229,8 +235,6 @@ void VecInt_Set(IntVector* vec, size_t index, int str) {
         AddMessage("\nerror : intvector_set/インデックス範囲外\n");
         return;
     }
-    free((void*)vec->data[index]); // 古いコピーを解放
-
     vec->data[index] = str;
 }
 void VecInt_Free(IntVector* vec) {
@@ -271,8 +275,6 @@ void VecBool_Set(BoolVector* vec, size_t index, bool str) {
         AddMessage("\nerror : bool_vector_set/インデックス範囲外\n");
         return;
     }
-    free((void*)vec->data[index]); // 古いコピーを解放
-
     vec->data[index] = str;
 }
 void VecBool_Free(BoolVector* vec) {
@@ -290,6 +292,7 @@ KeyMap World2dMap;
 KeyMap UIMap;
 KeyMap BoxColliderMap;
 KeyMap GridBoxMap;
+KeyMap GridPolygonMap;
 
 // KeyMap 関数
 void KeyMap_Init(KeyMap* map) {
@@ -429,6 +432,9 @@ static int BoxColliderOldIndex = 0;
 static int GridBoxIndex = 0;
 static int GridBoxOldIndex = 0;
 
+static int GridPolygonIndex = 0;
+static int GridPolygonOldIndex = 0;
+
 int GetCameraIndex() { return CameraIndex; }
 int GetUseCamera() { return UseCamera; }
 int GetUIIndex() { return UIIndex; }
@@ -490,6 +496,9 @@ void SettingCamera()
             SetCameraView(CamPos, CamLook);
     }
 }
+
+//SpriteWorld =====================
+
 
 
 //グリッド=========================
@@ -555,6 +564,76 @@ void SettingGridBox()
             );
     }
 }
+void AddGridPolygon(const char* Name)
+{
+    Vec4_PushBack(&GridPolygonPosVec4, { 0.0f,0.0f, 0.0f, 0.0f });
+    Vec4_PushBack(&GridPolygonSizeVec4, { 1.0f, 1.0f, 1.0f, 1.0f });
+    Vec4_PushBack(&GridPolygonAngleVec4, { 0.0f,0.0f, 0.0f, 0.0f });
+    Vec4_PushBack(&GridPolygonColorVec4, { 0.0f,0.0f, 0.0f, 0.0f });
+
+    VecInt_PushBack(&GridPolygonSides, 4);
+
+    KeyMap_Add(&GridPolygonMap, Name);
+
+    GridPolygonIndex++;
+}
+void SetGridPolygonPos(const char* Name, float posX, float posY, float posZ)
+{
+    Vec4_Set(&GridPolygonPosVec4, KeyMap_GetIndex(&GridPolygonMap, Name),
+        { posX, posY, posZ });
+}
+void SetGridPolygonSize(const char* Name, float sizeX, float sizeY, float sizeZ)
+{
+    Vec4_Set(&GridPolygonSizeVec4, KeyMap_GetIndex(&GridPolygonMap, Name),
+        { sizeX, sizeY, sizeX });
+}
+void SetGridPolygonAngle(const char* Name, float angleX, float angleY, float angleZ)
+{
+    Vec4_Set(&GridPolygonAngleVec4, KeyMap_GetIndex(&GridPolygonMap, Name),
+        { angleX, angleY, angleX });
+}
+void SetGridPolygonColor(const char* Name, float R, float G, float B, float A)
+{
+    Vec4_Set(&GridPolygonColorVec4, KeyMap_GetIndex(&GridPolygonMap, Name),
+        Vec4{ R,G,B,A });
+}
+void SetGridPolygonSides(const char* Name, int Sides)
+{
+    VecInt_Set(&GridPolygonSides, KeyMap_GetIndex(&GridPolygonMap, Name), Sides);
+}
+void CreateGridPolygon()
+{
+    while (GridPolygonOldIndex < GridPolygonIndex)
+    {
+        GridPolygonOldIndex++;
+    }
+}
+void SettingGridPolygon()
+{
+    for (int i = 0; i < GridPolygonIndex; i++)
+    {
+        Vec4 vec4Color = Vec4_Get(&GridPolygonColorVec4, i);
+
+        Vec4 vec4Pos = Vec4_Get(&GridPolygonPosVec4, i);
+        Vec4 vec4Size = Vec4_Get(&GridPolygonSizeVec4, i);
+        Vec4 vec4Angle = Vec4_Get(&GridPolygonAngleVec4, i);
+
+        XMFLOAT4 Color;
+        Color.x = vec4Color.X;
+        Color.y = vec4Color.Y;
+        Color.z = vec4Color.Z;
+        Color.w = vec4Color.W;
+
+        grid->SetColor({Color});
+        grid->DrawGridPolygon(
+            VecInt_Get(&GridPolygonSides, i),
+            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
+            { vec4Size.X, vec4Size.Y, vec4Size.Z },
+            { vec4Angle.X, vec4Angle.Y,vec4Angle.Z }
+            );
+    }
+}
+
 
 void DrawGridBase()
 {
@@ -655,12 +734,21 @@ void InitDo()
     AddGridBox("Box02");
     SetGridBoxPos("Box02", 1, 0, 0);
     SetGridBoxColor("Box02", 1, 0, 0, 1);
+
+    AddGridBox("Box03");
+    SetGridBoxPos("Box03", 3, 0, 0);
+    SetGridBoxColor("Box03", 1, 1, 0, 1);
+
+    AddGridPolygon("Polygon01");
+    SetGridPolygonPos("Polygon01", 5, 0, 0);
+    SetGridPolygonColor("Polygon01", 0, 1, 1, 1);
+    SetGridPolygonSides("Polygon01", 6);
 }
 void UpdateDo()
 {
 	static float camPosX = -5.0f;
 
-	//camPosX += 0.1f;
+	camPosX += 0.1f;
 
 	SetCameraPos("MainCamera", camPosX, 5.0f, -5.0f);
 
@@ -668,8 +756,13 @@ void UpdateDo()
     CreateCamera();
     SettingCamera();
 
+    //グリッド_______
     CreateGridBox();
     SettingGridBox();
+    CreateGridPolygon();
+    SettingGridPolygon();
+
+    //grid->DrawGridPolygonGrid(10, 10, 1.2f, 6, 0.5f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f});
 
     object->Update();
 

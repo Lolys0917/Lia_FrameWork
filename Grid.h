@@ -23,7 +23,14 @@ public:
     void SetPos(XMFLOAT3 Start, XMFLOAT3 End);
 
     void DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle);
+    void DrawGridPolygonGrid(
+        int cols, int rows,
+        float spacing, int sides,
+        float radius,
+        const XMFLOAT3& origin, const XMFLOAT3& Angle);
+    void DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle);
 private:
+
     struct Vertex {
         XMFLOAT3 position;
     };
@@ -48,4 +55,6 @@ private:
     ID3DBlob* errorBlob = nullptr;
 
     ID3D11Device* DeviceGetter;
+
+    void DrawPolygonGrid(const XMFLOAT3& pos, float radius, int sides, const XMFLOAT3& Angle);
 };
