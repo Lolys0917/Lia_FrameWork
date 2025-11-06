@@ -675,6 +675,12 @@ void DrawGridBox(XMFLOAT3 Pos, XMFLOAT3 Size, XMFLOAT3 Angle)
     grid->DrawBox(Pos, Size, Angle);
 }
 
+//シーン追加項目
+//
+// KeyMapを使って一次元増やす事で実現
+// Scene X Type X Component
+//
+
 void InitDo()
 {
 	//インデックス初期化
