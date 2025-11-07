@@ -45,6 +45,9 @@ static Vec4Vector GridPolygonPosVec4;   //Polygon_______
 static Vec4Vector GridPolygonSizeVec4;
 static Vec4Vector GridPolygonAngleVec4;
 static Vec4Vector GridPolygonColorVec4;
+static Vec4Vector GridColorVec4;        //Grid____
+static Vec4Vector GridStartVec4;
+static Vec4Vector GridEndVec4;
 
 //CharVec宣言 __________________
 static CharVector TexturePath;
@@ -414,7 +417,7 @@ Object* object;
 Grid* grid;
 
 //インデックス管理 ____________________________
-//オブジェクトの数___________________
+//オブジェクトの数
 static int UseCamera;
 static int CameraIndex = 0;
 static int CameraOldIdx = 0;
@@ -437,12 +440,18 @@ static int GridBoxOldIndex = 0;
 static int GridPolygonIndex = 0;
 static int GridPolygonOldIndex = 0;
 
+static int GridIndex = 0;
+static int GridOldIndex = 0;
+
 int GetCameraIndex() { return CameraIndex; }
 int GetUseCamera() { return UseCamera; }
 int GetUIIndex() { return UIIndex; }
 int GetWorld2dIndex() { return world2dIndex; }
 int GetModelIndex() { return ModelIndex; }
 int GetBoxColliderIndex() { return BoxColliderIndex; }
+int GetGridBoxIndex() { return GridBoxIndex; }
+int GetGridPolygonIndex() { return GridPolygonIndex; }
+int GetGridIndex() { return GridIndex; }
 
 //カメラ=============
 void AddCamera(const char* CameraName)
@@ -636,6 +645,29 @@ void SettingGridPolygon()
     }
 }
 
+void AddGrid(const char* Name)
+{
+    Vec4_PushBack(&GridColorVec4, { 1.0f,1.0f,1.0f,1.0f });
+    Vec4_PushBack(&GridStartVec4, { -5.0f,0.0f, -5.0f, 0.0f });
+    Vec4_PushBack(&GridEndVec4, { 5.0f,0.0f, 5.0f, 0.0f });
+    KeyMap_Add(&GridBoxMap, Name);
+    GridIndex++;
+}
+void SetGridColor(const char* Name, float R, float G, float B, float A)
+{
+    Vec4_Set(&GridColorVec4, KeyMap_GetIndex(&GridBoxMap, Name),
+        { R,G,B,A });
+}
+void SetGridStart(const char* Name, float posX, float posY, float posZ)
+{
+    Vec4_Set(&GridStartVec4, KeyMap_GetIndex(&GridBoxMap, Name),
+        { posX,posY,posZ });
+}
+void SetGridEnd(const char* Name, float posX, float posY, float posZ)
+{
+    Vec4_Set(&GridEndVec4, KeyMap_GetIndex(&GridBoxMap, Name),
+        { posX,posY,posZ });
+}
 
 void DrawGridBase()
 {
@@ -691,10 +723,15 @@ static int SceneEndFlag = 0;
 
 // 各Sceneごとの範囲を保持
 typedef struct {
+    int StartIndex_Grid;
+    int EndIndex_Grid;
     int StartIndex_GridBox;
     int EndIndex_GridBox;
     int StartIndex_GridPolygon;
     int EndIndex_GridPolygon;
+    int StartIndex_Camera;
+    int EndIndex_Camera;
+    int UseCameraIndex; // 現在のシーンで使用中のカメラ
 } SceneRange;
 
 static std::vector<SceneRange> SceneRanges;
@@ -704,12 +741,18 @@ void AddScene(const char* name)
     KeyMap_Add(&SceneMap, name);
 
     SceneRange range{};
+    range.StartIndex_Camera = CameraIndex;
+    range.EndIndex_Camera = CameraIndex;
+    range.UseCameraIndex = -1;
+
     range.StartIndex_GridBox = GridBoxIndex;
     range.EndIndex_GridBox = GridBoxIndex;
     range.StartIndex_GridPolygon = GridPolygonIndex;
     range.EndIndex_GridPolygon = GridPolygonIndex;
-    SceneRanges.push_back(range);
+    range.StartIndex_Grid = GridIndex;
+    range.EndIndex_Grid = GridIndex;
 
+    SceneRanges.push_back(range);
     SceneCount++;
     SceneEndFlag = 0;
 }
@@ -717,9 +760,11 @@ void AddScene(const char* name)
 void SceneEndPoint()
 {
     if (SceneCount <= 0) return;
-
-    SceneRanges.back().EndIndex_GridBox = GridBoxIndex;
-    SceneRanges.back().EndIndex_GridPolygon = GridPolygonIndex;
+    auto& r = SceneRanges.back();
+    r.EndIndex_Camera = CameraIndex;
+    r.EndIndex_GridBox = GridBoxIndex;
+    r.EndIndex_GridPolygon = GridPolygonIndex;
+    r.EndIndex_Grid = GridIndex;
     SceneEndFlag = 1;
 }
 
@@ -733,6 +778,35 @@ void ChangeScene(const char* name)
     CurrentSceneIndex = index;
 }
 
+void SetSceneCamera(const char* sceneName, const char* cameraName)
+{
+    int sceneIdx = KeyMap_GetIndex(&SceneMap, sceneName);
+    int camIdx = KeyMap_GetIndex(&CameraMap, cameraName);
+
+    if (sceneIdx == -1 || camIdx == -1) {
+        AddMessage("\nerror : SetSceneCamera failed (invalid scene or camera)\n");
+        return;
+    }
+
+    SceneRanges[sceneIdx].UseCameraIndex = camIdx;
+}
+
+void SettingCameraOnce()
+{
+    for (int i = 0; i < CameraIndex; i++)
+    {
+        object->GetComponent<Camera>(i)->SetCameraProjection(70.0f, 800, 600);
+
+        Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, i);
+        Vec4 vec4Look = Vec4_Get(&CameraLookVec4, i);
+
+        XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
+        XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
+
+        object->GetComponent<Camera>(i)->SetCameraView(CamPos, CamLook);
+    }
+}
+
 void UpdateScene()
 {
     if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size())
@@ -740,13 +814,31 @@ void UpdateScene()
 
     SceneRange& range = SceneRanges[CurrentSceneIndex];
 
-    // 現在のシーンに対応するグリッドなどだけを更新
-    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
-        // Scene専用GridBox更新処理がある場合はここに
+    int useCam = range.UseCameraIndex;
+    if (useCam >= 0)
+    {
+        Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, useCam);
+        Vec4 vec4Look = Vec4_Get(&CameraLookVec4, useCam);
+
+        XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
+        XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
+
+        object->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
     }
 
+	// --- Scene単位で更新 ---
+    // 
+	// Grid=============
+    // 
+    // 現在のシーンに対応するグリッドなどだけを更新
+    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
+        // Scene専用GridBox更新処理
+    }
     for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
-        // Scene専用GridPolygon更新処理がある場合はここに
+        // Scene専用GridPolygon更新処理
+    }
+    for (int i = range.StartIndex_Grid; i < range.EndIndex_Grid; i++) {
+        // Scene専用Grid更新処理
     }
 }
 
@@ -756,6 +848,10 @@ void DrawScene()
         return;
 
     SceneRange& range = SceneRanges[CurrentSceneIndex];
+    int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : UseCamera;
+
+    grid->SetProj(object->GetComponent<Camera>(useCam)->GetProjection());
+    grid->SetView(object->GetComponent<Camera>(useCam)->GetView());
 
     // --- Scene単位で描画 ---
     for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
@@ -832,6 +928,9 @@ void InitDo()
     KeyMap_Init(&World2dMap);
     KeyMap_Init(&UIMap);
 	KeyMap_Init(&BoxColliderMap);
+    KeyMap_Init(&GridBoxMap);
+    KeyMap_Init(&GridPolygonMap);
+	KeyMap_Init(&SceneMap);
 
 	//クラス取得
 	grid = new Grid();
@@ -839,34 +938,30 @@ void InitDo()
 	object = new Object();
 	object->Init();
 
-	AddCamera("MainCamera");
-	UseCameraSet("MainCamera");
-	SetCameraPos("MainCamera", 0.0f, 5.0f, -10.0f);
-	SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
+    AddCamera("MainCamera");
+    UseCameraSet("MainCamera");
+    SetCameraPos("MainCamera", 0.0f, 5.0f, -10.0f);
+    SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
+
+    AddCamera("Scene2Cam");
+    SetCameraPos("Scene2Cam", 0.0f, 3.0f, -8.0f);
+    SetCameraLook("Scene2Cam", 5.0f, 0.0f, 0.0f);
 
     AddScene("Scene1");
-
-    AddGridBox("Box01");
-    AddGridBox("Box02");
-    SetGridBoxPos("Box02", 1, 0, 0);
-    SetGridBoxColor("Box02", 1, 0, 0, 1);
-    AddGridBox("Box03");
-    SetGridBoxPos("Box03", 3, 0, 0);
-    SetGridBoxColor("Box03", 1, 1, 0, 1);
-
-    SceneEndPoint(); // Scene1終了
+    // グリッド登録など
+    SceneEndPoint();
 
     AddScene("Scene2");
+    // グリッド登録など
+    SceneEndPoint();
 
-    AddGridPolygon("Polygon01");
-    SetGridPolygonPos("Polygon01", 5, 0, 0);
-    SetGridPolygonColor("Polygon01", 0, 1, 1, 1);
-    SetGridPolygonSides("Polygon01", 6);
-
-    SceneEndPoint(); // Scene2終了
+    SetSceneCamera("Scene1", "MainCamera");
+    SetSceneCamera("Scene2", "Scene2Cam");
 
     ChangeScene("Scene1");
 
+    CreateCamera();
+    SettingCameraOnce();
 }
 void UpdateDo()
 {
@@ -874,11 +969,11 @@ void UpdateDo()
 
 	camPosX += 0.1f;
 
-	SetCameraPos("MainCamera", camPosX, 5.0f, -5.0f);
+	//SetCameraPos("MainCamera", camPosX, 5.0f, -5.0f);
 
     //カメラ_________
-    CreateCamera();
-    SettingCamera();
+    //CreateCamera();
+    //SettingCamera();
 
     //グリッド_______
     //CreateGridBox();
@@ -898,9 +993,6 @@ void DrawDo()
 {
     DrawGridBase();
     
-    //DrawGridBox({ 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f });
-    //DrawGridBox({ 2.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f });
-
     object->Draw();
     //MessageBoxA(NULL, "テストメッセージ", "タイトル", MB_OK);
 
@@ -920,6 +1012,9 @@ void ReleaseDo()
 	ModelOldIndex = 0;
 	BoxColliderIndex = 0;
 	BoxColliderOldIndex = 0;
+	//オブジェクト解放
+	delete object;
+	delete grid;
 
     //Vec4解放
     Vec4_Free(&CameraPosVec4);
@@ -950,4 +1045,7 @@ void ReleaseDo()
     KeyMap_Free(&World2dMap);
     KeyMap_Free(&UIMap);
     KeyMap_Free(&BoxColliderMap);
+	KeyMap_Free(&GridBoxMap);
+	KeyMap_Free(&GridPolygonMap);
+	KeyMap_Free(&SceneMap);
 }
