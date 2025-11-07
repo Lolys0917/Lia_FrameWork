@@ -294,6 +294,7 @@ KeyMap UIMap;
 KeyMap BoxColliderMap;
 KeyMap GridBoxMap;
 KeyMap GridPolygonMap;
+KeyMap SceneMap;
 
 // KeyMap 関数
 void KeyMap_Init(KeyMap* map) {
@@ -674,12 +675,118 @@ void DrawGridBox(XMFLOAT3 Pos, XMFLOAT3 Size, XMFLOAT3 Angle)
     grid->SetColor({ 1.0f, 1.0f, 0.0f, 1.0f });
     grid->DrawBox(Pos, Size, Angle);
 }
+  ////////////////
+ // シーン管理 // 
+////////////////
 
 //シーン追加項目
 //
 // KeyMapを使って一次元増やす事で実現
 // Scene X Type X Component
 //
+
+static int CurrentSceneIndex = -1;
+static int SceneCount = 0;
+static int SceneEndFlag = 0;
+
+// 各Sceneごとの範囲を保持
+typedef struct {
+    int StartIndex_GridBox;
+    int EndIndex_GridBox;
+    int StartIndex_GridPolygon;
+    int EndIndex_GridPolygon;
+} SceneRange;
+
+static std::vector<SceneRange> SceneRanges;
+
+void AddScene(const char* name)
+{
+    KeyMap_Add(&SceneMap, name);
+
+    SceneRange range{};
+    range.StartIndex_GridBox = GridBoxIndex;
+    range.EndIndex_GridBox = GridBoxIndex;
+    range.StartIndex_GridPolygon = GridPolygonIndex;
+    range.EndIndex_GridPolygon = GridPolygonIndex;
+    SceneRanges.push_back(range);
+
+    SceneCount++;
+    SceneEndFlag = 0;
+}
+
+void SceneEndPoint()
+{
+    if (SceneCount <= 0) return;
+
+    SceneRanges.back().EndIndex_GridBox = GridBoxIndex;
+    SceneRanges.back().EndIndex_GridPolygon = GridPolygonIndex;
+    SceneEndFlag = 1;
+}
+
+void ChangeScene(const char* name)
+{
+    int index = KeyMap_GetIndex(&SceneMap, name);
+    if (index == -1) {
+        AddMessage("\nerror : Scene not found\n");
+        return;
+    }
+    CurrentSceneIndex = index;
+}
+
+void UpdateScene()
+{
+    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size())
+        return;
+
+    SceneRange& range = SceneRanges[CurrentSceneIndex];
+
+    // 現在のシーンに対応するグリッドなどだけを更新
+    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
+        // Scene専用GridBox更新処理がある場合はここに
+    }
+
+    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
+        // Scene専用GridPolygon更新処理がある場合はここに
+    }
+}
+
+void DrawScene()
+{
+    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size())
+        return;
+
+    SceneRange& range = SceneRanges[CurrentSceneIndex];
+
+    // --- Scene単位で描画 ---
+    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
+        Vec4 vec4Pos = Vec4_Get(&GridBoxPosVec4, i);
+        Vec4 vec4Size = Vec4_Get(&GridBoxSizeVec4, i);
+        Vec4 vec4Angle = Vec4_Get(&GridBoxAngleVec4, i);
+        Vec4 vec4Color = Vec4_Get(&GridBoxColorVec4, i);
+
+        grid->SetColor({ vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W });
+        grid->DrawBox(
+            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
+            { vec4Size.X, vec4Size.Y, vec4Size.Z },
+            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
+        );
+    }
+
+    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
+        Vec4 vec4Color = Vec4_Get(&GridPolygonColorVec4, i);
+        Vec4 vec4Pos = Vec4_Get(&GridPolygonPosVec4, i);
+        Vec4 vec4Size = Vec4_Get(&GridPolygonSizeVec4, i);
+        Vec4 vec4Angle = Vec4_Get(&GridPolygonAngleVec4, i);
+
+        grid->SetColor({ vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W });
+        grid->DrawGridPolygon(
+            VecInt_Get(&GridPolygonSides, i),
+            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
+            { vec4Size.X, vec4Size.Y, vec4Size.Z },
+            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
+        );
+    }
+}
 
 void InitDo()
 {
@@ -743,12 +850,11 @@ void InitDo()
     AddGridBox("Box02");
     SetGridBoxPos("Box02", 1, 0, 0);
     SetGridBoxColor("Box02", 1, 0, 0, 1);
-
     AddGridBox("Box03");
     SetGridBoxPos("Box03", 3, 0, 0);
     SetGridBoxColor("Box03", 1, 1, 0, 1);
 
-    SceneEndPoint();
+    SceneEndPoint(); // Scene1終了
 
     AddScene("Scene2");
 
@@ -757,7 +863,7 @@ void InitDo()
     SetGridPolygonColor("Polygon01", 0, 1, 1, 1);
     SetGridPolygonSides("Polygon01", 6);
 
-    SceneEndPoint();
+    SceneEndPoint(); // Scene2終了
 
     ChangeScene("Scene1");
 
@@ -775,10 +881,10 @@ void UpdateDo()
     SettingCamera();
 
     //グリッド_______
-    CreateGridBox();
-    SettingGridBox();
-    CreateGridPolygon();
-    SettingGridPolygon();
+    //CreateGridBox();
+    //SettingGridBox();
+    //CreateGridPolygon();
+    //SettingGridPolygon();
 
     //grid->DrawGridPolygonGrid(10, 10, 1.2f, 6, 0.5f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f});
 
