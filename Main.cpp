@@ -17,6 +17,7 @@
 #include "Main.h"
 
 #include "ObjectManager.h"
+#include "CoreScene.h"
 
  //
 //ライブラリ_______________
@@ -184,7 +185,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
     const UINT64 updateIntervalMs = 1000; // タイトル更新間隔（ms） --- 1000ms = 1秒
 
     InitDo();
-
+    CoreStartUp();
     // 主ループ
     bool running = true;
     while (running) {
@@ -202,6 +203,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
         const float clearColor[4] = { 0.1f, 0.2f, 0.3f, 1.0f };
         GetContext()->ClearRenderTargetView(GetRenderTargetView(), clearColor);
         GetContext()->ClearDepthStencilView(GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+        
+        CoreSceneUpdate();
+        CoreSceneDraw();
+        
         UpdateDo();
         DrawDo();
         // swap

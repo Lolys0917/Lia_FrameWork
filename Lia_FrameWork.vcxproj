@@ -137,17 +137,19 @@
     <ClCompile Include="ComponentCamera.cpp" />
     <ClCompile Include="ComponentSpriteScreen.cpp" />
     <ClCompile Include="ComponentSpriteWorld.h" />
+    <ClCompile Include="CoreScene.cpp" />
     <ClCompile Include="Grid.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ObjectManager.cpp" />
     <ClCompile Include="SceneManager.cpp" />
-    <ClCompile Include="StartUp.cpp" />
     <ClCompile Include="TestScene.cpp" />
+    <ClCompile Include="UtilManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AssetLoad.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentCamera.h" />
+    <ClInclude Include="CoreScene.h" />
     <ClInclude Include="Grid.h" />
     <ClInclude Include="ComponentModel.h" />
     <ClInclude Include="Main.h" />
@@ -156,6 +158,10 @@
     <ClInclude Include="ComponentSpriteScreen.h" />
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="TestScene.h" />
+    <ClInclude Include="UtilManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ObjectMemo.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

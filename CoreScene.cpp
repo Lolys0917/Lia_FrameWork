@@ -1,7 +1,14 @@
-// StartUp.cpp
+// The project type: Game Engine Core Module
+// The code defines core scene lifecycle functions for initialization, updating, drawing, and ending scenes.
+
+// プログラムのメインとなるシーン管理
+// ここに処理を書くことでシーンの初期化、更新、描画、終了処理を行うことができます。
+// Initよりも先にStartupが呼ばれます。
+
+#include "CoreScene.h"
 #include "ObjectManager.h"
 
-void StartUp()
+void CoreStartUp()
 {
     // --- カメラ初期化 ---
     AddCamera("MainCamera");
@@ -9,7 +16,7 @@ void StartUp()
     SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
 
     AddCamera("SideCamera");
-    SetCameraPos("SideCamera", 10.0f, 5.0f, 0.0f);
+    SetCameraPos("SideCamera", 1.0f, 5.0f, -5.0f);
     SetCameraLook("SideCamera", 0.0f, 0.0f, 0.0f);
 
     // --- Scene1 ---
@@ -32,10 +39,21 @@ void StartUp()
     SetSceneCamera("Scene2", "SideCamera");
 
     // 最初のシーン設定
-    ChangeScene("Scene1");
+    ChangeScene("Scene2");
 
     // Camera, Gridなど初期化
     CreateCamera();
     SettingCameraOnce();
-    //CreateGrid();
+}
+void CoreSceneUpdate()
+{
+
+}
+void CoreSceneDraw()
+{
+
+}
+void CoreSceneEnd()
+{
+
 }

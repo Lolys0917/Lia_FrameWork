@@ -19,17 +19,14 @@
     <Filter Include="ソース ファイル\Component\base">
       <UniqueIdentifier>{36d9e531-2699-437d-8055-d5069da0736e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ソース ファイル\Object">
-      <UniqueIdentifier>{22cbce6e-5121-4828-bd4d-60cda55cdce2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ソース ファイル\Debug">
       <UniqueIdentifier>{a9dd2fbf-ca98-44f7-9734-d1534965229d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ソース ファイル\Scene">
-      <UniqueIdentifier>{3ffba046-bf44-41ed-8c56-795e43f8e300}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ソース ファイル\ForUsers">
       <UniqueIdentifier>{34583739-3fd0-4e1b-9d78-894d4160c7ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\Manager">
+      <UniqueIdentifier>{22cbce6e-5121-4828-bd4d-60cda55cdce2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -40,7 +37,7 @@
       <Filter>ソース ファイル\Component</Filter>
     </ClCompile>
     <ClCompile Include="ObjectManager.cpp">
-      <Filter>ソース ファイル\Object</Filter>
+      <Filter>ソース ファイル\Manager</Filter>
     </ClCompile>
     <ClCompile Include="ComponentCamera.cpp">
       <Filter>ソース ファイル\Component</Filter>
@@ -51,17 +48,20 @@
     <ClCompile Include="Grid.cpp">
       <Filter>ソース ファイル\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="SceneManager.cpp">
-      <Filter>ソース ファイル\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="TestScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="AssetLoad.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="StartUp.cpp">
+    <ClCompile Include="CoreScene.cpp">
       <Filter>ソース ファイル\ForUsers</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneManager.cpp">
+      <Filter>ソース ファイル\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="UtilManager.cpp">
+      <Filter>ソース ファイル\Manager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -78,10 +78,10 @@
       <Filter>ソース ファイル\Component\base</Filter>
     </ClInclude>
     <ClInclude Include="Object.h">
-      <Filter>ソース ファイル\Object</Filter>
+      <Filter>ソース ファイル\Manager</Filter>
     </ClInclude>
     <ClInclude Include="ObjectManager.h">
-      <Filter>ソース ファイル\Object</Filter>
+      <Filter>ソース ファイル\Manager</Filter>
     </ClInclude>
     <ClInclude Include="Main.h">
       <Filter>ソース ファイル</Filter>
@@ -89,14 +89,23 @@
     <ClInclude Include="Grid.h">
       <Filter>ソース ファイル\Debug</Filter>
     </ClInclude>
-    <ClInclude Include="SceneManager.h">
-      <Filter>ソース ファイル\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="TestScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="AssetLoad.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="CoreScene.h">
+      <Filter>ソース ファイル\ForUsers</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneManager.h">
+      <Filter>ソース ファイル\Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="UtilManager.h">
+      <Filter>ソース ファイル\Manager</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ObjectMemo.txt" />
   </ItemGroup>
 </Project>

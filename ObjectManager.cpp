@@ -1,51 +1,25 @@
-//______________________________
-//オブジェクト管理用のコード
-// オブジェクトの呼び出しを管理
-// シーンによるオブジェクト管理
-// DLL化してのエンジンも視野に入れるためC言語準拠で実装
-// コンポーネントの追加もここで管理
-// コンポーネント管理用の構造体を用意し、インデックスで管理する形をとる
-// 将来的にはstd::vectorやstd::mapに置き換える可能性あり
-//______________________________
-//メッセージ管理
-//ポップアップ描画やログ出力用にメッセージを管理
-//GUIまたはポップアップで表示することを想定
-//______________________________
-//理想形
-// オブジェクトの描画やシーンの管理を簡易的に行うためのマネージャー
-// オブジェクト呼び出し等を関数で管理
-//______________________________
-
 #include "ObjectManager.h"
-
-#include "Main.h"
-#include "Object.h"
-#include "Grid.h"
+#include "UtilManager.h"
 #include "SceneManager.h"
-
-//コンポーネントインクルード
+#include "Grid.h"
+#include "Object.h"
 #include "ComponentCamera.h"
-#include "ComponentSpriteScreen.h"
-#include "ComponentSpriteWorld.h"
 
-//定数
-#define MAX_MESSAGE 256
-
-//グローバル宣言
-static const char* Message[MAX_MESSAGE];
+static Grid* grid = nullptr;
+static Object* object = nullptr;
 
 //Vec4宣言 __________________________
 //カメラ用Vec4
 static Vec4Vector CameraPosVec4;
 static Vec4Vector CameraLookVec4;
 //UI用Vec4
-static Vec4Vector SpriteScreenTBLRVec4;
-static Vec4Vector SpriteScreenAngleVec4;
-static Vec4Vector SpriteScreenColorVec4;
-//SpriteWorld用Vec4
-static Vec4Vector SpriteWorldPosVec4;
-static Vec4Vector SpriteWorldSizeVec4;
-static Vec4Vector SpriteWorldAngleVec4;
+static Vec4Vector UITBLRVec4;
+static Vec4Vector UIAngleVec4;
+static Vec4Vector UIColorVec4;
+//World2d用Vec4
+static Vec4Vector World2dPosVec4;
+static Vec4Vector World2dSizeVec4;
+static Vec4Vector World2dAngleVec4;
 //Model用Vec4
 static Vec4Vector ModelPosVec4;
 static Vec4Vector ModelSizeVec4;
@@ -63,14 +37,10 @@ static Vec4Vector GridPolygonPosVec4;   //Polygon_______
 static Vec4Vector GridPolygonSizeVec4;
 static Vec4Vector GridPolygonAngleVec4;
 static Vec4Vector GridPolygonColorVec4;
-static Vec4Vector GridColorVec4;        //Grid____
-static Vec4Vector GridStartVec4;
-static Vec4Vector GridEndVec4;
 
 //CharVec宣言 __________________
 static CharVector TexturePath;
 static CharVector ModelPath;
-
 //IntVec宣言 __________________
 static IntVector NumberOfScenes;
 static IntVector ModelType;
@@ -79,232 +49,6 @@ static IntVector GridPolygonSides;
 
 //BoolVector宣言 _________________
 static BoolVector BillboardW2d;
-
-// vector ___________________
-// Vec4
-// vector初期化
-void Vec4_Init(Vec4Vector* vec) {
-    vec->data = NULL;
-    vec->size = 0;
-    vec->capacity = 0;
-}
-//push_back
-void Vec4_PushBack(Vec4Vector* vec, Vec4 value) {
-    if (vec->size >= vec->capacity) {
-        size_t new_capacity = (vec->capacity == 0) ? 4 : vec->capacity * 2;
-        Vec4* new_data = (Vec4*)realloc(vec->data, new_capacity * sizeof(Vec4));
-        if (!new_data) {
-            AddMessage("\nerror : vector_push_back/メモリの確保に失敗\n");
-            return;
-        }
-        vec->data = new_data;
-        vec->capacity = new_capacity;
-    }
-    vec->data[vec->size] = value;
-    vec->size++;
-}
-//要素の設定
-void Vec4_Set(Vec4Vector* vec, size_t index, Vec4 value) {
-    if (index >= vec->size) {
-        AddMessage("\nerror : vector_set/インデックス範囲外\n");
-        return;
-    }
-    vec->data[index] = value;
-}
-//要素を取得
-Vec4 Vec4_Get(Vec4Vector* vec, size_t index) {
-    if (index >= vec->size) {
-        AddMessage("\nerror : vector_get/インデックス範囲外\n");
-        return { -1.0f,-1.0f,-1.0f,-1.0f };
-    }
-    return vec->data[index];
-}
-//解放
-void Vec4_Free(Vec4Vector* vec) {
-    free(vec->data);
-    vec->data = NULL;
-    vec->size = 0;
-    vec->capacity = 0;
-}
-Vec4Vector* GetVec4Vector(int type) {
-    switch (type) {
-    case 0: return &CameraPosVec4;
-    case 1: return &CameraLookVec4;
-    case 2: return &SpriteScreenTBLRVec4;
-    case 3: return &SpriteScreenAngleVec4;
-    case 4: return &SpriteWorldPosVec4;
-    case 5: return &SpriteWorldSizeVec4;
-    case 6: return &SpriteWorldAngleVec4;
-    case 7: return &ModelPosVec4;
-    case 8: return &ModelSizeVec4;
-    case 9: return &ModelAngleVec4;
-    case 10: return &BoxColliderPosVec4;
-    case 11: return &BoxColliderSizeVec4;
-    case 12: return &BoxColliderAngleVec4;
-    default:
-        AddMessage("\nerror : get_vec4vector/不明なタイプ\n");
-        return NULL;
-    }
-}
-
-// Char
-void VecC_Init(CharVector* vec) {
-    vec->data = NULL;
-    vec->size = 0;
-    vec->capacity = 0;
-}
-void VecC_PushBack(CharVector* vec, const char* str) {
-    //if (!str) return;
-
-    if (vec->size >= vec->capacity) {
-        size_t new_capacity = (vec->capacity == 0) ? 4 : vec->capacity * 2;
-        char** new_data = (char**)realloc(vec->data, new_capacity * sizeof(const char*));
-        if (!new_data) {
-            AddMessage("\nerror : charvector_push_back/メモリの確保に失敗\n");
-            return;
-        }
-        vec->data = new_data;
-        vec->capacity = new_capacity;
-    }
-
-    // コピーを確保して保存
-    size_t len = strlen(str) + 1;
-    char* copy = (char*)malloc(len);
-    if (!copy) {
-        AddMessage("\nerror : charvector_push_back/文字列コピー失敗\n");
-        return;
-    }
-    memcpy(copy, str, len);
-
-    vec->data[vec->size++] = copy;
-}
-const char* VecC_Get(CharVector* vec, size_t index) {
-    if (!vec)
-    {
-        AddMessage("\nerror : charvector_get/ベクターがNULL\n");
-        return NULL;
-    }
-    if (index >= vec->size) {
-        AddMessage("\nerror : charvector_get/インデックス範囲外\n");
-        return NULL;
-    }
-    return vec->data[index];
-}
-void VecC_Set(CharVector* vec, size_t index, const char* str) {
-    if (index >= vec->size) {
-        AddMessage("\nerror : charvector_set/インデックス範囲外\n");
-        return;
-    }
-    vec->data[index] = NULL;
-
-    size_t len = strlen(str) + 1;
-    char* copy = (char*)malloc(len);
-    memcpy(copy, str, len);
-
-    vec->data[index] = copy;
-}
-void VecC_Free(CharVector* vec) {
-    for (size_t i = 0; i < vec->size; i++) {
-        free((void*)vec->data[i]);
-    }
-    free(vec->data);
-    vec->data = NULL;
-    vec->size = 0;
-    vec->capacity = 0;
-}
-CharVector* GetVecCVector(int type) {
-    switch (type) {
-    case 0: return &ModelPath;
-    case 1: return &TexturePath;
-    default:
-        AddMessage("\nerror : get_veccvector/不明なタイプ\n");
-        return NULL;
-    }
-}
-
-//___________________________________
-// Int
-void VecInt_Init(IntVector* vec) {
-    vec->data = NULL;
-    vec->size = 0;
-    vec->capacity = 0;
-}
-void VecInt_PushBack(IntVector* vec, int str) {
-    //if (!str) return;
-
-    if (vec->size >= vec->capacity) {
-        size_t new_capacity = (vec->capacity == 0) ? 4 : vec->capacity * 2;
-        int* new_data = (int*)realloc(vec->data, new_capacity * sizeof(int));
-        if (!new_data) {
-            AddMessage("\nerror : intvector_push_back/メモリの確保に失敗\n");
-            return;
-        }
-        vec->data = new_data;
-        vec->capacity = new_capacity;
-    }
-
-    vec->data[vec->size++] = str;
-}
-int VecInt_Get(IntVector* vec, size_t index) {
-    if (index >= vec->size) {
-        AddMessage("\nerror : intvector_get/インデックス範囲外\n");
-        return -1;
-    }
-    return vec->data[index];
-}
-void VecInt_Set(IntVector* vec, size_t index, int str) {
-    if (index >= vec->size) {
-        AddMessage("\nerror : intvector_set/インデックス範囲外\n");
-        return;
-    }
-    vec->data[index] = str;
-}
-void VecInt_Free(IntVector* vec) {
-    free(vec->data);
-    vec->data = NULL;
-    vec->size = 0;
-    vec->capacity = 0;
-}
-
-void VecBool_Init(BoolVector* vec) {
-    vec->data = NULL;
-    vec->size = 0;
-    vec->capacity = 0;
-}
-void VecBool_PushBack(BoolVector* vec, bool str) {
-    if (vec->size >= vec->capacity) {
-        size_t new_capacity = (vec->capacity == 0) ? 4 : vec->capacity * 2;
-        bool* new_data = (bool*)realloc(vec->data, new_capacity * sizeof(bool));
-        if (!new_data) {
-            AddMessage("\nerror : bool_vector_push_back/メモリの確保に失敗\n");
-            return;
-        }
-        vec->data = new_data;
-        vec->capacity = new_capacity;
-    }
-
-    vec->data[vec->size++] = str;
-}
-int VecBool_Get(BoolVector* vec, size_t index) {
-    if (index >= vec->size) {
-        AddMessage("\nerror : bool_vector_get/インデックス範囲外\n");
-        return NULL;
-    }
-    return vec->data[index];
-}
-void VecBool_Set(BoolVector* vec, size_t index, bool str) {
-    if (index >= vec->size) {
-        AddMessage("\nerror : bool_vector_set/インデックス範囲外\n");
-        return;
-    }
-    vec->data[index] = str;
-}
-void VecBool_Free(BoolVector* vec) {
-    free(vec->data);
-    vec->data = NULL;
-    vec->size = 0;
-    vec->capacity = 0;
-}
 
 // KeyMap宣言 __________________
 KeyMap CameraMap;
@@ -315,148 +59,9 @@ KeyMap UIMap;
 KeyMap BoxColliderMap;
 KeyMap GridBoxMap;
 KeyMap GridPolygonMap;
-KeyMap SceneMap;
-
-// KeyMap 関数
-void KeyMap_Init(KeyMap* map) {
-    map->keys = NULL;
-    map->size = 0;
-    map->capacity = 0;
-}
-void KeyMap_Free(KeyMap* map) {
-    for (size_t i = 0; i < map->size; i++) {
-        free(map->keys[i]);
-    }
-    free(map->keys);
-    map->keys = NULL;
-    map->size = 0;
-    map->capacity = 0;
-}
-int KeyMap_EnsureCapacity(KeyMap* map) {
-    if (map->size >= map->capacity) {
-        size_t new_capacity = (map->capacity == 0) ? 4 : map->capacity * 2;
-        char** new_keys = (char**)realloc(map->keys, new_capacity * sizeof(char*));
-        if (!new_keys) {
-            AddMessage("\nerror : keymap_ensure_capacity/メモリの確保に失敗\n");
-            return 0; // メモリ確保失敗
-        }
-        map->keys = new_keys;
-        map->capacity = new_capacity;
-    }
-    return 1; // 成功
-}
-int KeyMap_Add(KeyMap* map, const char* key) {
-    for (size_t i = 0; i < map->size; i++) {
-        if (strcmp(map->keys[i], key) == 0) {
-            printf("error: key '%s' already exists!\n", key);
-            return -1; // 既存
-        }
-    }
-    if (!KeyMap_EnsureCapacity(map)) return -1;
-
-    map->keys[map->size] = _strdup(key);
-    return (int)map->size++; // 登録したインデックスを返す
-}
-int KeyMap_GetIndex(KeyMap* map, const char* key) {
-    for (size_t i = 0; i < map->size; i++) {
-        if (strcmp(map->keys[i], key) == 0) {
-            return (int)i; // 見つかった
-        }
-    }
-    return -1; // 見つからなかった
-}
-const char* KeyMap_GetKey(KeyMap* map, int index) {
-    if (index < 0 || (size_t)index >= map->size) {
-        AddMessage("\nerror : keymap_getkey/インデックス範囲外\n");
-        return NULL;
-    }
-    return map->keys[index];
-}
-KeyMap* GetKeyMapByType(int type) {
-    switch (type) {
-    case 0: return &CameraMap;
-    case 1: return &ModelMap;
-    case 2: return &TextureMap;
-    case 3: return &World2dMap;
-    case 4: return &UIMap;
-    case 5: return &BoxColliderMap;
-    default:
-        AddMessage("\nerror : get_keymap_by_type/不明なタイプ\n");
-        return NULL;
-    }
-}
-
-void DebugDumpModelType() {
-    char buf[256];
-    for (size_t i = 0; i < ModelType.size; i++) {
-        sprintf(buf, "ModelType[%zu] = %d\n", i, ModelType.data[i]);
-        AddMessage(buf);
-    }
-}
-void ConcatCStrFree(const char* str)
-{
-    free((void*)str);
-}
-const char* ConcatCStr(const char* str1, const char* str2)
-{
-    if (!str1 && !str2) return nullptr;
-    if (!str1) return str2;
-    if (!str2) return str1;
-    size_t len1 = strlen(str1);
-    size_t len2 = strlen(str2);
-    char* result = (char*)malloc(len1 + len2 + 1); // +1 for null terminator
-    if (!result) {
-        AddMessage("\nerror : concat_cstr/メモリの確保に失敗\n");
-        return nullptr;
-    }
-    strcpy_s(result, len1 + 1, str1); // Copy first string
-    strcat_s(result, len1 + len2 + 1, str2); // Concatenate second string
-    return result; // 呼び出し側でfreeすること
-}
-void AddMessage(const char* sent)
-{
-    const char* MM = ConcatCStr("\n", sent);
-
-    for (int i = 0; i < MAX_MESSAGE; i++)
-    {
-        if (Message[i] == "\0")
-        {
-            Message[i] = MM;
-            break;
-        }
-    }
-}
-
-  //////////////////////
- // オブジェクト管理 // 
-//////////////////////
-
-//オブジェクト用
-Object* object;
-Grid* grid;
-
-//グリッド用
-static int CurrentSceneIndex = -1;
-static int SceneCount = 0;
-static int SceneEndFlag = 0;
-
-// 各Sceneごとの範囲を保持
-typedef struct {
-    int StartIndex_Grid;
-    int EndIndex_Grid;
-    int StartIndex_GridBox;
-    int EndIndex_GridBox;
-    int StartIndex_GridPolygon;
-    int EndIndex_GridPolygon;
-    int StartIndex_Camera;
-    int EndIndex_Camera;
-    int UseCameraIndex; // 現在のシーンで使用中のカメラ
-} SceneRange;
-
-static std::vector<SceneRange> SceneRanges;
 
 //インデックス管理 ____________________________
-//オブジェクトの数
+//オブジェクトの数___________________
 static int UseCamera;
 static int CameraIndex = 0;
 static int CameraOldIdx = 0;
@@ -479,46 +84,24 @@ static int GridBoxOldIndex = 0;
 static int GridPolygonIndex = 0;
 static int GridPolygonOldIndex = 0;
 
-static int GridIndex = 0;
-static int GridOldIndex = 0;
-
 int GetCameraIndex() { return CameraIndex; }
 int GetUseCamera() { return UseCamera; }
 int GetUIIndex() { return UIIndex; }
 int GetWorld2dIndex() { return world2dIndex; }
 int GetModelIndex() { return ModelIndex; }
 int GetBoxColliderIndex() { return BoxColliderIndex; }
-int GetGridBoxIndex() { return GridBoxIndex; }
-int GetGridPolygonIndex() { return GridPolygonIndex; }
-int GetGridIndex() { return GridIndex; }
 
-//カメラ=============
-void AddCamera(const char* CameraName)
-{
-
-    //Vec4_Init(&CameraPosVec4);
-    Vec4_PushBack(&CameraPosVec4, Vec4{ 0.0f,0.0f,0.0f,0.0f });
-
-    //Vec4_Init(&CameraLookVec4);
-    Vec4_PushBack(&CameraLookVec4, Vec4{ 0.0f,0.0f,0.0f,0.0f });
-
-    KeyMap_Add(&CameraMap, CameraName);
-
+void AddCamera(const char* name) {
+    Vec4_PushBack(&CameraPosVec4, { 0,0,0,0 });
+    Vec4_PushBack(&CameraLookVec4, { 0,0,1,0 });
+    KeyMap_Add(&CameraMap, name);
     CameraIndex++;
 }
-void SetCameraPos(const char* CameraName, float posX, float posY, float posZ)
-{
-    Vec4_Set(&CameraPosVec4, KeyMap_GetIndex(&CameraMap, CameraName),
-        Vec4{ posX, posY, posZ, 0.0f });
+void SetCameraPos(const char* name, float x, float y, float z) {
+    Vec4_Set(&CameraPosVec4, KeyMap_GetIndex(&CameraMap, name), { x,y,z,0 });
 }
-void SetCameraLook(const char* CameraName, float lookX, float lookY, float lookZ)
-{
-    Vec4_Set(&CameraLookVec4, KeyMap_GetIndex(&CameraMap, CameraName),
-        Vec4{ lookX, lookY, lookZ, 0.0f });
-}
-void UseCameraSet(const char* CameraName)
-{
-    UseCamera = KeyMap_GetIndex(&CameraMap, CameraName);
+void SetCameraLook(const char* name, float x, float y, float z) {
+    Vec4_Set(&CameraLookVec4, KeyMap_GetIndex(&CameraMap, name), { x,y,z,0 });
 }
 void CreateCamera()
 {
@@ -529,30 +112,17 @@ void CreateCamera()
         CameraOldIdx++;
     }
 }
-void SettingCamera()
-{
+void UseCameraSet(const char* name) {
+    UseCamera = KeyMap_GetIndex(&CameraMap, name);
+}
+void SettingCameraOnce() {
     for (int i = 0; i < CameraIndex; i++)
-    {
-        object->GetComponent<Camera>(i)->
-            SetCameraProjection(70.0f, 800, 600);
-
-        Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, i);
-        Vec4 vec4Look = Vec4_Get(&CameraLookVec4, i);
-
-        XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
-        XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
-
-        object->GetComponent<Camera>(i)->
-            SetCameraView(CamPos, CamLook);
-    }
+        AddMessage("Camera initialized");
 }
 
-//SpriteWorld =====================
-
-
-
-//グリッド=========================
-
+//============================
+// Grid
+//============================
 //ボックス型グリッド
 void AddGridBox(const char* Name)
 {
@@ -585,35 +155,8 @@ void SetGridBoxColor(const char* Name, float R, float G, float B, float A)
     Vec4_Set(&GridBoxColorVec4, KeyMap_GetIndex(&GridBoxMap, Name),
         Vec4{ R, G, B, A });
 }
-void CreateGridBox()
-{
-    while (GridBoxOldIndex < GridBoxIndex)
-    {
-        GridBoxOldIndex++;
-    }
-}
-void SettingGridBox()
-{
-    for (int i = 0; i < GridBoxIndex; i++)
-    {
-        Vec4 vec4Pos = Vec4_Get(&GridBoxPosVec4, i);
-        Vec4 vec4Size = Vec4_Get(&GridBoxSizeVec4, i);
-        Vec4 vec4Angle = Vec4_Get(&GridBoxAngleVec4, i);
-        Vec4 vec4Color = Vec4_Get(&GridBoxColorVec4, i);
 
-        XMFLOAT4 GridBoxPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
-        XMFLOAT4 GridBoxSize = { vec4Size.X, vec4Size.Y, vec4Size.Z, 0.0f };
-        XMFLOAT4 GridBoxAngle = { vec4Angle.X, vec4Angle.Y, vec4Angle.Z, 0.0f };
-        XMFLOAT4 GridBoxColor = { vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W };
-
-        grid->SetColor({ vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W });
-        grid->DrawBox(
-            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
-            { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
-            );
-    }
-}
+//多角形グリッド
 void AddGridPolygon(const char* Name)
 {
     Vec4_PushBack(&GridPolygonPosVec4, { 0.0f,0.0f, 0.0f, 0.0f });
@@ -651,68 +194,9 @@ void SetGridPolygonSides(const char* Name, int Sides)
 {
     VecInt_Set(&GridPolygonSides, KeyMap_GetIndex(&GridPolygonMap, Name), Sides);
 }
-void CreateGridPolygon()
-{
-    while (GridPolygonOldIndex < GridPolygonIndex)
-    {
-        GridPolygonOldIndex++;
-    }
-}
-void SettingGridPolygon()
-{
-    for (int i = 0; i < GridPolygonIndex; i++)
-    {
-        Vec4 vec4Color = Vec4_Get(&GridPolygonColorVec4, i);
-
-        Vec4 vec4Pos = Vec4_Get(&GridPolygonPosVec4, i);
-        Vec4 vec4Size = Vec4_Get(&GridPolygonSizeVec4, i);
-        Vec4 vec4Angle = Vec4_Get(&GridPolygonAngleVec4, i);
-
-        XMFLOAT4 Color;
-        Color.x = vec4Color.X;
-        Color.y = vec4Color.Y;
-        Color.z = vec4Color.Z;
-        Color.w = vec4Color.W;
-
-        grid->SetColor({Color});
-        grid->DrawGridPolygon(
-            VecInt_Get(&GridPolygonSides, i),
-            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
-            { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { vec4Angle.X, vec4Angle.Y,vec4Angle.Z }
-            );
-    }
-}
-
-void AddGrid(const char* Name)
-{
-    Vec4_PushBack(&GridColorVec4, { 1.0f,1.0f,1.0f,1.0f });
-    Vec4_PushBack(&GridStartVec4, { -5.0f,0.0f, -5.0f, 0.0f });
-    Vec4_PushBack(&GridEndVec4, { 5.0f,0.0f, 5.0f, 0.0f });
-    KeyMap_Add(&GridBoxMap, Name);
-    GridIndex++;
-}
-void SetGridColor(const char* Name, float R, float G, float B, float A)
-{
-    Vec4_Set(&GridColorVec4, KeyMap_GetIndex(&GridBoxMap, Name),
-        { R,G,B,A });
-}
-void SetGridStart(const char* Name, float posX, float posY, float posZ)
-{
-    Vec4_Set(&GridStartVec4, KeyMap_GetIndex(&GridBoxMap, Name),
-        { posX,posY,posZ });
-}
-void SetGridEnd(const char* Name, float posX, float posY, float posZ)
-{
-    Vec4_Set(&GridEndVec4, KeyMap_GetIndex(&GridBoxMap, Name),
-        { posX,posY,posZ });
-}
 
 void DrawGridBase()
 {
-    SceneRange& range = SceneRanges[CurrentSceneIndex];
-    int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : UseCamera;
-
     // グリッド表示 //=====
     // 補正グリッド
     grid->SetProj(object->GetComponent<Camera>(UseCamera)->GetProjection());
@@ -744,274 +228,12 @@ void DrawGridBase()
     grid->SetPos({ 0.0f, 0.0f, -5.0f }, { 0.0f, 0.0f, 5.0f });
     grid->Draw();
 }
-void DrawGridBox(XMFLOAT3 Pos, XMFLOAT3 Size, XMFLOAT3 Angle)
-{
-    grid->SetColor({ 1.0f, 1.0f, 0.0f, 1.0f });
-    grid->DrawBox(Pos, Size, Angle);
-}
-  ////////////////
- // シーン管理 // 
-////////////////
 
-//シーン追加項目
-//
-// KeyMapを使って一次元増やす事で実現
-// Scene X Type X Component
-//
-
-void AddScene(const char* name)
-{
-    KeyMap_Add(&SceneMap, name);
-
-    SceneRange range{};
-    range.StartIndex_Camera = CameraIndex;
-    range.EndIndex_Camera = CameraIndex;
-    range.UseCameraIndex = -1;
-
-    range.StartIndex_GridBox = GridBoxIndex;
-    range.EndIndex_GridBox = GridBoxIndex;
-    range.StartIndex_GridPolygon = GridPolygonIndex;
-    range.EndIndex_GridPolygon = GridPolygonIndex;
-    range.StartIndex_Grid = GridIndex;
-    range.EndIndex_Grid = GridIndex;
-
-    SceneRanges.push_back(range);
-    SceneCount++;
-    SceneEndFlag = 0;
-}
-
-void SceneEndPoint()
-{
-    if (SceneCount <= 0) return;
-    auto& r = SceneRanges.back();
-    r.EndIndex_Camera = CameraIndex;
-    r.EndIndex_GridBox = GridBoxIndex;
-    r.EndIndex_GridPolygon = GridPolygonIndex;
-    r.EndIndex_Grid = GridIndex;
-    SceneEndFlag = 1;
-}
-
-void SetSceneCamera(const char* sceneName, const char* cameraName)
-{
-    int sceneIdx = KeyMap_GetIndex(&SceneMap, sceneName);
-    int camIdx = KeyMap_GetIndex(&CameraMap, cameraName);
-
-    if (sceneIdx == -1 || camIdx == -1) {
-        AddMessage("\nerror : SetSceneCamera failed (invalid scene or camera)\n");
-        return;
-    }
-
-    SceneRanges[sceneIdx].UseCameraIndex = camIdx;
-}
-
-void SettingCameraOnce()
-{
-    for (int i = 0; i < CameraIndex; i++)
-    {
-        object->GetComponent<Camera>(i)->SetCameraProjection(70.0f, 800, 600);
-
-        Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, i);
-        Vec4 vec4Look = Vec4_Get(&CameraLookVec4, i);
-
-        XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
-        XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
-
-        object->GetComponent<Camera>(i)->SetCameraView(CamPos, CamLook);
-    }
-}
-
-void InitScene(const char* name)
-{
-    int index = KeyMap_GetIndex(&SceneMap, name);
-    if (index == -1) {
-        AddMessage("\nerror : InitScene failed (scene not found)\n");
-        return;
-    }
-
-    SceneRange& range = SceneRanges[index];
-    CurrentSceneIndex = index;
-
-    // カメラ再設定
-    int useCam = range.UseCameraIndex >= 0 ? range.UseCameraIndex : UseCamera;
-    if (useCam >= 0 && useCam < CameraIndex) {
-        Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, useCam);
-        Vec4 vec4Look = Vec4_Get(&CameraLookVec4, useCam);
-        XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
-        XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
-        object->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
-    }
-
-    // シーン範囲内オブジェクトを再初期化
-    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
-        // 位置や色などを再設定して復帰
-        Vec4 col = Vec4_Get(&GridBoxColorVec4, i);
-        grid->SetColor({ col.X, col.Y, col.Z, col.W });
-    }
-    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
-        // 必要があれば再初期化
-        Vec4 col = Vec4_Get(&GridPolygonColorVec4, i);
-        grid->SetColor({ col.X, col.Y, col.Z, col.W });
-    }
-
-    AddMessage(ConcatCStr("InitScene(): ", name));
-}
-
-void DeleteScene(const char* name)
-{
-    int index = KeyMap_GetIndex(&SceneMap, name);
-    if (index == -1) {
-        AddMessage("\nerror : DeleteScene failed (scene not found)\n");
-        return;
-    }
-
-    // 削除対象シーン
-    SceneRange& range = SceneRanges[index];
-
-    // --- Vec4 / Int 内のデータを削除（安全な削除処理） ---
-    auto erase_range = [&](auto& vec, int start, int end) {
-        if (start >= 0 && end <= (int)vec.size && start < end) {
-            int count = end - start;
-            memmove(&vec.data[start], &vec.data[end],
-                (vec.size - end) * sizeof(vec.data[0]));
-            vec.size -= count;
-        }
-        };
-
-    erase_range(GridBoxPosVec4, range.StartIndex_GridBox, range.EndIndex_GridBox);
-    erase_range(GridBoxColorVec4, range.StartIndex_GridBox, range.EndIndex_GridBox);
-    erase_range(GridPolygonPosVec4, range.StartIndex_GridPolygon, range.EndIndex_GridPolygon);
-    erase_range(GridPolygonColorVec4, range.StartIndex_GridPolygon, range.EndIndex_GridPolygon);
-
-    // KeyMap内も削除
-    const char* keyName = KeyMap_GetKey(&SceneMap, index);
-    if (keyName) free((void*)keyName);
-
-    // SceneMapのキー削除
-    for (size_t i = index; i + 1 < SceneMap.size; i++)
-        SceneMap.keys[i] = SceneMap.keys[i + 1];
-    SceneMap.size--;
-
-    // SceneRange削除
-    SceneRanges.erase(SceneRanges.begin() + index);
-
-    AddMessage(ConcatCStr("DeleteScene(): ", name));
-
-    // カレント修正
-    if (CurrentSceneIndex >= (int)SceneRanges.size())
-        CurrentSceneIndex = (int)SceneRanges.size() - 1;
-}
-
-void UpdateScene()
-{
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size())
-        return;
-
-    SceneRange& range = SceneRanges[CurrentSceneIndex];
-
-    int useCam = range.UseCameraIndex;
-    if (useCam >= 0)
-    {
-        Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, useCam);
-        Vec4 vec4Look = Vec4_Get(&CameraLookVec4, useCam);
-
-        XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
-        XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
-
-        object->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
-    }
-
-	// --- Scene単位で更新 ---
-    // 
-	// Grid=============
-    // 
-    // 現在のシーンに対応するグリッドなどだけを更新
-    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
-        // Scene専用GridBox更新処理
-    }
-    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
-        // Scene専用GridPolygon更新処理
-    }
-    for (int i = range.StartIndex_Grid; i < range.EndIndex_Grid; i++) {
-        // Scene専用Grid更新処理
-    }
-}
-
-void DrawScene()
-{
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size())
-        return;
-
-    SceneRange& range = SceneRanges[CurrentSceneIndex];
-    int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : UseCamera;
-
-    grid->SetProj(object->GetComponent<Camera>(useCam)->GetProjection());
-    grid->SetView(object->GetComponent<Camera>(useCam)->GetView());
-
-    // --- Scene単位で描画 ---
-    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
-        Vec4 vec4Pos = Vec4_Get(&GridBoxPosVec4, i);
-        Vec4 vec4Size = Vec4_Get(&GridBoxSizeVec4, i);
-        Vec4 vec4Angle = Vec4_Get(&GridBoxAngleVec4, i);
-        Vec4 vec4Color = Vec4_Get(&GridBoxColorVec4, i);
-
-        grid->SetColor({ vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W });
-        grid->DrawBox(
-            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
-            { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
-        );
-    }
-
-    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
-        Vec4 vec4Color = Vec4_Get(&GridPolygonColorVec4, i);
-        Vec4 vec4Pos = Vec4_Get(&GridPolygonPosVec4, i);
-        Vec4 vec4Size = Vec4_Get(&GridPolygonSizeVec4, i);
-        Vec4 vec4Angle = Vec4_Get(&GridPolygonAngleVec4, i);
-
-        grid->SetColor({ 1, 1, 1, 1 });
-        /*grid->DrawGridPolygon(
-            VecInt_Get(&GridPolygonSides, i),
-            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
-            { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }*/
-
-        grid->DrawGridPolygon(
-            VecInt_Get(&GridPolygonSides, i),
-            { 0, 0, 0 },
-            { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { 0, 0, 0 }
-        );
-    }
-}
-
-const char* GetCurrentSceneName()
-{
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneMap.size)
-        return "None";
-    return KeyMap_GetKey(&SceneMap, CurrentSceneIndex);
-}
-
-void ChangeScene(const char* name)
-{
-    int index = KeyMap_GetIndex(&SceneMap, name);
-    if (index == -1) {
-        AddMessage(ConcatCStr("error : ChangeScene - Scene not found: ", name));
-        return;
-    }
-
-    // 現在のScene終了処理（※Deleteしない）
-    AddMessage(ConcatCStr("Exiting Scene: ", GetCurrentSceneName()));
-
-    // 新Sceneへ切替
-    CurrentSceneIndex = index;
-    InitScene(name);
-
-    AddMessage(ConcatCStr("Changed Scene to: ", name));
-}
-
-void InitDo()
-{
-	//インデックス初期化
+//============================
+// 基本ライフサイクル
+//============================
+void InitDo() {
+    //インデックス初期化
     UseCamera = 0;
     CameraIndex = 0;
     CameraOldIdx = 0;
@@ -1022,144 +244,77 @@ void InitDo()
     ModelIndex = 0;
     ModelOldIndex = 0;
     BoxColliderIndex = 0;
-	BoxColliderOldIndex = 0;
+    BoxColliderOldIndex = 0;
 
-	//Vec4初期化
-	Vec4_Init(&CameraPosVec4);
+    //Vec4初期化
+    Vec4_Init(&CameraPosVec4);
     Vec4_Init(&CameraLookVec4);
-    Vec4_Init(&SpriteScreenTBLRVec4);
-    Vec4_Init(&SpriteScreenAngleVec4);
-    Vec4_Init(&SpriteWorldPosVec4);
-    Vec4_Init(&SpriteWorldSizeVec4);
-    Vec4_Init(&SpriteWorldAngleVec4);
+    Vec4_Init(&UITBLRVec4);
+    Vec4_Init(&UIAngleVec4);
+    Vec4_Init(&World2dPosVec4);
+    Vec4_Init(&World2dSizeVec4);
+    Vec4_Init(&World2dAngleVec4);
     Vec4_Init(&ModelPosVec4);
     Vec4_Init(&ModelSizeVec4);
     Vec4_Init(&ModelAngleVec4);
     Vec4_Init(&BoxColliderPosVec4);
     Vec4_Init(&BoxColliderSizeVec4);
     Vec4_Init(&BoxColliderAngleVec4);
-	//CharVec初期化
+    //CharVec初期化
     VecC_Init(&TexturePath);
     VecC_Init(&ModelPath);
-	//IntVec初期化
+    //IntVec初期化
     VecInt_Init(&NumberOfScenes);
     VecInt_Init(&ModelType);
-	//BoolVec初期化
+    //BoolVec初期化
     VecBool_Init(&BillboardW2d);
-	//KeyMap初期化
+    //KeyMap初期化
     KeyMap_Init(&CameraMap);
     KeyMap_Init(&ModelMap);
     KeyMap_Init(&TextureMap);
     KeyMap_Init(&World2dMap);
     KeyMap_Init(&UIMap);
-	KeyMap_Init(&BoxColliderMap);
-    KeyMap_Init(&GridBoxMap);
-    KeyMap_Init(&GridPolygonMap);
-	KeyMap_Init(&SceneMap);
+    KeyMap_Init(&BoxColliderMap);
 
-	//クラス取得
-	grid = new Grid();
-	grid->Init();
-	object = new Object();
-	object->Init();
-
-    AddCamera("MainCamera");
-    UseCameraSet("MainCamera");
-    SetCameraPos("MainCamera", 0.0f, 5.0f, -10.0f);
-    SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
-
-    AddCamera("Scene2Cam");
-    SetCameraPos("Scene2Cam", 0.0f, 3.0f, -8.0f);
-    SetCameraLook("Scene2Cam", 5.0f, 0.0f, 0.0f);
-
-    AddScene("Scene1");
-    // グリッド登録など
-	AddGridBox("GridBox1");
-	SetGridBoxColor("GridBox1", 0.0f, 1.0f, 1.0f, 1.0f);
-
-    AddGridPolygon("GridPolygon1");
-    SetGridPolygonColor("GridPolygon1", 1.0f, 0.0f, 1.0f, 1.0f);
-    SetGridPolygonSides("GridPolygon1", 6);
-    SetGridPolygonPos("GridPolygon1", 2.0f, 0.0f, 2.0f);
-    SceneEndPoint();
-
-    AddScene("Scene2");
-    // グリッド登録など
-	AddGridPolygon("GridPolygon1");
-	SetGridPolygonColor("GridPolygon1", 1.0f, 0.0f, 1.0f, 1.0f);
-	SetGridPolygonSides("GridPolygon1", 6);
-	SetGridPolygonPos("GridPolygon1", 2.0f, 0.0f, 2.0f);
-    SceneEndPoint();
-
-    SetSceneCamera("Scene1", "MainCamera");
-    SetSceneCamera("Scene2", "Scene2Cam");
-
-    ChangeScene("Scene2");
-
-    CreateCamera();
-    SettingCameraOnce();
+    grid = new Grid();
+    grid->Init();
+    object = new Object();
+    object->Init();
 }
-void UpdateDo()
-{
-	static float camPosX = -5.0f;
-
-	camPosX += 0.1f;
-
-	//SetCameraPos("MainCamera", camPosX, 5.0f, -5.0f);
-
+void UpdateDo() {
     //カメラ_________
-    //CreateCamera();
-    //SettingCamera();
-
-    //グリッド_______
-    //CreateGridBox();
-    //SettingGridBox();
-    //CreateGridPolygon();
-    //SettingGridPolygon();
-
-    //grid->DrawGridPolygonGrid(10, 10, 1.2f, 6, 0.5f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f});
+    CreateCamera();
 
     object->Update();
-
     UpdateScene();
-
-	//MessageBoxA(NULL, "テストメッセージ", "タイトル", MB_OK);
 }
-void DrawDo()
-{
+void DrawDo() {
     DrawGridBase();
-    
     object->Draw();
-    //MessageBoxA(NULL, "テストメッセージ", "タイトル", MB_OK);
-
     DrawScene();
 }
-void ReleaseDo()
-{
-	//インデックス初期化
-	UseCamera = -1;
-	CameraIndex = 0;
-	CameraOldIdx = 0;
-	UIIndex = 0;
-	UIOldIndex = 0;
-	world2dIndex = 0;
-	world2dOldIndex = 0;
-	ModelIndex = 0;
-	ModelOldIndex = 0;
-	BoxColliderIndex = 0;
-	BoxColliderOldIndex = 0;
-	//オブジェクト解放
-	delete object;
-	delete grid;
+void ReleaseDo() {
+    //インデックス初期化
+    UseCamera = -1;
+    CameraIndex = 0;
+    CameraOldIdx = 0;
+    UIIndex = 0;
+    UIOldIndex = 0;
+    world2dIndex = 0;
+    world2dOldIndex = 0;
+    ModelIndex = 0;
+    ModelOldIndex = 0;
+    BoxColliderIndex = 0;
+    BoxColliderOldIndex = 0;
 
     //Vec4解放
     Vec4_Free(&CameraPosVec4);
     Vec4_Free(&CameraLookVec4);
-    Vec4_Free(&SpriteScreenTBLRVec4);
-    Vec4_Free(&SpriteScreenAngleVec4);
-    Vec4_Free(&SpriteWorldPosVec4);
-    Vec4_Free(&SpriteWorldSizeVec4);
-    Vec4_Free(&SpriteWorldAngleVec4);
+    Vec4_Free(&UITBLRVec4);
+    Vec4_Free(&UIAngleVec4);
+    Vec4_Free(&World2dPosVec4);
+    Vec4_Free(&World2dSizeVec4);
+    Vec4_Free(&World2dAngleVec4);
     Vec4_Free(&ModelPosVec4);
     Vec4_Free(&ModelSizeVec4);
     Vec4_Free(&ModelAngleVec4);
@@ -1181,7 +336,4 @@ void ReleaseDo()
     KeyMap_Free(&World2dMap);
     KeyMap_Free(&UIMap);
     KeyMap_Free(&BoxColliderMap);
-	KeyMap_Free(&GridBoxMap);
-	KeyMap_Free(&GridPolygonMap);
-	KeyMap_Free(&SceneMap);
 }
