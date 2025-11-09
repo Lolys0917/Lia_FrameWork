@@ -152,6 +152,10 @@ void SetCameraLook(
         float LookX, float LookY, float LookZ);
 void UseCameraSet(
         const char* CameraName);
+
+void SettingCameraOnce();
+void CreateGrid();
+
 //内部用関数
 void CreateCamera();
 void SettingCamera();
@@ -176,9 +180,6 @@ void SetSpriteScreenAngle(
 void SetSpriteScreenColor(
         const char* ObjectName,
         float R, float G, float B, float A);
-//内部用関数
-void CreateSpriteScreen();
-void SettingSpriteScreen();
 
 //3DSprite_____________________
 //外部用関数
@@ -197,9 +198,6 @@ void SetSpriteWorldAngle(
 void SetSpriteWorldColor(
     const char* ObjectName,
     float R, float G, float B, float A);
-//内部用関数
-void CreateSpriteWorld();
-void SettingSpriteWorld();
 
 //Model _______________________
 //外部用関数
@@ -215,9 +213,6 @@ void SetModelSize(
 void SetModelAngle(
         const char* ObjectName,
         float AngleX, float AngleY, float AngleZ);
-//内部用関数
-void CreateModel();
-void SettingModel();
 
 //Speaker&Sound ________________
 //外部用関数
@@ -239,9 +234,73 @@ void SoundStop(         //音の停止
         const char* ObjectName);
 void SoundPause(        //音の一時停止
         const char* ObjectName);
-//内部用関数
-void CreateSpeaker();
-void SettingSpeaker();
+
+//BoxCollider _______________________
+//外部用関数
+void AddBoxCollider(
+	const char* ObjectName);
+void SetBoxColliderPos(
+	const char* ObjectName,
+	float PosX, float PosY, float PosZ);
+void SetBoxColliderSize(
+	const char* ObjectName,
+	float SizeX, float SizeY, float SizeZ);
+void SetBoxColliderAngle(
+	const char* ObjectName,
+	float AngleX, float AngleY, float AngleZ);
+
+//Grid _______________________
+//Box型グリッド
+//外部用関数
+void AddGridBox(
+	const char* Name);
+void SetGridBoxPos(
+	const char* Name,
+	float posX, float posY, float posZ);
+void SetGridBoxSize(
+	const char* Name,
+	float sizeX, float sizeY, float sizeZ);
+void SetGridBoxAngle(
+	const char* Name,
+	float angleX, float angleY, float angleZ);
+void SetGridBoxColor(
+	const char* Name,
+	float R, float G, float B, float A);
+//多角形グリッド
+//外部用関数
+void AddGridPolygon(
+	const char* Name);
+void SetGridPolygonPos(
+	const char* Name,
+	float posX, float posY, float posZ);
+void SetGridPolygonSize(
+	const char* Name,
+	float sizeX, float sizeY, float sizeZ);
+void SetGridPolygonAngle(
+	const char* Name,
+	float angleX, float angleY, float angleZ);
+void SetGridPolygonColor(
+	const char* Name,
+	float R, float G, float B, float A);
+void SetGridPolygonSides(
+	const char* Name,
+	int Sides);
+
+
+
+
+  /////////////////////
+ // Scene管理関数群 //
+/////////////////////
+
+void AddScene(
+	const char* SceneName);
+void SceneEndPoint();
+void SetSceneCamera(
+	const char* SceneName,
+	const char* CameraName);
+void ChangeScene(
+	const char* SceneName);
 
   //////////////////
  // 全体共通処理 //

@@ -1,3 +1,21 @@
+//______________________________
+//オブジェクト管理用のコード
+// オブジェクトの呼び出しを管理
+// シーンによるオブジェクト管理
+// DLL化してのエンジンも視野に入れるためC言語準拠で実装
+// コンポーネントの追加もここで管理
+// コンポーネント管理用の構造体を用意し、インデックスで管理する形をとる
+// 将来的にはstd::vectorやstd::mapに置き換える可能性あり
+//______________________________
+//メッセージ管理
+//ポップアップ描画やログ出力用にメッセージを管理
+//GUIまたはポップアップで表示することを想定
+//______________________________
+//理想形
+// オブジェクトの描画やシーンの管理を簡易的に行うためのマネージャー
+// オブジェクト呼び出し等を関数で管理
+//______________________________
+
 #include "ObjectManager.h"
 
 #include "Main.h"
@@ -21,13 +39,13 @@ static const char* Message[MAX_MESSAGE];
 static Vec4Vector CameraPosVec4;
 static Vec4Vector CameraLookVec4;
 //UI用Vec4
-static Vec4Vector UITBLRVec4;
-static Vec4Vector UIAngleVec4;
-static Vec4Vector UIColorVec4;
-//World2d用Vec4
-static Vec4Vector World2dPosVec4;
-static Vec4Vector World2dSizeVec4;
-static Vec4Vector World2dAngleVec4;
+static Vec4Vector SpriteScreenTBLRVec4;
+static Vec4Vector SpriteScreenAngleVec4;
+static Vec4Vector SpriteScreenColorVec4;
+//SpriteWorld用Vec4
+static Vec4Vector SpriteWorldPosVec4;
+static Vec4Vector SpriteWorldSizeVec4;
+static Vec4Vector SpriteWorldAngleVec4;
 //Model用Vec4
 static Vec4Vector ModelPosVec4;
 static Vec4Vector ModelSizeVec4;
@@ -112,11 +130,11 @@ Vec4Vector* GetVec4Vector(int type) {
     switch (type) {
     case 0: return &CameraPosVec4;
     case 1: return &CameraLookVec4;
-    case 2: return &UITBLRVec4;
-    case 3: return &UIAngleVec4;
-    case 4: return &World2dPosVec4;
-    case 5: return &World2dSizeVec4;
-    case 6: return &World2dAngleVec4;
+    case 2: return &SpriteScreenTBLRVec4;
+    case 3: return &SpriteScreenAngleVec4;
+    case 4: return &SpriteWorldPosVec4;
+    case 5: return &SpriteWorldSizeVec4;
+    case 6: return &SpriteWorldAngleVec4;
     case 7: return &ModelPosVec4;
     case 8: return &ModelSizeVec4;
     case 9: return &ModelAngleVec4;
@@ -413,8 +431,29 @@ void AddMessage(const char* sent)
  // オブジェクト管理 // 
 //////////////////////
 
+//オブジェクト用
 Object* object;
 Grid* grid;
+
+//グリッド用
+static int CurrentSceneIndex = -1;
+static int SceneCount = 0;
+static int SceneEndFlag = 0;
+
+// 各Sceneごとの範囲を保持
+typedef struct {
+    int StartIndex_Grid;
+    int EndIndex_Grid;
+    int StartIndex_GridBox;
+    int EndIndex_GridBox;
+    int StartIndex_GridPolygon;
+    int EndIndex_GridPolygon;
+    int StartIndex_Camera;
+    int EndIndex_Camera;
+    int UseCameraIndex; // 現在のシーンで使用中のカメラ
+} SceneRange;
+
+static std::vector<SceneRange> SceneRanges;
 
 //インデックス管理 ____________________________
 //オブジェクトの数
@@ -671,6 +710,9 @@ void SetGridEnd(const char* Name, float posX, float posY, float posZ)
 
 void DrawGridBase()
 {
+    SceneRange& range = SceneRanges[CurrentSceneIndex];
+    int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : UseCamera;
+
     // グリッド表示 //=====
     // 補正グリッド
     grid->SetProj(object->GetComponent<Camera>(UseCamera)->GetProjection());
@@ -717,25 +759,6 @@ void DrawGridBox(XMFLOAT3 Pos, XMFLOAT3 Size, XMFLOAT3 Angle)
 // Scene X Type X Component
 //
 
-static int CurrentSceneIndex = -1;
-static int SceneCount = 0;
-static int SceneEndFlag = 0;
-
-// 各Sceneごとの範囲を保持
-typedef struct {
-    int StartIndex_Grid;
-    int EndIndex_Grid;
-    int StartIndex_GridBox;
-    int EndIndex_GridBox;
-    int StartIndex_GridPolygon;
-    int EndIndex_GridPolygon;
-    int StartIndex_Camera;
-    int EndIndex_Camera;
-    int UseCameraIndex; // 現在のシーンで使用中のカメラ
-} SceneRange;
-
-static std::vector<SceneRange> SceneRanges;
-
 void AddScene(const char* name)
 {
     KeyMap_Add(&SceneMap, name);
@@ -768,16 +791,6 @@ void SceneEndPoint()
     SceneEndFlag = 1;
 }
 
-void ChangeScene(const char* name)
-{
-    int index = KeyMap_GetIndex(&SceneMap, name);
-    if (index == -1) {
-        AddMessage("\nerror : Scene not found\n");
-        return;
-    }
-    CurrentSceneIndex = index;
-}
-
 void SetSceneCamera(const char* sceneName, const char* cameraName)
 {
     int sceneIdx = KeyMap_GetIndex(&SceneMap, sceneName);
@@ -805,6 +818,87 @@ void SettingCameraOnce()
 
         object->GetComponent<Camera>(i)->SetCameraView(CamPos, CamLook);
     }
+}
+
+void InitScene(const char* name)
+{
+    int index = KeyMap_GetIndex(&SceneMap, name);
+    if (index == -1) {
+        AddMessage("\nerror : InitScene failed (scene not found)\n");
+        return;
+    }
+
+    SceneRange& range = SceneRanges[index];
+    CurrentSceneIndex = index;
+
+    // カメラ再設定
+    int useCam = range.UseCameraIndex >= 0 ? range.UseCameraIndex : UseCamera;
+    if (useCam >= 0 && useCam < CameraIndex) {
+        Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, useCam);
+        Vec4 vec4Look = Vec4_Get(&CameraLookVec4, useCam);
+        XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
+        XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
+        object->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
+    }
+
+    // シーン範囲内オブジェクトを再初期化
+    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
+        // 位置や色などを再設定して復帰
+        Vec4 col = Vec4_Get(&GridBoxColorVec4, i);
+        grid->SetColor({ col.X, col.Y, col.Z, col.W });
+    }
+    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
+        // 必要があれば再初期化
+        Vec4 col = Vec4_Get(&GridPolygonColorVec4, i);
+        grid->SetColor({ col.X, col.Y, col.Z, col.W });
+    }
+
+    AddMessage(ConcatCStr("InitScene(): ", name));
+}
+
+void DeleteScene(const char* name)
+{
+    int index = KeyMap_GetIndex(&SceneMap, name);
+    if (index == -1) {
+        AddMessage("\nerror : DeleteScene failed (scene not found)\n");
+        return;
+    }
+
+    // 削除対象シーン
+    SceneRange& range = SceneRanges[index];
+
+    // --- Vec4 / Int 内のデータを削除（安全な削除処理） ---
+    auto erase_range = [&](auto& vec, int start, int end) {
+        if (start >= 0 && end <= (int)vec.size && start < end) {
+            int count = end - start;
+            memmove(&vec.data[start], &vec.data[end],
+                (vec.size - end) * sizeof(vec.data[0]));
+            vec.size -= count;
+        }
+        };
+
+    erase_range(GridBoxPosVec4, range.StartIndex_GridBox, range.EndIndex_GridBox);
+    erase_range(GridBoxColorVec4, range.StartIndex_GridBox, range.EndIndex_GridBox);
+    erase_range(GridPolygonPosVec4, range.StartIndex_GridPolygon, range.EndIndex_GridPolygon);
+    erase_range(GridPolygonColorVec4, range.StartIndex_GridPolygon, range.EndIndex_GridPolygon);
+
+    // KeyMap内も削除
+    const char* keyName = KeyMap_GetKey(&SceneMap, index);
+    if (keyName) free((void*)keyName);
+
+    // SceneMapのキー削除
+    for (size_t i = index; i + 1 < SceneMap.size; i++)
+        SceneMap.keys[i] = SceneMap.keys[i + 1];
+    SceneMap.size--;
+
+    // SceneRange削除
+    SceneRanges.erase(SceneRanges.begin() + index);
+
+    AddMessage(ConcatCStr("DeleteScene(): ", name));
+
+    // カレント修正
+    if (CurrentSceneIndex >= (int)SceneRanges.size())
+        CurrentSceneIndex = (int)SceneRanges.size() - 1;
 }
 
 void UpdateScene()
@@ -874,14 +968,45 @@ void DrawScene()
         Vec4 vec4Size = Vec4_Get(&GridPolygonSizeVec4, i);
         Vec4 vec4Angle = Vec4_Get(&GridPolygonAngleVec4, i);
 
-        grid->SetColor({ vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W });
-        grid->DrawGridPolygon(
+        grid->SetColor({ 1, 1, 1, 1 });
+        /*grid->DrawGridPolygon(
             VecInt_Get(&GridPolygonSides, i),
             { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
             { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
+            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }*/
+
+        grid->DrawGridPolygon(
+            VecInt_Get(&GridPolygonSides, i),
+            { 0, 0, 0 },
+            { vec4Size.X, vec4Size.Y, vec4Size.Z },
+            { 0, 0, 0 }
         );
     }
+}
+
+const char* GetCurrentSceneName()
+{
+    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneMap.size)
+        return "None";
+    return KeyMap_GetKey(&SceneMap, CurrentSceneIndex);
+}
+
+void ChangeScene(const char* name)
+{
+    int index = KeyMap_GetIndex(&SceneMap, name);
+    if (index == -1) {
+        AddMessage(ConcatCStr("error : ChangeScene - Scene not found: ", name));
+        return;
+    }
+
+    // 現在のScene終了処理（※Deleteしない）
+    AddMessage(ConcatCStr("Exiting Scene: ", GetCurrentSceneName()));
+
+    // 新Sceneへ切替
+    CurrentSceneIndex = index;
+    InitScene(name);
+
+    AddMessage(ConcatCStr("Changed Scene to: ", name));
 }
 
 void InitDo()
@@ -902,11 +1027,11 @@ void InitDo()
 	//Vec4初期化
 	Vec4_Init(&CameraPosVec4);
     Vec4_Init(&CameraLookVec4);
-    Vec4_Init(&UITBLRVec4);
-    Vec4_Init(&UIAngleVec4);
-    Vec4_Init(&World2dPosVec4);
-    Vec4_Init(&World2dSizeVec4);
-    Vec4_Init(&World2dAngleVec4);
+    Vec4_Init(&SpriteScreenTBLRVec4);
+    Vec4_Init(&SpriteScreenAngleVec4);
+    Vec4_Init(&SpriteWorldPosVec4);
+    Vec4_Init(&SpriteWorldSizeVec4);
+    Vec4_Init(&SpriteWorldAngleVec4);
     Vec4_Init(&ModelPosVec4);
     Vec4_Init(&ModelSizeVec4);
     Vec4_Init(&ModelAngleVec4);
@@ -949,16 +1074,27 @@ void InitDo()
 
     AddScene("Scene1");
     // グリッド登録など
+	AddGridBox("GridBox1");
+	SetGridBoxColor("GridBox1", 0.0f, 1.0f, 1.0f, 1.0f);
+
+    AddGridPolygon("GridPolygon1");
+    SetGridPolygonColor("GridPolygon1", 1.0f, 0.0f, 1.0f, 1.0f);
+    SetGridPolygonSides("GridPolygon1", 6);
+    SetGridPolygonPos("GridPolygon1", 2.0f, 0.0f, 2.0f);
     SceneEndPoint();
 
     AddScene("Scene2");
     // グリッド登録など
+	AddGridPolygon("GridPolygon1");
+	SetGridPolygonColor("GridPolygon1", 1.0f, 0.0f, 1.0f, 1.0f);
+	SetGridPolygonSides("GridPolygon1", 6);
+	SetGridPolygonPos("GridPolygon1", 2.0f, 0.0f, 2.0f);
     SceneEndPoint();
 
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "Scene2Cam");
 
-    ChangeScene("Scene1");
+    ChangeScene("Scene2");
 
     CreateCamera();
     SettingCameraOnce();
@@ -1019,11 +1155,11 @@ void ReleaseDo()
     //Vec4解放
     Vec4_Free(&CameraPosVec4);
     Vec4_Free(&CameraLookVec4);
-    Vec4_Free(&UITBLRVec4);
-    Vec4_Free(&UIAngleVec4);
-    Vec4_Free(&World2dPosVec4);
-    Vec4_Free(&World2dSizeVec4);
-    Vec4_Free(&World2dAngleVec4);
+    Vec4_Free(&SpriteScreenTBLRVec4);
+    Vec4_Free(&SpriteScreenAngleVec4);
+    Vec4_Free(&SpriteWorldPosVec4);
+    Vec4_Free(&SpriteWorldSizeVec4);
+    Vec4_Free(&SpriteWorldAngleVec4);
     Vec4_Free(&ModelPosVec4);
     Vec4_Free(&ModelSizeVec4);
     Vec4_Free(&ModelAngleVec4);
