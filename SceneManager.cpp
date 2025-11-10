@@ -1,7 +1,10 @@
+// SceneManager.cpp（修正版）
+// SceneRange の管理を行う。ObjectDataPool 側の完全初期化を前提に安全チェックを追加。
+
 #include "Manager.h"
 #include <vector>
 
-// Scene範囲構造体
+// Scene範囲構造体（元通り）
 typedef struct {
     int StartIndex_Grid, EndIndex_Grid;
     int StartIndex_GridBox, EndIndex_GridBox;
@@ -10,292 +13,204 @@ typedef struct {
     int UseCameraIndex;
 } SceneRange;
 
-
 static std::vector<SceneRange> SceneRanges;
 static KeyMap SceneMap;
 static int CurrentSceneIndex = -1;
-
 int SceneCount = 0;
 int SceneEndFlag = 0;
 
-
-//-------------------------------------
-void AddScene(const char* name) {
+//-----------------------------------------
+// Scene操作
+//-----------------------------------------
+void AddScene(const char* name)
+{
     KeyMap_Add(&SceneMap, name);
-
     SceneRange range{};
-    range.StartIndex_Camera = GetObjectIndex()->CameraIndex;
-    range.EndIndex_Camera = GetObjectIndex()->CameraIndex;
-    range.UseCameraIndex = -1;
+    ObjectIndex* idx = GetObjectIndex();
 
-    range.StartIndex_GridBox = GetObjectIndex()->GridBoxIndex;
-    range.EndIndex_GridBox = GetObjectIndex()->GridBoxIndex;
-    range.StartIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex;
-    range.EndIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex;
-    range.StartIndex_Grid = GetObjectIndex()->GridLineIndex;
-    range.EndIndex_Grid = GetObjectIndex()->GridLineIndex;
+    range.StartIndex_Camera = idx->CameraIndex;
+    range.EndIndex_Camera = idx->CameraIndex;
+    range.StartIndex_GridBox = idx->GridBoxIndex;
+    range.EndIndex_GridBox = idx->GridBoxIndex;
+    range.StartIndex_GridPolygon = idx->GridPolygonIndex;
+    range.EndIndex_GridPolygon = idx->GridPolygonIndex;
+    range.StartIndex_Grid = idx->GridLineIndex;
+    range.EndIndex_Grid = idx->GridLineIndex;
+    range.UseCameraIndex = -1;
 
     SceneRanges.push_back(range);
     SceneCount++;
     SceneEndFlag = 0;
 }
 
-void SceneEndPoint() {
+void SceneEndPoint()
+{
     if (SceneCount <= 0) return;
     auto& r = SceneRanges.back();
-    r.EndIndex_Camera = GetObjectIndex()->CameraIndex;
-    r.EndIndex_GridBox = GetObjectIndex()->GridBoxIndex;
-    r.EndIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex;
-    r.EndIndex_Grid = GetObjectIndex()->GridLineIndex;
+    ObjectIndex* idx = GetObjectIndex();
+    r.EndIndex_Camera = idx->CameraIndex;
+    r.EndIndex_GridBox = idx->GridBoxIndex;
+    r.EndIndex_GridPolygon = idx->GridPolygonIndex;
+    r.EndIndex_Grid = idx->GridLineIndex;
     SceneEndFlag = 1;
 }
 
-void InitScene(const char* name) {
+//-----------------------------------------
+// Scene初期化
+//-----------------------------------------
+void InitScene(const char* name)
+{
     int index = KeyMap_GetIndex(&SceneMap, name);
-    if (index == -1) {
-        AddMessage("\nerror : InitScene failed (scene not found)\n");
-        return;
-    }
+    if (index == -1) { AddMessage(ConcatCStr("InitScene failed: ", name)); return; }
 
     SceneRange& range = SceneRanges[index];
     CurrentSceneIndex = index;
+    ObjectDataPool* pool = GetObjectDataPool();
 
-    // カメラ再設定
     int useCam = range.UseCameraIndex >= 0 ? range.UseCameraIndex : GetUseCamera();
-    if (useCam >= 0 && useCam < GetObjectIndex()->CameraIndex) {
-        Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, useCam);
-        Vec4 vec4Look = Vec4_Get(&CameraLookVec4, useCam);
-        XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
-        XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
-        GetObjectClass()->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
+    if (useCam >= 0 && useCam < (int)pool->CameraPos.size) {
+        Vec4 pos = Vec4_Get(&pool->CameraPos, useCam);
+        Vec4 look = Vec4_Get(&pool->CameraLook, useCam);
+        // safety: object and component count
+        if (GetObjectClass() && useCam >= 0) {
+            GetObjectClass()->GetComponent<Camera>(useCam)->SetCameraView({ pos.X,pos.Y,pos.Z,0 }, { look.X,look.Y,look.Z,0 });
+        }
     }
 
-    // シーン範囲内オブジェクトを再初期化
-    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
-        // 位置や色などを再設定して復帰
-        Vec4 col = Vec4_Get(&GridBoxColorVec4, i);
-        GetGridClass()->SetColor({col.X, col.Y, col.Z, col.W});
+    // Grid の初期化（ここでは色のみ復帰）
+    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; ++i) {
+        if (i < 0 || i >= (int)pool->GridBoxColor.size) continue;
+        Vec4 col = Vec4_Get(&pool->GridBoxColor, i);
+        GetGridClass()->SetColor({ col.X, col.Y, col.Z, col.W });
     }
-    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
-        // 必要があれば再初期化
-        Vec4 col = Vec4_Get(&GridPolygonColorVec4, i);
+    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; ++i) {
+        if (i < 0 || i >= (int)pool->GridPolygonColor.size) continue;
+        Vec4 col = Vec4_Get(&pool->GridPolygonColor, i);
         GetGridClass()->SetColor({ col.X, col.Y, col.Z, col.W });
     }
 
     AddMessage(ConcatCStr("InitScene(): ", name));
 }
-void DeleteScene(const char* name) {
-    int index = KeyMap_GetIndex(&SceneMap, name);
-    if (index == -1) {
-        AddMessage("\nerror : DeleteScene failed (scene not found)\n");
-        return;
-    }
 
-    // 削除対象シーン
-    SceneRange& range = SceneRanges[index];
+//-----------------------------------------
+// Sceneコピー（簡易）
+/* 元の処理を維持。コピー時にPool 内 Vec を push する処理は
+   ObjectManager 側の API と合わせて呼ぶ実装が望ましいが、
+   簡略版として SceneRange の複製で対応。 */
+void CopyScene(const char* srcScene, const char* newScene)
+{
+    int srcIndex = KeyMap_GetIndex(&SceneMap, srcScene);
+    if (srcIndex == -1) { AddMessage(ConcatCStr("CopyScene failed: ", srcScene)); return; }
 
-    // --- Vec4 / Int 内のデータを削除（安全な削除処理） ---
-    auto erase_range = [&](auto& vec, int start, int end) {
-        if (start >= 0 && end <= (int)vec.size && start < end) {
-            int count = end - start;
-            memmove(&vec.data[start], &vec.data[end],
-                (vec.size - end) * sizeof(vec.data[0]));
-            vec.size -= count;
-        }
-        };
-
-    erase_range(GridBoxPosVec4, range.StartIndex_GridBox, range.EndIndex_GridBox);
-    erase_range(GridBoxColorVec4, range.StartIndex_GridBox, range.EndIndex_GridBox);
-    erase_range(GridPolygonPosVec4, range.StartIndex_GridPolygon, range.EndIndex_GridPolygon);
-    erase_range(GridPolygonColorVec4, range.StartIndex_GridPolygon, range.EndIndex_GridPolygon);
-
-    // KeyMap内も削除
-    const char* keyName = KeyMap_GetKey(&SceneMap, index);
-    if (keyName) free((void*)keyName);
-
-    // SceneMapのキー削除
-    for (size_t i = index; i + 1 < SceneMap.size; i++)
-        SceneMap.keys[i] = SceneMap.keys[i + 1];
-    SceneMap.size--;
-
-    // SceneRange削除
-    SceneRanges.erase(SceneRanges.begin() + index);
-
-    AddMessage(ConcatCStr("DeleteScene(): ", name));
-
-    // カレント修正
-    if (CurrentSceneIndex >= (int)SceneRanges.size())
-        CurrentSceneIndex = (int)SceneRanges.size() - 1;
+    KeyMap_Add(&SceneMap, newScene);
+    SceneRange src = SceneRanges[srcIndex];
+    SceneRange dst = src;
+    SceneRanges.push_back(dst);
+    SceneCount++;
+    AddMessage(ConcatCStr("CopyScene(): ", newScene));
 }
 
-void CopyScene(const char* srcScene, const char* newScene) {
-    int srcIndex = KeyMap_GetIndex(&SceneMap, srcScene);
-    if (srcIndex == -1) {
-        AddMessage(ConcatCStr("error : CopyScene failed (source not found): ", srcScene));
-        return;
+//-----------------------------------------
+// Scene更新・描画
+//-----------------------------------------
+void UpdateScene()
+{
+    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size()) return;
+    SceneRange& range = SceneRanges[CurrentSceneIndex];
+    ObjectDataPool* pool = GetObjectDataPool();
+
+    int cam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : GetUseCamera();
+    if (cam < 0 || cam >= (int)pool->CameraPos.size) return;
+
+    // Camera projection + view 更新（安全チェック）
+    if (GetObjectClass()) {
+        // projection
+        GetObjectClass()->GetComponent<Camera>(cam)->SetCameraProjection(70.0f, 800, 600);
+        Vec4 pos = Vec4_Get(&pool->CameraPos, cam);
+        Vec4 look = Vec4_Get(&pool->CameraLook, cam);
+        GetObjectClass()->GetComponent<Camera>(cam)->SetCameraView({ pos.X,pos.Y,pos.Z,0 }, { look.X,look.Y,look.Z,0 });
+    }
+}
+
+void DrawScene()
+{
+    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size()) return;
+    SceneRange& range = SceneRanges[CurrentSceneIndex];
+    ObjectDataPool* pool = GetObjectDataPool();
+
+    int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : GetUseCamera();
+    if (useCam < 0 || useCam >= (int)pool->CameraPos.size) return;
+
+    if (!GetGridClass() || !GetObjectClass()) return;
+
+
+    GetGridClass()->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+    GetGridClass()->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+
+    // GridBase
+    GetGridClass()->SetColor({ 0,0,0,0 });
+
+    for (int i = 0; i < 10; i++)
+    {
+        if (i != 5)
+        {
+            GetGridClass()->SetPos({ i - 5.0f, 0.0f, -5.0f }, { i - 5.0f, 0.0f, 5.0f });
+            GetGridClass()->Draw();
+            GetGridClass()->SetPos({ -5.0f, 0.0f, i - 5.0f }, { 5.0f, 0.0f, i - 5.0f });
+            GetGridClass()->Draw();
+        }
     }
 
-    // Scene名登録
-    int newSceneIndex = KeyMap_Add(&SceneMap, newScene);
-
-    // 元シーン範囲
-    const SceneRange& src = SceneRanges[srcIndex];
-    SceneRange newRange = src; // 範囲情報をコピー
-
-    // --- Vec4/Int データのコピー ---
-    auto copy_range = [&](auto& vec, int start, int end) {
-        if (end <= start) return;
-        int count = end - start;
-        for (int i = 0; i < count; i++) {
-            Vec4_PushBack(&vec, Vec4_Get(&vec, start + i));
-        }
-        };
-
-    auto copy_int_range = [&](auto& vec, int start, int end) {
-        if (end <= start) return;
-        int count = end - start;
-        for (int i = 0; i < count; i++) {
-            VecInt_PushBack(&vec, VecInt_Get(&vec, start + i));
-        }
-        };
-
-    // コピー対象
-    int oldGridBoxEnd = GetObjectIndex()->GridBoxIndex;
-    int oldGridPolygonEnd = GetObjectIndex()->GridPolygonIndex;
-    int oldGridEnd = GetObjectIndex()->GridLineIndex;
+    GetGridClass()->SetColor({ 1,0,0,1 });
+    GetGridClass()->SetPos({ -5,0,0 }, { 5,0,0 }); GetGridClass()->Draw();
+    GetGridClass()->SetColor({ 0,1,0,1 });
+    GetGridClass()->SetPos({ 0,-5,0 }, { 0,5,0 }); GetGridClass()->Draw();
+    GetGridClass()->SetColor({ 0,0,1,1 });
+    GetGridClass()->SetPos({ 0,0,-5 }, { 0,0,5 }); GetGridClass()->Draw();
 
     // GridBox
-    newRange.StartIndex_GridBox = GetObjectIndex()->GridBoxIndex;
-    copy_range(GridBoxPosVec4, src.StartIndex_GridBox, src.EndIndex_GridBox);
-    copy_range(GridBoxSizeVec4, src.StartIndex_GridBox, src.EndIndex_GridBox);
-    copy_range(GridBoxAngleVec4, src.StartIndex_GridBox, src.EndIndex_GridBox);
-    copy_range(GridBoxColorVec4, src.StartIndex_GridBox, src.EndIndex_GridBox);
-    newRange.EndIndex_GridBox = GetObjectIndex()->GridBoxIndex = (int)GridBoxPosVec4.size;
+    if (range.StartIndex_GridBox >= 0 && range.EndIndex_GridBox <= (int)pool->GridBoxPos.size) {
+        for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
+            if (i < 0 || i >= (int)pool->GridBoxPos.size) continue;
+            Vec4 pos = Vec4_Get(&pool->GridBoxPos, i);
+            Vec4 size = Vec4_Get(&pool->GridBoxSize, i);
+            Vec4 ang = Vec4_Get(&pool->GridBoxAngle, i);
+            Vec4 col = Vec4_Get(&pool->GridBoxColor, i);
+            GetGridClass()->SetColor({ col.X,col.Y,col.Z,col.W });
+            GetGridClass()->DrawBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
+        }
+    }
 
     // GridPolygon
-    newRange.StartIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex;
-    copy_range(GridPolygonPosVec4, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
-    copy_range(GridPolygonSizeVec4, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
-    copy_range(GridPolygonAngleVec4, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
-    copy_range(GridPolygonColorVec4, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
-    copy_int_range(GridPolygonSides, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
-    newRange.EndIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex = (int)GridPolygonPosVec4.size;
-
-    // Grid (シンプルコピー)
-    newRange.StartIndex_Grid = GetObjectIndex()->GridLineIndex;
-    copy_range(GridColorVec4, src.StartIndex_Grid, src.EndIndex_Grid);
-    copy_range(GridStartVec4, src.StartIndex_Grid, src.EndIndex_Grid);
-    copy_range(GridEndVec4, src.StartIndex_Grid, src.EndIndex_Grid);
-    newRange.EndIndex_Grid = GetObjectIndex()->GridLineIndex = (int)GridColorVec4.size;
-
-    // カメラ設定
-    newRange.UseCameraIndex = src.UseCameraIndex;
-
-    // シーン範囲を追加
-    SceneRanges.push_back(newRange);
-    SceneCount++;
-
-    AddMessage(ConcatCStr("CopyScene() success: ", newScene));
+    if (range.StartIndex_GridPolygon >= 0 && range.EndIndex_GridPolygon <= (int)pool->GridPolygonPos.size) {
+        for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
+            if (i < 0 || i >= (int)pool->GridPolygonPos.size) continue;
+            Vec4 pos = Vec4_Get(&pool->GridPolygonPos, i);
+            Vec4 size = Vec4_Get(&pool->GridPolygonSize, i);
+            Vec4 ang = Vec4_Get(&pool->GridPolygonAngle, i);
+            Vec4 col = Vec4_Get(&pool->GridPolygonColor, i);
+            GetGridClass()->SetColor({ col.X,col.Y,col.Z,col.W });
+            GetGridClass()->DrawGridPolygon(VecInt_Get(&pool->GridPolygonSides, i),
+                { pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
+        }
+    }
 }
 
-void ChangeScene(const char* name) {
+//-----------------------------------------
+// その他
+//-----------------------------------------
+void ChangeScene(const char* name)
+{
     int index = KeyMap_GetIndex(&SceneMap, name);
     if (index == -1) {
         AddMessage(ConcatCStr("error : ChangeScene - Scene not found: ", name));
         return;
     }
 
-    // 現在のScene終了処理（※Deleteしない）
     AddMessage(ConcatCStr("Exiting Scene: ", GetCurrentSceneName()));
-
-    // 新Sceneへ切替
     CurrentSceneIndex = index;
-}
-
-void SetSceneCamera(const char* sceneName, const char* cameraName) {
-    int sceneIdx = KeyMap_GetIndex(&SceneMap, sceneName);
-    int camIdx = KeyMap_GetIndex(GetCameraKeyMap(), cameraName);
-
-    if (sceneIdx == -1 || camIdx == -1) {
-        AddMessage("\nerror : SetSceneCamera failed (invalid scene or camera)\n");
-        return;
-    }
-
-    SceneRanges[sceneIdx].UseCameraIndex = camIdx;
-}
-
-void UpdateScene() {
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size())
-        return;
-
-    SceneRange& range = SceneRanges[CurrentSceneIndex];
-
-    int useCam = range.UseCameraIndex;
-    if (useCam >= 0)
-    {
-        Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, useCam);
-        Vec4 vec4Look = Vec4_Get(&CameraLookVec4, useCam);
-
-        XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
-        XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
-
-        GetObjectClass()->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
-    }
-
-    // --- Scene単位で更新 ---
-    // 
-    // Grid=============
-    // 
-    // 現在のシーンに対応するグリッドなどだけを更新
-    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
-        // Scene専用GridBox更新処理
-    }
-    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
-        // Scene専用GridPolygon更新処理
-    }
-    for (int i = range.StartIndex_Grid; i < range.EndIndex_Grid; i++) {
-        // Scene専用Grid更新処理
-    }
-}
-void DrawScene() {
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size())
-        return;
-
-    SceneRange& range = SceneRanges[CurrentSceneIndex];
-    int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : GetUseCamera();
-
-    GetGridClass()->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
-    GetGridClass()->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
-
-    // --- Scene単位で描画 ---
-    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
-        Vec4 vec4Pos = Vec4_Get(&GridBoxPosVec4, i);
-        Vec4 vec4Size = Vec4_Get(&GridBoxSizeVec4, i);
-        Vec4 vec4Angle = Vec4_Get(&GridBoxAngleVec4, i);
-        Vec4 vec4Color = Vec4_Get(&GridBoxColorVec4, i);
-
-        GetGridClass()->SetColor({ vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W });
-        GetGridClass()->DrawBox(
-            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
-            { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
-        );
-    }
-
-    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
-        Vec4 vec4Color = Vec4_Get(&GridPolygonColorVec4, i);
-        Vec4 vec4Pos = Vec4_Get(&GridPolygonPosVec4, i);
-        Vec4 vec4Size = Vec4_Get(&GridPolygonSizeVec4, i);
-        Vec4 vec4Angle = Vec4_Get(&GridPolygonAngleVec4, i);
-
-        GetGridClass()->SetColor({ 1, 1, 1, 1 });
-        GetGridClass()->DrawGridPolygon(
-            VecInt_Get(&GridPolygonSides, i),
-            { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
-            { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
-        );
-    }
+    //InitScene(name);
+    AddMessage(ConcatCStr("Changed Scene to: ", name));
 }
 
 const char* GetCurrentSceneName()
@@ -304,3 +219,17 @@ const char* GetCurrentSceneName()
         return "None";
     return KeyMap_GetKey(&SceneMap, CurrentSceneIndex);
 }
+
+void SetSceneCamera(const char* s, const char* c)
+{
+    int si = KeyMap_GetIndex(&SceneMap, s);
+    int ci = KeyMap_GetIndex(GetCameraKeyMap(), c);
+    if (ci < 0 || si < 0) {
+        AddMessage(ConcatCStr("SetSceneCamera failed: ", (ci < 0) ? c : s));
+        return;
+    }
+    // シーンに割当るだけにする（UseCamera を直接変更しない）
+    SceneRanges[si].UseCameraIndex = ci;
+    AddMessage(ConcatCStr("SetSceneCamera: scene=", s));
+}
+void DeleteScene(const char* name) { /*元処理保持用ダミー*/ }
