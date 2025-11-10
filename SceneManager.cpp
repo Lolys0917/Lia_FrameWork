@@ -1,26 +1,39 @@
-#include "SceneManager.h"
-#include "UtilManager.h"
+#include "Manager.h"
 #include <vector>
+
+// Scene範囲構造体
+typedef struct {
+    int StartIndex_Grid, EndIndex_Grid;
+    int StartIndex_GridBox, EndIndex_GridBox;
+    int StartIndex_GridPolygon, EndIndex_GridPolygon;
+    int StartIndex_Camera, EndIndex_Camera;
+    int UseCameraIndex;
+} SceneRange;
+
 
 static std::vector<SceneRange> SceneRanges;
 static KeyMap SceneMap;
 static int CurrentSceneIndex = -1;
+
+int SceneCount = 0;
+int SceneEndFlag = 0;
+
 
 //-------------------------------------
 void AddScene(const char* name) {
     KeyMap_Add(&SceneMap, name);
 
     SceneRange range{};
-    range.StartIndex_Camera = CameraIndex;
-    range.EndIndex_Camera = CameraIndex;
+    range.StartIndex_Camera = GetObjectIndex()->CameraIndex;
+    range.EndIndex_Camera = GetObjectIndex()->CameraIndex;
     range.UseCameraIndex = -1;
 
-    range.StartIndex_GridBox = GridBoxIndex;
-    range.EndIndex_GridBox = GridBoxIndex;
-    range.StartIndex_GridPolygon = GridPolygonIndex;
-    range.EndIndex_GridPolygon = GridPolygonIndex;
-    range.StartIndex_Grid = GridIndex;
-    range.EndIndex_Grid = GridIndex;
+    range.StartIndex_GridBox = GetObjectIndex()->GridBoxIndex;
+    range.EndIndex_GridBox = GetObjectIndex()->GridBoxIndex;
+    range.StartIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex;
+    range.EndIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex;
+    range.StartIndex_Grid = GetObjectIndex()->GridLineIndex;
+    range.EndIndex_Grid = GetObjectIndex()->GridLineIndex;
 
     SceneRanges.push_back(range);
     SceneCount++;
@@ -30,10 +43,10 @@ void AddScene(const char* name) {
 void SceneEndPoint() {
     if (SceneCount <= 0) return;
     auto& r = SceneRanges.back();
-    r.EndIndex_Camera = CameraIndex;
-    r.EndIndex_GridBox = GridBoxIndex;
-    r.EndIndex_GridPolygon = GridPolygonIndex;
-    r.EndIndex_Grid = GridIndex;
+    r.EndIndex_Camera = GetObjectIndex()->CameraIndex;
+    r.EndIndex_GridBox = GetObjectIndex()->GridBoxIndex;
+    r.EndIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex;
+    r.EndIndex_Grid = GetObjectIndex()->GridLineIndex;
     SceneEndFlag = 1;
 }
 
@@ -48,25 +61,25 @@ void InitScene(const char* name) {
     CurrentSceneIndex = index;
 
     // カメラ再設定
-    int useCam = range.UseCameraIndex >= 0 ? range.UseCameraIndex : UseCamera;
-    if (useCam >= 0 && useCam < CameraIndex) {
+    int useCam = range.UseCameraIndex >= 0 ? range.UseCameraIndex : GetUseCamera();
+    if (useCam >= 0 && useCam < GetObjectIndex()->CameraIndex) {
         Vec4 vec4Pos = Vec4_Get(&CameraPosVec4, useCam);
         Vec4 vec4Look = Vec4_Get(&CameraLookVec4, useCam);
         XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
         XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
-        object->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
+        GetObjectClass()->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
     }
 
     // シーン範囲内オブジェクトを再初期化
     for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
         // 位置や色などを再設定して復帰
         Vec4 col = Vec4_Get(&GridBoxColorVec4, i);
-        grid->SetColor({ col.X, col.Y, col.Z, col.W });
+        GetGridClass()->SetColor({col.X, col.Y, col.Z, col.W});
     }
     for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
         // 必要があれば再初期化
         Vec4 col = Vec4_Get(&GridPolygonColorVec4, i);
-        grid->SetColor({ col.X, col.Y, col.Z, col.W });
+        GetGridClass()->SetColor({ col.X, col.Y, col.Z, col.W });
     }
 
     AddMessage(ConcatCStr("InitScene(): ", name));
@@ -115,15 +128,15 @@ void DeleteScene(const char* name) {
         CurrentSceneIndex = (int)SceneRanges.size() - 1;
 }
 
-void CopyScene(const char* src, const char* dest) {
-    int srcIndex = KeyMap_GetIndex(&SceneMap, srcName);
+void CopyScene(const char* srcScene, const char* newScene) {
+    int srcIndex = KeyMap_GetIndex(&SceneMap, srcScene);
     if (srcIndex == -1) {
-        AddMessage(ConcatCStr("error : CopyScene failed (source not found): ", srcName));
+        AddMessage(ConcatCStr("error : CopyScene failed (source not found): ", srcScene));
         return;
     }
 
     // Scene名登録
-    int newSceneIndex = KeyMap_Add(&SceneMap, newName);
+    int newSceneIndex = KeyMap_Add(&SceneMap, newScene);
 
     // 元シーン範囲
     const SceneRange& src = SceneRanges[srcIndex];
@@ -147,33 +160,33 @@ void CopyScene(const char* src, const char* dest) {
         };
 
     // コピー対象
-    int oldGridBoxEnd = GridBoxIndex;
-    int oldGridPolygonEnd = GridPolygonIndex;
-    int oldGridEnd = GridIndex;
+    int oldGridBoxEnd = GetObjectIndex()->GridBoxIndex;
+    int oldGridPolygonEnd = GetObjectIndex()->GridPolygonIndex;
+    int oldGridEnd = GetObjectIndex()->GridLineIndex;
 
     // GridBox
-    newRange.StartIndex_GridBox = GridBoxIndex;
+    newRange.StartIndex_GridBox = GetObjectIndex()->GridBoxIndex;
     copy_range(GridBoxPosVec4, src.StartIndex_GridBox, src.EndIndex_GridBox);
     copy_range(GridBoxSizeVec4, src.StartIndex_GridBox, src.EndIndex_GridBox);
     copy_range(GridBoxAngleVec4, src.StartIndex_GridBox, src.EndIndex_GridBox);
     copy_range(GridBoxColorVec4, src.StartIndex_GridBox, src.EndIndex_GridBox);
-    newRange.EndIndex_GridBox = GridBoxIndex = (int)GridBoxPosVec4.size;
+    newRange.EndIndex_GridBox = GetObjectIndex()->GridBoxIndex = (int)GridBoxPosVec4.size;
 
     // GridPolygon
-    newRange.StartIndex_GridPolygon = GridPolygonIndex;
+    newRange.StartIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex;
     copy_range(GridPolygonPosVec4, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
     copy_range(GridPolygonSizeVec4, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
     copy_range(GridPolygonAngleVec4, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
     copy_range(GridPolygonColorVec4, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
     copy_int_range(GridPolygonSides, src.StartIndex_GridPolygon, src.EndIndex_GridPolygon);
-    newRange.EndIndex_GridPolygon = GridPolygonIndex = (int)GridPolygonPosVec4.size;
+    newRange.EndIndex_GridPolygon = GetObjectIndex()->GridPolygonIndex = (int)GridPolygonPosVec4.size;
 
     // Grid (シンプルコピー)
-    newRange.StartIndex_Grid = GridIndex;
+    newRange.StartIndex_Grid = GetObjectIndex()->GridLineIndex;
     copy_range(GridColorVec4, src.StartIndex_Grid, src.EndIndex_Grid);
     copy_range(GridStartVec4, src.StartIndex_Grid, src.EndIndex_Grid);
     copy_range(GridEndVec4, src.StartIndex_Grid, src.EndIndex_Grid);
-    newRange.EndIndex_Grid = GridIndex = (int)GridColorVec4.size;
+    newRange.EndIndex_Grid = GetObjectIndex()->GridLineIndex = (int)GridColorVec4.size;
 
     // カメラ設定
     newRange.UseCameraIndex = src.UseCameraIndex;
@@ -182,7 +195,7 @@ void CopyScene(const char* src, const char* dest) {
     SceneRanges.push_back(newRange);
     SceneCount++;
 
-    AddMessage(ConcatCStr("CopyScene() success: ", newName));
+    AddMessage(ConcatCStr("CopyScene() success: ", newScene));
 }
 
 void ChangeScene(const char* name) {
@@ -199,9 +212,9 @@ void ChangeScene(const char* name) {
     CurrentSceneIndex = index;
 }
 
-void SetSceneCamera(const char* scene, const char* camera) {
+void SetSceneCamera(const char* sceneName, const char* cameraName) {
     int sceneIdx = KeyMap_GetIndex(&SceneMap, sceneName);
-    int camIdx = KeyMap_GetIndex(&CameraMap, cameraName);
+    int camIdx = KeyMap_GetIndex(GetCameraKeyMap(), cameraName);
 
     if (sceneIdx == -1 || camIdx == -1) {
         AddMessage("\nerror : SetSceneCamera failed (invalid scene or camera)\n");
@@ -226,7 +239,7 @@ void UpdateScene() {
         XMFLOAT4 CamPos = { vec4Pos.X, vec4Pos.Y, vec4Pos.Z, 0.0f };
         XMFLOAT4 CamLook = { vec4Look.X, vec4Look.Y, vec4Look.Z, 0.0f };
 
-        object->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
+        GetObjectClass()->GetComponent<Camera>(useCam)->SetCameraView(CamPos, CamLook);
     }
 
     // --- Scene単位で更新 ---
@@ -249,10 +262,10 @@ void DrawScene() {
         return;
 
     SceneRange& range = SceneRanges[CurrentSceneIndex];
-    int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : UseCamera;
+    int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : GetUseCamera();
 
-    grid->SetProj(object->GetComponent<Camera>(useCam)->GetProjection());
-    grid->SetView(object->GetComponent<Camera>(useCam)->GetView());
+    GetGridClass()->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+    GetGridClass()->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
 
     // --- Scene単位で描画 ---
     for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
@@ -261,8 +274,8 @@ void DrawScene() {
         Vec4 vec4Angle = Vec4_Get(&GridBoxAngleVec4, i);
         Vec4 vec4Color = Vec4_Get(&GridBoxColorVec4, i);
 
-        grid->SetColor({ vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W });
-        grid->DrawBox(
+        GetGridClass()->SetColor({ vec4Color.X, vec4Color.Y, vec4Color.Z, vec4Color.W });
+        GetGridClass()->DrawBox(
             { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
             { vec4Size.X, vec4Size.Y, vec4Size.Z },
             { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
@@ -275,18 +288,12 @@ void DrawScene() {
         Vec4 vec4Size = Vec4_Get(&GridPolygonSizeVec4, i);
         Vec4 vec4Angle = Vec4_Get(&GridPolygonAngleVec4, i);
 
-        grid->SetColor({ 1, 1, 1, 1 });
-        /*grid->DrawGridPolygon(
+        GetGridClass()->SetColor({ 1, 1, 1, 1 });
+        GetGridClass()->DrawGridPolygon(
             VecInt_Get(&GridPolygonSides, i),
             { vec4Pos.X, vec4Pos.Y, vec4Pos.Z },
             { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }*/
-
-        grid->DrawGridPolygon(
-            VecInt_Get(&GridPolygonSides, i),
-            { 0, 0, 0 },
-            { vec4Size.X, vec4Size.Y, vec4Size.Z },
-            { 0, 0, 0 }
+            { vec4Angle.X, vec4Angle.Y, vec4Angle.Z }
         );
     }
 }

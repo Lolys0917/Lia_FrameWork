@@ -1,0 +1,191 @@
+//Manager関連を統括するヘッダーファイル
+//Manager.h
+// |  Manager関連の定義
+// |  SceneManager.cpp
+// |  ObjectManager.cpp
+// |  UtilManager.cpp
+// |  AssetManager.cpp
+// |  AudioManager.cpp
+// |  InputManager.cpp
+// |  EffectManager.cpp
+// |  ShaderManager.cpp
+// __________________________________________
+
+#pragma once
+
+// Include________________________
+#include "Grid.h"
+#include "Object.h"
+
+// Define_________________________
+
+// 構造体定義_____________________
+// Vec4構造体
+typedef struct { float X, Y, Z, W; } Vec4;
+// ベクター型構造体
+typedef struct { Vec4* data;  size_t size; size_t capacity; } Vec4Vector;
+typedef struct { char** data; size_t size; size_t capacity; } CharVector;
+typedef struct { int* data;   size_t size; size_t capacity; } IntVector;
+typedef struct { bool* data;  size_t size; size_t capacity; } BoolVector;
+typedef struct { char** keys; size_t size; size_t capacity; } KeyMap;
+struct ObjectDataPool {
+    // Camera
+    Vec4Vector CameraPos;
+    Vec4Vector CameraLook;
+    // UI
+    Vec4Vector UITBLR;
+    Vec4Vector UIAngle;
+    Vec4Vector UIColor;
+    // World2D
+    Vec4Vector World2dPos;
+    Vec4Vector World2dSize;
+    Vec4Vector World2dAngle;
+    // Model
+    Vec4Vector ModelPos;
+    Vec4Vector ModelSize;
+    Vec4Vector ModelAngle;
+    // Collider
+    Vec4Vector BoxColliderPos;
+    Vec4Vector BoxColliderSize;
+    Vec4Vector BoxColliderAngle;
+    // Grid
+    Vec4Vector GridBoxPos;
+    Vec4Vector GridBoxSize;
+    Vec4Vector GridBoxAngle;
+    Vec4Vector GridBoxColor;
+    Vec4Vector GridPolygonPos;
+    Vec4Vector GridPolygonSize;
+    Vec4Vector GridPolygonAngle;
+    Vec4Vector GridPolygonColor;
+};
+
+// 実体をグローバルに保持（実際のVec4Vectorの実体）
+static ObjectDataPool g_ObjectPool;
+
+// ObjectIndex構造体
+typedef struct {
+	int CameraIndex;        //Camera_________
+    int SpriteWorldIndex;	//Sprite_________
+    int SpriteScreenIndex;
+	int ModelIndex;			//Model__________
+	int BoxColliderIndex;	//Collider_______
+	int SphereColliderIndex;
+	int CapsuleColliderIndex;
+	int GridLineIndex;      //Grid___________
+	int GridBoxIndex;
+	int GridPolygonIndex;
+	int GridSphereIndex;
+	int GridCapsuleIndex;
+	int EffectIndex;		//Effect_________
+} ObjectIndex;
+enum class IndexType {
+	All,
+	Camera,
+	SpriteWorld,
+	SpriteScreen,
+	Model,
+	BoxCollider,
+	SphereCollider,
+	CapsuleCollider,
+	GridLine,
+	GridBox,
+	GridPolygon,
+	GridSphere,
+	GridCapsule,
+	Effect
+};
+
+
+  ///////////////////
+ // ObjectManager //
+///////////////////
+//|| 管理   ||_______________________
+void InitDo();
+void UpdateDo();
+void DrawDo();
+void ReleaseDo();
+//|| Camera ||_______________________
+void AddCamera(const char* name);
+void SetCameraPos(const char* name, float x, float y, float z);
+void SetCameraLook(const char* name, float x, float y, float z);
+void UseCameraSet(const char* name);
+void CreateCamera();
+int GetUseCamera();
+//void SettingCameraOnce();
+//|| Grid   ||_______________________
+// Grid Line
+
+// Grid Box
+void AddGridBox(const char* name);
+void SetGridBoxPos(const char* name, float x, float y, float z);
+void SetGridBoxSize(const char* name, float x, float y, float z);
+void SetGridBoxColor(const char* name, float R, float G, float B, float A);
+// Grid Polygon
+void AddGridPolygon(const char* name);
+void SetGridPolygonPos(const char* name, float x, float y, float z);
+void SetGridPolygonColor(const char* name, float R, float G, float B, float A);
+void SetGridPolygonSides(const char* name, int sides);
+
+void DrawGridBase();
+
+void OutObjectIndex(ObjectIndex* out);
+ObjectIndex* GetObjectIndex();
+
+Object* GetObjectClass();
+Grid* GetGridClass();
+
+KeyMap* GetCameraKeyMap();
+
+ObjectDataPool* GetObjectDataPool();
+
+  //////////////////
+ // SceneManager //
+//////////////////
+void AddScene(const char* name);
+void SceneEndPoint();
+void ChangeScene(const char* name);
+void InitScene(const char* name);
+void DeleteScene(const char* name);
+void CopyScene(const char* src, const char* dest);
+void SetSceneCamera(const char* scene, const char* camera);
+void UpdateScene();
+void DrawScene();
+const char* GetCurrentSceneName();
+
+  //////////////////
+ // UtilManager  //
+//////////////////
+//|| ユーティリティ ||________________
+void AddMessage(const char* sent);
+const char* ConcatCStr(const char* str1, const char* str2);
+void ConcatCStrFree(const char* str);
+//|| Vec4 系 ||_______________________
+void Vec4_Init(Vec4Vector* vec);
+void Vec4_PushBack(Vec4Vector* vec, Vec4 value);
+void Vec4_Set(Vec4Vector* vec, size_t index, Vec4 value);
+Vec4 Vec4_Get(Vec4Vector* vec, size_t index);
+void Vec4_Free(Vec4Vector* vec);
+//|| Char 系 ||_______________________
+void VecC_Init(CharVector* vec);
+void VecC_PushBack(CharVector* vec, const char* str);
+void VecC_Set(CharVector* vec, size_t index, const char* str);
+const char* VecC_Get(CharVector* vec, size_t index);
+void VecC_Free(CharVector* vec);
+//|| Int 系 ||________________________
+void VecInt_Init(IntVector* vec);
+void VecInt_PushBack(IntVector* vec, int value);
+void VecInt_Set(IntVector* vec, size_t index, int value);
+int VecInt_Get(IntVector* vec, size_t index);
+void VecInt_Free(IntVector* vec);
+//|| Bool 系 ||_______________________
+void VecBool_Init(BoolVector* vec);
+void VecBool_PushBack(BoolVector* vec, bool value);
+void VecBool_Set(BoolVector* vec, size_t index, bool value);
+bool VecBool_Get(BoolVector* vec, size_t index);
+void VecBool_Free(BoolVector* vec);
+//|| KeyMap 系 ||______________________
+void KeyMap_Init(KeyMap* map);
+int KeyMap_Add(KeyMap* map, const char* key);
+int KeyMap_GetIndex(KeyMap* map, const char* key);
+const char* KeyMap_GetKey(KeyMap* map, int index);
+void KeyMap_Free(KeyMap* map);

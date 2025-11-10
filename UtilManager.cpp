@@ -1,4 +1,7 @@
-#include "UtilManager.h"
+#include "Manager.h"
+#include <Windows.h>
+#include <string>
+#include <vector>
 #include <cstdio>
 
 #define MAX_MESSAGE 256

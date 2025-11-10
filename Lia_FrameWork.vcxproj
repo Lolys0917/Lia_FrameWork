@@ -153,6 +153,7 @@
     <ClInclude Include="Grid.h" />
     <ClInclude Include="ComponentModel.h" />
     <ClInclude Include="Main.h" />
+    <ClInclude Include="Manager.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="ObjectManager.h" />
     <ClInclude Include="ComponentSpriteScreen.h" />

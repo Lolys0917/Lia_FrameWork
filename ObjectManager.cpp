@@ -1,14 +1,14 @@
-#include "ObjectManager.h"
-#include "UtilManager.h"
-#include "SceneManager.h"
-#include "Grid.h"
-#include "Object.h"
+#include "Manager.h"
 #include "ComponentCamera.h"
+
 
 static Grid* grid = nullptr;
 static Object* object = nullptr;
 
+static ObjectIndex ObjectIdx;
+
 //Vec4éŒ¾ __________________________
+
 //ƒJƒƒ‰—pVec4
 static Vec4Vector CameraPosVec4;
 static Vec4Vector CameraLookVec4;
@@ -336,4 +336,40 @@ void ReleaseDo() {
     KeyMap_Free(&World2dMap);
     KeyMap_Free(&UIMap);
     KeyMap_Free(&BoxColliderMap);
+}
+
+//Žæ“¾—pŠÖ” __________________________
+
+ObjectDataPool* GetObjectDataPool() {
+    return &g_ObjectPool;
+}
+void OutObjectIndex(ObjectIndex* out) {
+	out->CameraIndex            = ObjectIdx.CameraIndex;
+	out->SpriteWorldIndex       = ObjectIdx.SpriteWorldIndex;
+	out->SpriteScreenIndex      = ObjectIdx.SpriteScreenIndex;
+	out->ModelIndex             = ObjectIdx.ModelIndex;
+	out->BoxColliderIndex       = ObjectIdx.BoxColliderIndex;
+	out->SphereColliderIndex    = ObjectIdx.SphereColliderIndex;
+	out->CapsuleColliderIndex   = ObjectIdx.CapsuleColliderIndex;
+	out->GridLineIndex          = ObjectIdx.GridLineIndex;
+	out->GridBoxIndex           = ObjectIdx.GridBoxIndex;
+	out->GridPolygonIndex       = ObjectIdx.GridPolygonIndex;
+	out->GridSphereIndex        = ObjectIdx.GridSphereIndex;
+	out->GridCapsuleIndex       = ObjectIdx.GridCapsuleIndex;
+	out->EffectIndex            = ObjectIdx.EffectIndex;
+}
+ObjectIndex* GetObjectIndex() {
+    return &ObjectIdx;
+}
+int GetUseCamera() {
+    return UseCamera;
+}
+Object* GetObjectClass() {
+    return object;
+}
+Grid* GetGridClass() {
+    return grid;
+}
+KeyMap* GetCameraKeyMap() {
+    return &CameraMap;
 }

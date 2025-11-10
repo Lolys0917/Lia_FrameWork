@@ -104,6 +104,9 @@
     <ClInclude Include="UtilManager.h">
       <Filter>ソース ファイル\Manager</Filter>
     </ClInclude>
+    <ClInclude Include="Manager.h">
+      <Filter>ソース ファイル\Manager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ObjectMemo.txt" />
