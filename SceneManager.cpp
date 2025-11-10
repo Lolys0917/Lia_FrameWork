@@ -1,5 +1,6 @@
 // SceneManager.cpp（修正版）
 // SceneRange の管理を行う。ObjectDataPool 側の完全初期化を前提に安全チェックを追加。
+// Objectにインデックスを割り振り、Sceneごとに管理する仕組みを提供。
 
 #include "Manager.h"
 #include <vector>

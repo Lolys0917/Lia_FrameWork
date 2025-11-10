@@ -134,6 +134,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AssetLoad.cpp" />
+    <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="ComponentCamera.cpp" />
     <ClCompile Include="ComponentSpriteScreen.cpp" />
     <ClCompile Include="ComponentSpriteWorld.h" />

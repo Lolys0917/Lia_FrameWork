@@ -1,5 +1,10 @@
 // ObjectManager.cpp
 // 修正版：ObjectDataPool の全フィールド初期化／解放、ObjectIdx 同期、境界チェックなどを追加
+// Objectの作成・管理
+// Componentの管理を行う
+// 更新時にユーザーによる操作を反映させる
+// Manager.h経由でSceneManagerと連携し、シーンごとのオブジェクト管理を行う
+// ObjectManagerはシーン内のオブジェクトを管理し、必要に応じて生成・削除を行う。
 
 #include "Manager.h"
 #include "ComponentCamera.h"
