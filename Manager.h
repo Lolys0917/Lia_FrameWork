@@ -28,39 +28,6 @@ typedef struct { char** data; size_t size; size_t capacity; } CharVector;
 typedef struct { int* data;   size_t size; size_t capacity; } IntVector;
 typedef struct { bool* data;  size_t size; size_t capacity; } BoolVector;
 typedef struct { char** keys; size_t size; size_t capacity; } KeyMap;
-struct ObjectDataPool {
-    // Camera
-    Vec4Vector CameraPos;
-    Vec4Vector CameraLook;
-    // UI
-    Vec4Vector UITBLR;
-    Vec4Vector UIAngle;
-    Vec4Vector UIColor;
-    // World2D
-    Vec4Vector World2dPos;
-    Vec4Vector World2dSize;
-    Vec4Vector World2dAngle;
-    // Model
-    Vec4Vector ModelPos;
-    Vec4Vector ModelSize;
-    Vec4Vector ModelAngle;
-    // Collider
-    Vec4Vector BoxColliderPos;
-    Vec4Vector BoxColliderSize;
-    Vec4Vector BoxColliderAngle;
-    // Grid
-    Vec4Vector GridBoxPos;
-    Vec4Vector GridBoxSize;
-    Vec4Vector GridBoxAngle;
-    Vec4Vector GridBoxColor;
-    Vec4Vector GridPolygonPos;
-    Vec4Vector GridPolygonSize;
-    Vec4Vector GridPolygonAngle;
-    Vec4Vector GridPolygonColor;
-};
-
-// 実体をグローバルに保持（実際のVec4Vectorの実体）
-static ObjectDataPool g_ObjectPool;
 
 // ObjectIndex構造体
 typedef struct {
@@ -95,6 +62,56 @@ enum class IndexType {
 	Effect
 };
 
+//-----------------------------------------
+// Vec4管理用データプール構造体
+//-----------------------------------------
+struct ObjectDataPool {
+    // Camera
+    Vec4Vector CameraPos;
+    Vec4Vector CameraLook;
+    // UI
+    Vec4Vector UITBLR;
+    Vec4Vector UIAngle;
+    Vec4Vector UIColor;
+    // World2D
+    Vec4Vector World2dPos;
+    Vec4Vector World2dSize;
+    Vec4Vector World2dAngle;
+    // Model
+    Vec4Vector ModelPos;
+    Vec4Vector ModelSize;
+    Vec4Vector ModelAngle;
+    // BoxCollider
+    Vec4Vector BoxColliderPos;
+    Vec4Vector BoxColliderSize;
+    Vec4Vector BoxColliderAngle;
+    // Grid(Box / Polygon)
+    Vec4Vector GridBoxPos;
+    Vec4Vector GridBoxSize;
+    Vec4Vector GridBoxAngle;
+    Vec4Vector GridBoxColor;
+    Vec4Vector GridPolygonPos;
+    Vec4Vector GridPolygonSize;
+    Vec4Vector GridPolygonAngle;
+    Vec4Vector GridPolygonColor;
+    // Int / Bool / Char Vec
+    IntVector GridPolygonSides;
+    CharVector TexturePath;
+    CharVector ModelPath;
+    IntVector NumberOfScenes;
+    IntVector ModelType;
+    BoolVector BillboardW2d;
+    // KeyMaps
+    KeyMap CameraMap;
+    KeyMap ModelMap;
+    KeyMap TextureMap;
+    KeyMap World2dMap;
+    KeyMap UIMap;
+    KeyMap BoxColliderMap;
+    KeyMap GridBoxMap;
+    KeyMap GridPolygonMap;
+};
+ObjectDataPool* GetObjectDataPool();
 
   ///////////////////
  // ObjectManager //
@@ -109,8 +126,8 @@ void AddCamera(const char* name);
 void SetCameraPos(const char* name, float x, float y, float z);
 void SetCameraLook(const char* name, float x, float y, float z);
 void UseCameraSet(const char* name);
-void CreateCamera();
 int GetUseCamera();
+void SetUseCamera(int index);
 //void SettingCameraOnce();
 //|| Grid   ||_______________________
 // Grid Line
@@ -126,8 +143,6 @@ void SetGridPolygonPos(const char* name, float x, float y, float z);
 void SetGridPolygonColor(const char* name, float R, float G, float B, float A);
 void SetGridPolygonSides(const char* name, int sides);
 
-void DrawGridBase();
-
 void OutObjectIndex(ObjectIndex* out);
 ObjectIndex* GetObjectIndex();
 
@@ -136,7 +151,6 @@ Grid* GetGridClass();
 
 KeyMap* GetCameraKeyMap();
 
-ObjectDataPool* GetObjectDataPool();
 
   //////////////////
  // SceneManager //

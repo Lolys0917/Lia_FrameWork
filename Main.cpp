@@ -16,7 +16,7 @@
 
 #include "Main.h"
 
-#include "ObjectManager.h"
+#include "Manager.h"
 #include "CoreScene.h"
 
  //

@@ -6,17 +6,21 @@
 // Initよりも先にStartupが呼ばれます。
 
 #include "CoreScene.h"
-#include "ObjectManager.h"
+#include "Manager.h"
 
 void CoreStartUp()
 {
     // --- カメラ初期化 ---
     AddCamera("MainCamera");
-    SetCameraPos("MainCamera", 0.0f, 3.0f, -10.0f);
-    SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
+    SetCameraPos("MainCamera", 1.0f, 3.0f, -10.0f);
+    SetCameraLook("MainCamera", 1.0f, 0.0f, 0.0f);
+
+    AddCamera("SubCamera");
+    SetCameraPos("SubCamera", 3.0f, 5.0f, -5.0f);
+    SetCameraLook("SubCamera", 0.0f, 0.0f, 0.0f);
 
     AddCamera("SideCamera");
-    SetCameraPos("SideCamera", 1.0f, 5.0f, -5.0f);
+    SetCameraPos("SideCamera", 0.0f, 5.0f, -5.0f);
     SetCameraLook("SideCamera", 0.0f, 0.0f, 0.0f);
 
     // --- Scene1 ---
@@ -27,23 +31,26 @@ void CoreStartUp()
     SetGridBoxPos("BoxB", 2, 0, 0);
     SceneEndPoint();
 
+
+    AddScene("Scene3");
+	SceneEndPoint();
+
     // --- Scene2 ---
     AddScene("Scene2");
     AddGridPolygon("PolyA");
     SetGridPolygonPos("PolyA", 0, 0, 0);
-    SetGridPolygonSides("PolyA", 5);
+	SetGridPolygonColor("PolyA", 0, 1, 1, 1);
+    SetGridPolygonSides("PolyA", 6);
     SceneEndPoint();
 
     // --- シーンごとのカメラ割当 ---
+    SetSceneCamera("Scene3", "SubCamera");
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
-
     // 最初のシーン設定
     ChangeScene("Scene2");
 
     // Camera, Gridなど初期化
-    CreateCamera();
-    SettingCameraOnce();
 }
 void CoreSceneUpdate()
 {
