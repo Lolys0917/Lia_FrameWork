@@ -18,7 +18,17 @@ void AddMessage(const char* sent) {
         }
     }
 }
+std::wstring ConvertToWString(const char* str)
+{
+    if (!str) return L"";
 
+    int len = MultiByteToWideChar(CP_ACP, 0, str, -1, nullptr, 0); // CP_ACP = ANSI (ŠÂ‹«ˆË‘¶)
+    if (len == 0) return L"";
+
+    std::wstring wstr(len - 1, L'\0'); // I’[ƒkƒ‹•¶Žš‚ðœ‚¢‚ÄŠm•Û
+    MultiByteToWideChar(CP_ACP, 0, str, -1, &wstr[0], len);
+    return wstr;
+}
 const char* ConcatCStr(const char* str1, const char* str2) {
     if (!str1 && !str2) return nullptr;
     if (!str1) return str2;
@@ -288,6 +298,10 @@ int KeyMap_GetIndex(KeyMap* map, const char* key) {
         }
     }
     return -1; // Œ©‚Â‚©‚ç‚È‚©‚Á‚½
+}
+int KeyMap_GetSize(KeyMap* map)
+{
+	return (int)map->size;
 }
 const char* KeyMap_GetKey(KeyMap* map, int index) {
     if (index < 0 || (size_t)index >= map->size) {

@@ -121,6 +121,8 @@ void AddGridBox(const char* Name)
     KeyMap_Add(&g_ObjectPool.GridBoxMap, Name);
     GridBoxIndex++;
     ObjectIdx.GridBoxIndex = GridBoxIndex;
+
+    NotifyAddObject(IndexType::GridBox);
 }
 
 void SetGridBoxPos(const char* Name, float x, float y, float z)
@@ -190,7 +192,6 @@ void CreateObject()
         object->AddComponent<Camera>();
         CameraOldIdx++;
     }
-
 }
 
 

@@ -48,12 +48,6 @@
     <ClCompile Include="Grid.cpp">
       <Filter>ソース ファイル\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="TestScene.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="AssetLoad.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="CoreScene.cpp">
       <Filter>ソース ファイル\ForUsers</Filter>
     </ClCompile>
@@ -91,12 +85,6 @@
     </ClInclude>
     <ClInclude Include="Grid.h">
       <Filter>ソース ファイル\Debug</Filter>
-    </ClInclude>
-    <ClInclude Include="TestScene.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="AssetLoad.h">
-      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="CoreScene.h">
       <Filter>ソース ファイル\ForUsers</Filter>

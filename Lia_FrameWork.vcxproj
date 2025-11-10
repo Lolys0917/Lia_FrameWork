@@ -133,7 +133,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AssetLoad.cpp" />
     <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="ComponentCamera.cpp" />
     <ClCompile Include="ComponentSpriteScreen.cpp" />
@@ -143,11 +142,9 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ObjectManager.cpp" />
     <ClCompile Include="SceneManager.cpp" />
-    <ClCompile Include="TestScene.cpp" />
     <ClCompile Include="UtilManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AssetLoad.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentCamera.h" />
     <ClInclude Include="CoreScene.h" />
@@ -159,7 +156,6 @@
     <ClInclude Include="ObjectManager.h" />
     <ClInclude Include="ComponentSpriteScreen.h" />
     <ClInclude Include="SceneManager.h" />
-    <ClInclude Include="TestScene.h" />
     <ClInclude Include="UtilManager.h" />
   </ItemGroup>
   <ItemGroup>

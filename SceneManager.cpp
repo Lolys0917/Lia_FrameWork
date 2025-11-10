@@ -1,34 +1,39 @@
-// SceneManager.cppiC³”Åj
-// SceneRange ‚ÌŠÇ—‚ğs‚¤BObjectDataPool ‘¤‚ÌŠ®‘S‰Šú‰»‚ğ‘O’ñ‚ÉˆÀ‘Sƒ`ƒFƒbƒN‚ğ’Ç‰ÁB
-// Object‚ÉƒCƒ“ƒfƒbƒNƒX‚ğŠ„‚èU‚èAScene‚²‚Æ‚ÉŠÇ—‚·‚éd‘g‚İ‚ğ’ñ‹ŸB
+ï»¿// SceneManager.cppï¼ˆä¿®æ­£ç‰ˆï¼‰
+// SceneRange ã®ç®¡ç†ã‚’è¡Œã†ã€‚ObjectDataPool å´ã®å®Œå…¨åˆæœŸåŒ–ã‚’å‰æã«å®‰å…¨ãƒã‚§ãƒƒã‚¯ã‚’è¿½åŠ ã€‚
+// Objectã«ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’å‰²ã‚ŠæŒ¯ã‚Šã€Sceneã”ã¨ã«ç®¡ç†ã™ã‚‹ä»•çµ„ã¿ã‚’æä¾›ã€‚
 
 #include "Manager.h"
 #include <vector>
 
-// Scene”ÍˆÍ\‘¢‘ÌiŒ³’Ê‚èj
+// Sceneç¯„å›²æ§‹é€ ä½“ï¼ˆå…ƒé€šã‚Šï¼‰
 typedef struct {
     int StartIndex_Grid, EndIndex_Grid;
     int StartIndex_GridBox, EndIndex_GridBox;
     int StartIndex_GridPolygon, EndIndex_GridPolygon;
     int StartIndex_Camera, EndIndex_Camera;
     int UseCameraIndex;
+    bool Finalized;
 } SceneRange;
 
 static std::vector<SceneRange> SceneRanges;
 static KeyMap SceneMap;
 static int CurrentSceneIndex = -1;
-int SceneCount = 0;
-int SceneEndFlag = 0;
+static int ActiveSceneIndex = -1;
+void SettingScene();
+void SceneEndPoint();
 
 //-----------------------------------------
-// Scene‘€ì
+// Sceneæ“ä½œ
 //-----------------------------------------
 void AddScene(const char* name)
 {
     KeyMap_Add(&SceneMap, name);
-    SceneRange range{};
-    ObjectIndex* idx = GetObjectIndex();
+    int newIndex = KeyMap_GetIndex(&SceneMap, name);
+    CurrentSceneIndex = newIndex;
+    ActiveSceneIndex = newIndex; // âœ…è¿½åŠ ã•ã‚ŒãŸç¬é–“ã‚¢ã‚¯ãƒ†ã‚£ãƒ–åŒ–
 
+    ObjectIndex* idx = GetObjectIndex();
+    SceneRange range{};
     range.StartIndex_Camera = idx->CameraIndex;
     range.EndIndex_Camera = idx->CameraIndex;
     range.StartIndex_GridBox = idx->GridBoxIndex;
@@ -38,26 +43,54 @@ void AddScene(const char* name)
     range.StartIndex_Grid = idx->GridLineIndex;
     range.EndIndex_Grid = idx->GridLineIndex;
     range.UseCameraIndex = -1;
+    range.Finalized = false;
 
     SceneRanges.push_back(range);
-    SceneCount++;
-    SceneEndFlag = 0;
 }
 
 void SceneEndPoint()
 {
-    if (SceneCount <= 0) return;
-    auto& r = SceneRanges.back();
+    if (SceneRanges.empty()) return;
     ObjectIndex* idx = GetObjectIndex();
+    SceneRange& r = SceneRanges[CurrentSceneIndex];
+
     r.EndIndex_Camera = idx->CameraIndex;
     r.EndIndex_GridBox = idx->GridBoxIndex;
     r.EndIndex_GridPolygon = idx->GridPolygonIndex;
     r.EndIndex_Grid = idx->GridLineIndex;
-    SceneEndFlag = 1;
+    r.Finalized = true;
+
+    ActiveSceneIndex = -1;
 }
 
+//void SettingScene()
+//{
+//    if (KeyMap_GetSize(&SceneMap) <= 0) return;
+//    ObjectIndex* idx = GetObjectIndex();
+//
+//    for (int i = 0; i < CurrentSceneIndex; i++)
+//    {
+//        SceneRanges[i].EndIndex_Camera = idx->CameraIndex;
+//        SceneRanges[i].EndIndex_GridBox = idx->GridBoxIndex;
+//        SceneRanges[i].EndIndex_GridPolygon = idx->GridPolygonIndex;
+//        SceneRanges[i].EndIndex_Grid = idx->GridLineIndex;
+//    }
+//}
+void RefreshSceneRange()
+{
+    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size()) return;
+
+    SceneRange& range = SceneRanges[CurrentSceneIndex];
+    if (range.Finalized) return; // âœ… ç¢ºå®šæ¸ˆã¿ã¯æ›´æ–°ã—ãªã„
+
+    ObjectIndex* idx = GetObjectIndex();
+    range.EndIndex_Camera = idx->CameraIndex;
+    range.EndIndex_GridBox = idx->GridBoxIndex;
+    range.EndIndex_GridPolygon = idx->GridPolygonIndex;
+    range.EndIndex_Grid = idx->GridLineIndex;
+}
 //-----------------------------------------
-// Scene‰Šú‰»
+// SceneåˆæœŸåŒ–
 //-----------------------------------------
 void InitScene(const char* name)
 {
@@ -78,7 +111,7 @@ void InitScene(const char* name)
         }
     }
 
-    // Grid ‚Ì‰Šú‰»i‚±‚±‚Å‚ÍF‚Ì‚İ•œ‹Aj
+    // Grid ã®åˆæœŸåŒ–ï¼ˆã“ã“ã§ã¯è‰²ã®ã¿å¾©å¸°ï¼‰
     for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; ++i) {
         if (i < 0 || i >= (int)pool->GridBoxColor.size) continue;
         Vec4 col = Vec4_Get(&pool->GridBoxColor, i);
@@ -94,10 +127,10 @@ void InitScene(const char* name)
 }
 
 //-----------------------------------------
-// SceneƒRƒs[iŠÈˆÕj
-/* Œ³‚Ìˆ—‚ğˆÛBƒRƒs[‚ÉPool “à Vec ‚ğ push ‚·‚éˆ—‚Í
-   ObjectManager ‘¤‚Ì API ‚Æ‡‚í‚¹‚ÄŒÄ‚ÔÀ‘•‚ª–]‚Ü‚µ‚¢‚ªA
-   ŠÈ—ª”Å‚Æ‚µ‚Ä SceneRange ‚Ì•¡»‚Å‘Î‰B */
+// Sceneã‚³ãƒ”ãƒ¼ï¼ˆç°¡æ˜“ï¼‰
+/* å…ƒã®å‡¦ç†ã‚’ç¶­æŒã€‚ã‚³ãƒ”ãƒ¼æ™‚ã«Pool å†… Vec ã‚’ push ã™ã‚‹å‡¦ç†ã¯
+   ObjectManager å´ã® API ã¨åˆã‚ã›ã¦å‘¼ã¶å®Ÿè£…ãŒæœ›ã¾ã—ã„ãŒã€
+   ç°¡ç•¥ç‰ˆã¨ã—ã¦ SceneRange ã®è¤‡è£½ã§å¯¾å¿œã€‚ */
 void CopyScene(const char* srcScene, const char* newScene)
 {
     int srcIndex = KeyMap_GetIndex(&SceneMap, srcScene);
@@ -107,15 +140,16 @@ void CopyScene(const char* srcScene, const char* newScene)
     SceneRange src = SceneRanges[srcIndex];
     SceneRange dst = src;
     SceneRanges.push_back(dst);
-    SceneCount++;
     AddMessage(ConcatCStr("CopyScene(): ", newScene));
 }
 
 //-----------------------------------------
-// SceneXVE•`‰æ
+// Sceneæ›´æ–°ãƒ»æç”»
 //-----------------------------------------
 void UpdateScene()
 {
+    RefreshSceneRange();
+
     if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size()) return;
     SceneRange& range = SceneRanges[CurrentSceneIndex];
     ObjectDataPool* pool = GetObjectDataPool();
@@ -123,7 +157,7 @@ void UpdateScene()
     int cam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : GetUseCamera();
     if (cam < 0 || cam >= (int)pool->CameraPos.size) return;
 
-    // Camera projection + view XViˆÀ‘Sƒ`ƒFƒbƒNj
+    // Camera projection + view æ›´æ–°ï¼ˆå®‰å…¨ãƒã‚§ãƒƒã‚¯ï¼‰
     if (GetObjectClass()) {
         // projection
         GetObjectClass()->GetComponent<Camera>(cam)->SetCameraProjection(70.0f, 800, 600);
@@ -170,8 +204,8 @@ void DrawScene()
     GetGridClass()->SetPos({ 0,0,-5 }, { 0,0,5 }); GetGridClass()->Draw();
 
     // GridBox
-    if (range.StartIndex_GridBox >= 0 && range.EndIndex_GridBox <= (int)pool->GridBoxPos.size) {
-        for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; i++) {
+    if (SceneRanges[CurrentSceneIndex].StartIndex_GridBox >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_GridBox <= (int)pool->GridBoxPos.size) {
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_GridBox; i < SceneRanges[CurrentSceneIndex].EndIndex_GridBox; i++) {
             if (i < 0 || i >= (int)pool->GridBoxPos.size) continue;
             Vec4 pos = Vec4_Get(&pool->GridBoxPos, i);
             Vec4 size = Vec4_Get(&pool->GridBoxSize, i);
@@ -183,8 +217,8 @@ void DrawScene()
     }
 
     // GridPolygon
-    if (range.StartIndex_GridPolygon >= 0 && range.EndIndex_GridPolygon <= (int)pool->GridPolygonPos.size) {
-        for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; i++) {
+    if (SceneRanges[CurrentSceneIndex].StartIndex_GridPolygon >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_GridPolygon <= (int)pool->GridPolygonPos.size) {
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_GridPolygon; i < SceneRanges[CurrentSceneIndex].EndIndex_GridPolygon; i++) {
             if (i < 0 || i >= (int)pool->GridPolygonPos.size) continue;
             Vec4 pos = Vec4_Get(&pool->GridPolygonPos, i);
             Vec4 size = Vec4_Get(&pool->GridPolygonSize, i);
@@ -198,20 +232,39 @@ void DrawScene()
 }
 
 //-----------------------------------------
-// ‚»‚Ì‘¼
+// ãã®ä»–
 //-----------------------------------------
 void ChangeScene(const char* name)
 {
     int index = KeyMap_GetIndex(&SceneMap, name);
-    if (index == -1) {
-        AddMessage(ConcatCStr("error : ChangeScene - Scene not found: ", name));
-        return;
-    }
+    if (index == -1) return;
 
-    AddMessage(ConcatCStr("Exiting Scene: ", GetCurrentSceneName()));
+    AddMessage(ConcatCStr("ChangeScene: ", name));
     CurrentSceneIndex = index;
-    //InitScene(name);
-    AddMessage(ConcatCStr("Changed Scene to: ", name));
+    ActiveSceneIndex = index;
+}
+
+void NotifyAddObject(IndexType type)
+{
+    if (ActiveSceneIndex < 0 || ActiveSceneIndex >= (int)SceneRanges.size()) return;
+    SceneRange& range = SceneRanges[ActiveSceneIndex];
+    ObjectIndex* idx = GetObjectIndex();
+
+    switch (type)
+    {
+    case IndexType::GridBox:
+        range.EndIndex_GridBox = idx->GridBoxIndex;
+        break;
+    case IndexType::GridPolygon:
+        range.EndIndex_GridPolygon = idx->GridPolygonIndex;
+        break;
+    case IndexType::Camera:
+        range.EndIndex_Camera = idx->CameraIndex;
+        break;
+    case IndexType::GridLine:
+        range.EndIndex_Grid = idx->GridLineIndex;
+        break;
+    }
 }
 
 const char* GetCurrentSceneName()
@@ -229,8 +282,8 @@ void SetSceneCamera(const char* s, const char* c)
         AddMessage(ConcatCStr("SetSceneCamera failed: ", (ci < 0) ? c : s));
         return;
     }
-    // ƒV[ƒ“‚ÉŠ„“–‚é‚¾‚¯‚É‚·‚éiUseCamera ‚ğ’¼Ú•ÏX‚µ‚È‚¢j
+    // ã‚·ãƒ¼ãƒ³ã«å‰²å½“ã‚‹ã ã‘ã«ã™ã‚‹ï¼ˆUseCamera ã‚’ç›´æ¥å¤‰æ›´ã—ãªã„ï¼‰
     SceneRanges[si].UseCameraIndex = ci;
     AddMessage(ConcatCStr("SetSceneCamera: scene=", s));
 }
-void DeleteScene(const char* name) { /*Œ³ˆ—•Û—pƒ_ƒ~[*/ }
+void DeleteScene(const char* name) { /*å…ƒå‡¦ç†ä¿æŒç”¨ãƒ€ãƒŸãƒ¼*/ }
