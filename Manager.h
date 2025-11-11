@@ -46,7 +46,6 @@ typedef struct {
 	int EffectIndex;		//Effect_________
 } ObjectIndex;
 enum class IndexType {
-	All,
 	Camera,
 	SpriteWorld,
 	SpriteScreen,
@@ -165,12 +164,14 @@ void SetSceneCamera(const char* scene, const char* camera);
 void UpdateScene();
 void DrawScene();
 const char* GetCurrentSceneName();
+void NotifyAddObject(IndexType type);
 
   //////////////////
  // UtilManager  //
 //////////////////
 //|| ユーティリティ ||________________
 void AddMessage(const char* sent);
+std::wstring ConvertToWString(const char* str);
 const char* ConcatCStr(const char* str1, const char* str2);
 void ConcatCStrFree(const char* str);
 //|| Vec4 系 ||_______________________
@@ -202,4 +203,5 @@ void KeyMap_Init(KeyMap* map);
 int KeyMap_Add(KeyMap* map, const char* key);
 int KeyMap_GetIndex(KeyMap* map, const char* key);
 const char* KeyMap_GetKey(KeyMap* map, int index);
+int KeyMap_GetSize(KeyMap* map);
 void KeyMap_Free(KeyMap* map);

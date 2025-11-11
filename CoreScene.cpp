@@ -50,11 +50,14 @@ void CoreStartUp()
     // Å‰‚ÌƒV[ƒ“İ’è
     ChangeScene("Scene2");
 
+    AddGridBox("BoxC");
+    SetGridBoxPos("BoxC", 0, 0, 0);
     // Camera, Grid‚È‚Ç‰Šú‰»
 }
 void CoreSceneUpdate()
 {
-
+    static float pos = 0.0f;
+	pos += 0.01f;
 }
 void CoreSceneDraw()
 {
