@@ -28,7 +28,6 @@ typedef struct { char** data; size_t size; size_t capacity; } CharVector;
 typedef struct { int* data;   size_t size; size_t capacity; } IntVector;
 typedef struct { bool* data;  size_t size; size_t capacity; } BoolVector;
 typedef struct { char** keys; size_t size; size_t capacity; } KeyMap;
-
 // ObjectIndex構造体
 typedef struct {
 	int CameraIndex;        //Camera_________
@@ -60,10 +59,24 @@ enum class IndexType {
 	GridCapsule,
 	Effect
 };
+//モデル用マトリクスバッファ
+struct MatrixBuffer
+{
+    XMMATRIX mvp;
+    XMFLOAT4 diffuseColor;
+    int useTexture;
+    XMFLOAT3 pad;
+};
+//モデル用頂点情報
+struct ModelVertex
+{
+    XMFLOAT3 pos;
+    XMFLOAT2 uv;
+    XMFLOAT3 normal;
+};
 
 //-----------------------------------------
 // Vec4管理用データプール構造体
-//-----------------------------------------
 struct ObjectDataPool {
     // Camera
     Vec4Vector CameraPos;
@@ -165,6 +178,13 @@ void UpdateScene();
 void DrawScene();
 const char* GetCurrentSceneName();
 void NotifyAddObject(IndexType type);
+
+  //////////////////
+ // AssetManager //
+//////////////////
+std::vector<ModelVertex>* GetModelVertex(const char* modelName);
+ID3D11ShaderResourceView* GetTextureSRV(const char* textureName);
+
 
   //////////////////
  // UtilManager  //

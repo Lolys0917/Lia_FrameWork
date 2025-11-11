@@ -62,20 +62,6 @@ void SceneEndPoint()
 
     ActiveSceneIndex = -1;
 }
-
-//void SettingScene()
-//{
-//    if (KeyMap_GetSize(&SceneMap) <= 0) return;
-//    ObjectIndex* idx = GetObjectIndex();
-//
-//    for (int i = 0; i < CurrentSceneIndex; i++)
-//    {
-//        SceneRanges[i].EndIndex_Camera = idx->CameraIndex;
-//        SceneRanges[i].EndIndex_GridBox = idx->GridBoxIndex;
-//        SceneRanges[i].EndIndex_GridPolygon = idx->GridPolygonIndex;
-//        SceneRanges[i].EndIndex_Grid = idx->GridLineIndex;
-//    }
-//}
 void RefreshSceneRange()
 {
     if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size()) return;
