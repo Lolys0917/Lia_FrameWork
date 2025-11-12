@@ -10,14 +10,14 @@ struct VS_INPUT
 {
     float3 pos : POSITION;
     float2 uv : TEXCOORD0;
-    float3 nor : NORMAL;
+    //float3 nor : NORMAL;
 };
 
 struct PS_INPUT
 {
     float4 pos : SV_POSITION;
     float2 uv : TEXCOORD0;
-    float3 nor : NORMAL;
+    //float3 nor : NORMAL;
 };
 
 PS_INPUT VSMain(VS_INPUT input)
@@ -25,6 +25,6 @@ PS_INPUT VSMain(VS_INPUT input)
     PS_INPUT output;
     output.pos = mul(float4(input.pos, 1.0f), mvp);
     output.uv = input.uv;
-    output.nor = input.nor;
+    //output.nor = input.nor;
     return output;
 }

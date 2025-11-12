@@ -86,9 +86,10 @@ struct ObjectDataPool {
     Vec4Vector UIAngle;
     Vec4Vector UIColor;
     // World2D
-    Vec4Vector World2dPos;
-    Vec4Vector World2dSize;
-    Vec4Vector World2dAngle;
+    Vec4Vector SpriteWorldPos;
+    Vec4Vector SpriteWorldSize;
+    Vec4Vector SpriteWorldAngle;
+    Vec4Vector SpriteWorldColor;
     // Model
     Vec4Vector ModelPos;
     Vec4Vector ModelSize;
@@ -117,11 +118,12 @@ struct ObjectDataPool {
     KeyMap CameraMap;
     KeyMap ModelMap;
     KeyMap TextureMap;
-    KeyMap World2dMap;
+    KeyMap SpriteWorldMap;
     KeyMap UIMap;
     KeyMap BoxColliderMap;
     KeyMap GridBoxMap;
     KeyMap GridPolygonMap;
+    KeyMap TexturePathMap;
 };
 ObjectDataPool* GetObjectDataPool();
 
@@ -141,6 +143,12 @@ void UseCameraSet(const char* name);
 int GetUseCamera();
 void SetUseCamera(int index);
 //void SettingCameraOnce();
+//|| SpriteWorld ||__________________
+void AddSpriteWorld(const char* name, const char* pathName);
+void SetSpriteWorldPos(const char* name, float x, float y, float z);
+void SetSpriteWorldSize(const char* name, float x, float y, float z);
+void SetSpriteWorldAngle(const char* name, float x, float y, float z);
+void SetSpriteWorldColor(const char* name, float r, float g, float b, float a);
 //|| Grid   ||_______________________
 // Grid Line
 
@@ -185,6 +193,13 @@ void NotifyAddObject(IndexType type);
 std::vector<ModelVertex>* GetModelVertex(const char* modelName);
 ID3D11ShaderResourceView* GetTextureSRV(const char* textureName);
 
+bool IN_LoadTexture(const char* filename);
+bool IN_LoadModelObj(const char* filename);
+bool IN_LoadFBX(const char* filename);
+
+bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t size);
+bool IN_LoadFBX_Memory(const char* name, const unsigned char* data, size_t size);
+bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t size);
 
   //////////////////
  // UtilManager  //

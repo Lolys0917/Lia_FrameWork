@@ -8,6 +8,7 @@
 
 #include "Manager.h"
 #include "ComponentCamera.h"
+#include "ComponentSpriteWorld.h"
 #include <string>
 
 // ======================================================
@@ -28,7 +29,7 @@ static ObjectDataPool g_ObjectPool; // 実体
 static int UseCamera = -1;
 static int CameraIndex = 0, CameraOldIdx = 0;
 static int UIIndex = 0, UIOldIndex = 0;
-static int world2dIndex = 0, world2dOldIndex = 0;
+static int SpriteWorldIndex = 0, SpriteWorldOldIndex = 0;
 static int ModelIndex = 0, ModelOldIndex = 0;
 static int BoxColliderIndex = 0, BoxColliderOldIndex = 0;
 static int GridBoxIndex = 0, GridBoxOldIndex = 0;
@@ -110,6 +111,45 @@ void SetUseCamera(int index) {
 }
 
 //-----------------------------------------
+// SpriteWorld
+//-----------------------------------------
+void AddSpriteWorld(const char* name, const char* pathName)
+{
+    Vec4_PushBack(&g_ObjectPool.SpriteWorldPos, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.SpriteWorldSize, { 1,1,1,1 });
+    Vec4_PushBack(&g_ObjectPool.SpriteWorldAngle, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.SpriteWorldColor, { 1,1,1,1 });
+    KeyMap_Add(&g_ObjectPool.SpriteWorldMap, name);
+    KeyMap_Add(&g_ObjectPool.TexturePathMap, pathName);
+    SpriteWorldIndex++;
+    ObjectIdx.SpriteWorldIndex = SpriteWorldIndex;
+}
+void SetSpriteWorldPos(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteWorldMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteWorldPos : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteWorldPos, idx, { x,y,z,0 });
+}
+void SetSpriteWorldSize(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteWorldMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteWorldSize : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteWorldSize, idx, { x,y,z,0 });
+}
+void SetSpriteWorldAngle(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteWorldMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteWorldAngle : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteWorldAngle, idx, { x,y,z,0 });
+}
+void SetSpriteWorldColor(const char* name, float r, float g, float b, float a)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteWorldMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteWorldAngle : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteWorldColor, idx, { r,g,b,a });
+}
+
+//-----------------------------------------
 // Grid管理
 //-----------------------------------------
 void AddGridBox(const char* Name)
@@ -124,7 +164,6 @@ void AddGridBox(const char* Name)
 
     NotifyAddObject(IndexType::GridBox);
 }
-
 void SetGridBoxPos(const char* Name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridBoxMap, Name);
@@ -188,9 +227,18 @@ void CreateObject()
     if (!object) return;
 
 	// Camera
-    while (CameraOldIdx < CameraIndex) {
+    while (CameraOldIdx < CameraIndex) 
+    {
         object->AddComponent<Camera>();
         CameraOldIdx++;
+    }
+    //SpriteWorld
+    while (SpriteWorldOldIndex < SpriteWorldIndex)
+    {
+        const char* texPath = KeyMap_GetKey(&g_ObjectPool.TexturePathMap, SpriteWorldOldIndex);
+
+        object->AddComponent<SpriteWorld>()->SetTexture(texPath);
+        SpriteWorldOldIndex++;
     }
 }
 
@@ -202,8 +250,8 @@ void InitDo()
 {
     // インデックス初期化・ObjectIdx リセット
     UseCamera = -1;
-    CameraIndex = UIIndex = world2dIndex = ModelIndex = BoxColliderIndex = GridBoxIndex = GridPolygonIndex = 0;
-    CameraOldIdx = UIOldIndex = world2dOldIndex = ModelOldIndex = BoxColliderOldIndex = GridBoxOldIndex = GridPolygonOldIndex = 0;
+    CameraIndex = UIIndex = SpriteWorldIndex = ModelIndex = BoxColliderIndex = GridBoxIndex = GridPolygonIndex = 0;
+    CameraOldIdx = UIOldIndex = SpriteWorldOldIndex = ModelOldIndex = BoxColliderOldIndex = GridBoxOldIndex = GridPolygonOldIndex = 0;
 
     ObjectIdx.CameraIndex = 0;
     ObjectIdx.SpriteWorldIndex = 0;
@@ -232,9 +280,9 @@ void InitDo()
     Vec4_Init(&p->UIColor);
 
     // World2d
-    Vec4_Init(&p->World2dPos);
-    Vec4_Init(&p->World2dSize);
-    Vec4_Init(&p->World2dAngle);
+    Vec4_Init(&p->SpriteWorldPos);
+    Vec4_Init(&p->SpriteWorldSize);
+    Vec4_Init(&p->SpriteWorldAngle);
 
     // Model
     Vec4_Init(&p->ModelPos);
@@ -269,30 +317,33 @@ void InitDo()
     KeyMap_Init(&p->CameraMap);
     KeyMap_Init(&p->ModelMap);
     KeyMap_Init(&p->TextureMap);
-    KeyMap_Init(&p->World2dMap);
+    KeyMap_Init(&p->SpriteWorldMap);
     KeyMap_Init(&p->UIMap);
     KeyMap_Init(&p->BoxColliderMap);
     KeyMap_Init(&p->GridBoxMap);
     KeyMap_Init(&p->GridPolygonMap);
+    KeyMap_Init(&p->TexturePathMap);
 
     // クラス取得
     grid = new Grid();
     grid->Init();
     object = new Object();
     object->Init();
+
+    CreateObject();
 }
 
 void UpdateDo()
 {
     CreateObject();
-    object->Update();
     UpdateScene();
+    object->Update();
 }
 
 void DrawDo()
 {
-    object->Draw();
     DrawScene();
+    object->Draw();
 }
 
 void ReleaseDo()
@@ -307,9 +358,9 @@ void ReleaseDo()
     Vec4_Free(&p->UIAngle);
     Vec4_Free(&p->UIColor);
 
-    Vec4_Free(&p->World2dPos);
-    Vec4_Free(&p->World2dSize);
-    Vec4_Free(&p->World2dAngle);
+    Vec4_Free(&p->SpriteWorldPos);
+    Vec4_Free(&p->SpriteWorldSize);
+    Vec4_Free(&p->SpriteWorldAngle);
 
     Vec4_Free(&p->ModelPos);
     Vec4_Free(&p->ModelSize);
@@ -339,7 +390,7 @@ void ReleaseDo()
     KeyMap_Free(&p->CameraMap);
     KeyMap_Free(&p->ModelMap);
     KeyMap_Free(&p->TextureMap);
-    KeyMap_Free(&p->World2dMap);
+    KeyMap_Free(&p->SpriteWorldMap);
     KeyMap_Free(&p->UIMap);
     KeyMap_Free(&p->BoxColliderMap);
     KeyMap_Free(&p->GridBoxMap);

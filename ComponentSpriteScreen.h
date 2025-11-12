@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Component.h"
+#include "Manager.h"
 
 #include <d3d11.h>
 #include <DirectXMath.h>
@@ -17,7 +18,9 @@ public:
 
     void Draw()override;
 
-    bool SettingPath(const std::wstring& texturePath);
+    bool SettingPath(const char* texturePath);
+
+	void SetSRV(ID3D11ShaderResourceView* srv);
 
     //Top,Bottom,Left,Right
     void SetTBLR(float top, float bottom, float left, float right);

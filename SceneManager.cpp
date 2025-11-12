@@ -11,6 +11,7 @@ typedef struct {
     int StartIndex_GridBox, EndIndex_GridBox;
     int StartIndex_GridPolygon, EndIndex_GridPolygon;
     int StartIndex_Camera, EndIndex_Camera;
+    int StartIndex_SpriteWorld, EndIndex_SpriteWorld;
     int UseCameraIndex;
     bool Finalized;
 } SceneRange;
@@ -36,6 +37,8 @@ void AddScene(const char* name)
     SceneRange range{};
     range.StartIndex_Camera = idx->CameraIndex;
     range.EndIndex_Camera = idx->CameraIndex;
+    range.StartIndex_SpriteWorld = idx->SpriteWorldIndex;
+    range.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
     range.StartIndex_GridBox = idx->GridBoxIndex;
     range.EndIndex_GridBox = idx->GridBoxIndex;
     range.StartIndex_GridPolygon = idx->GridPolygonIndex;
@@ -55,6 +58,7 @@ void SceneEndPoint()
     SceneRange& r = SceneRanges[CurrentSceneIndex];
 
     r.EndIndex_Camera = idx->CameraIndex;
+    r.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
     r.EndIndex_GridBox = idx->GridBoxIndex;
     r.EndIndex_GridPolygon = idx->GridPolygonIndex;
     r.EndIndex_Grid = idx->GridLineIndex;
@@ -71,6 +75,7 @@ void RefreshSceneRange()
 
     ObjectIndex* idx = GetObjectIndex();
     range.EndIndex_Camera = idx->CameraIndex;
+    range.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
     range.EndIndex_GridBox = idx->GridBoxIndex;
     range.EndIndex_GridPolygon = idx->GridPolygonIndex;
     range.EndIndex_Grid = idx->GridLineIndex;
@@ -86,7 +91,7 @@ void InitScene(const char* name)
     SceneRange& range = SceneRanges[index];
     CurrentSceneIndex = index;
     ObjectDataPool* pool = GetObjectDataPool();
-
+    //Camera
     int useCam = range.UseCameraIndex >= 0 ? range.UseCameraIndex : GetUseCamera();
     if (useCam >= 0 && useCam < (int)pool->CameraPos.size) {
         Vec4 pos = Vec4_Get(&pool->CameraPos, useCam);
@@ -96,14 +101,22 @@ void InitScene(const char* name)
             GetObjectClass()->GetComponent<Camera>(useCam)->SetCameraView({ pos.X,pos.Y,pos.Z,0 }, { look.X,look.Y,look.Z,0 });
         }
     }
-
+    //SpriteWorld
+    for (int i = range.StartIndex_SpriteWorld; i < range.EndIndex_SpriteWorld; i++)
+    {
+        if (i < 0 || i >= (int)pool->GridBoxPos.size) continue;
+        Vec4 v4Pos = Vec4_Get(&pool->SpriteWorldPos, i);
+        GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+    }
     // Grid の初期化（ここでは色のみ復帰）
-    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; ++i) {
+    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; ++i)
+    {
         if (i < 0 || i >= (int)pool->GridBoxColor.size) continue;
         Vec4 col = Vec4_Get(&pool->GridBoxColor, i);
         GetGridClass()->SetColor({ col.X, col.Y, col.Z, col.W });
     }
-    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; ++i) {
+    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; ++i)
+    {
         if (i < 0 || i >= (int)pool->GridPolygonColor.size) continue;
         Vec4 col = Vec4_Get(&pool->GridPolygonColor, i);
         GetGridClass()->SetColor({ col.X, col.Y, col.Z, col.W });
@@ -145,7 +158,7 @@ void UpdateScene()
 
     // Camera projection + view 更新（安全チェック）
     if (GetObjectClass()) {
-        // projection
+        //Camera
         GetObjectClass()->GetComponent<Camera>(cam)->SetCameraProjection(70.0f, 800, 600);
         Vec4 pos = Vec4_Get(&pool->CameraPos, cam);
         Vec4 look = Vec4_Get(&pool->CameraLook, cam);
@@ -213,6 +226,41 @@ void DrawScene()
             GetGridClass()->SetColor({ col.X,col.Y,col.Z,col.W });
             GetGridClass()->DrawGridPolygon(VecInt_Get(&pool->GridPolygonSides, i),
                 { pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
+        }
+    }
+
+    if (!GetObjectClass())
+    {
+        MessageBoxA(nullptr, "ObjectClassNULL", "Error", MB_OK);
+    }
+
+    //SpriteWorld
+    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteWorld >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_SpriteWorld <= (int)pool->SpriteWorldPos.size)
+    {
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteWorld; i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteWorld; i++)
+        {
+            if (i < 0 || i >= (int)pool->SpriteWorldPos.size) continue;
+            Vec4 v4Pos = Vec4_Get(&pool->SpriteWorldPos, i);
+            Vec4 v4Size = Vec4_Get(&pool->SpriteWorldSize, i);
+            Vec4 v4Angle = Vec4_Get(&pool->SpriteWorldAngle, i);
+            Vec4 v4Color = Vec4_Get(&pool->SpriteWorldColor, i);
+
+            
+            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetColor({ v4Color.X, v4Color.Y, v4Color.Z, v4Color.W });
+            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetSize(v4Size.X, v4Size.Y);
+            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+
+            // ← 追加: カメラ行列を渡す（必須）
+            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+                GetObjectClass()->GetComponent<SpriteWorld>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+                GetObjectClass()->GetComponent<SpriteWorld>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+            }
+            else
+            {
+                MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
+            }
+
         }
     }
 }

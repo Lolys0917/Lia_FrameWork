@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Component.h"
+#include "ComponentSpriteWorld.h"
 #include "ComponentCamera.h"
 #include "Grid.h"
 #include "ComponentSpriteScreen.h"
-#include "ComponentSpriteWorld.h"
 #include "ComponentModel.h"
 #include <vector>
 
@@ -64,7 +64,7 @@ public:
         if constexpr (std::is_same_v<T, class Camera>) type = 0;
         else if constexpr (std::is_same_v<T, class Grid>) type = 1;
         else if constexpr (std::is_same_v<T, class Model>) type = 2;
-        else if constexpr (std::is_same_v<T, class World2d>) type = 3;
+        else if constexpr (std::is_same_v<T, class SpriteWorld>) type = 3;
         else if constexpr (std::is_same_v<T, class UI2d>) type = 4;
         else if constexpr (std::is_same_v<T, class BoxCollider>) type = 5;
         else type = -1;
@@ -85,7 +85,7 @@ public:
         if constexpr (std::is_same_v<T, class Camera>) type = 0;
         else if constexpr (std::is_same_v<T, class Grid>) type = 1;
         else if constexpr (std::is_same_v<T, class Model>) type = 2;
-        else if constexpr (std::is_same_v<T, class World2d>) type = 3;
+        else if constexpr (std::is_same_v<T, class SpriteWorld>) type = 3;
         else if constexpr (std::is_same_v<T, class UI2d>) type = 4;
         else if constexpr (std::is_same_v<T, class BoxCollider>) type = 5;
         else type = -1;
@@ -106,7 +106,7 @@ public:
         if constexpr (std::is_same_v<T, class Camera>) type = 0;
         else if constexpr (std::is_same_v<T, class Grid>) type = 1;
         else if constexpr (std::is_same_v<T, class Model>) type = 2;
-        else if constexpr (std::is_same_v<T, class World2d>) type = 3;
+        else if constexpr (std::is_same_v<T, class SpriteWorld>) type = 3;
         else if constexpr (std::is_same_v<T, class UI2d>) type = 4;
         else if constexpr (std::is_same_v<T, class BoxCollider>) type = 5;
         else type = -1;

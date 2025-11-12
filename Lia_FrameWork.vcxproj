@@ -133,10 +133,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AssetLoad.cpp" />
     <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="ComponentCamera.cpp" />
     <ClCompile Include="ComponentModel.cpp" />
     <ClCompile Include="ComponentSpriteScreen.cpp" />
+    <ClCompile Include="ComponentSpriteWorld.cpp" />
     <ClCompile Include="ComponentSpriteWorld.h" />
     <ClCompile Include="CoreScene.cpp" />
     <ClCompile Include="Grid.cpp" />
@@ -146,6 +148,7 @@
     <ClCompile Include="UtilManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AssetLoad.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentCamera.h" />
     <ClInclude Include="CoreScene.h" />

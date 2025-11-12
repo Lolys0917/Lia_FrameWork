@@ -1,19 +1,19 @@
-// ƒAƒZƒbƒg‚Ì“Ç
-// ƒAƒZƒbƒg‚Ì•Û‘¶
-// ƒAƒZƒbƒg‚ÌˆÃ†‰»
-// ƒAƒZƒbƒg‚Ì•œ†‰»
-// ƒAƒZƒbƒg‚ÌŠÇ—
-// ‚ğs‚¤ƒvƒƒOƒ‰ƒ€
+ï»¿// ã‚¢ã‚»ãƒƒãƒˆã®èª­è¾¼
+// ã‚¢ã‚»ãƒƒãƒˆã®ä¿å­˜
+// ã‚¢ã‚»ãƒƒãƒˆã®æš—å·åŒ–
+// ã‚¢ã‚»ãƒƒãƒˆã®å¾©å·åŒ–
+// ã‚¢ã‚»ãƒƒãƒˆã®ç®¡ç†
+// ã‚’è¡Œã†ãƒ—ãƒ­ã‚°ãƒ©ãƒ 
 //
-// ƒAƒZƒbƒg‚Íƒ\ƒtƒgo—Í‚É©“®‚ÅƒpƒbƒP[ƒW‰»‚³‚êAˆÃ†‰»‚³‚ê‚éB
-// ƒtƒ@ƒCƒ‹‚Ìd•¡‚ğ”ğ‚¯‚é‚½‚ßA“¯–¼ƒtƒ@ƒCƒ‹‚Í“Ç‚İ‚ß‚È‚¢‚à‚Ì‚Æ‚·‚éB
+// ã‚¢ã‚»ãƒƒãƒˆã¯ã‚½ãƒ•ãƒˆå‡ºåŠ›æ™‚ã«è‡ªå‹•ã§ãƒ‘ãƒƒã‚±ãƒ¼ã‚¸åŒ–ã•ã‚Œã€æš—å·åŒ–ã•ã‚Œã‚‹ã€‚
+// ãƒ•ã‚¡ã‚¤ãƒ«ã®é‡è¤‡ã‚’é¿ã‘ã‚‹ãŸã‚ã€åŒåãƒ•ã‚¡ã‚¤ãƒ«ã¯èª­ã¿è¾¼ã‚ãªã„ã‚‚ã®ã¨ã™ã‚‹ã€‚
 //
-// ƒAƒZƒbƒg‚ÌƒpƒX‚Í‘Š‘ÎƒpƒX‚Åw’è‚·‚éB
-// ƒAƒZƒbƒg‚Ìƒƒ‚ƒŠ‚ÍƒvƒƒOƒ‰ƒ€I—¹‚É©“®‚Å‰ğ•ú‚³‚ê‚éB
-// Manager.hŒo—R‚ÅAssetManager‚ÖƒAƒNƒZƒX‚µA
-// ƒAƒZƒbƒg‘€ìŠÖ”‚ğŒÄ‚Ño‚·B‚»‚ê‚É‚æ‚è
-// Manager.hŒo—R‚ÅObjectManager‚ÖƒAƒNƒZƒX‚µA
-// ƒAƒZƒbƒg‚Ìƒƒ‚ƒŠ‚ğæ“¾‚·‚é‚±‚Æ‚ªo—ˆ‚éB
+// ã‚¢ã‚»ãƒƒãƒˆã®ãƒ‘ã‚¹ã¯ç›¸å¯¾ãƒ‘ã‚¹ã§æŒ‡å®šã™ã‚‹ã€‚
+// ã‚¢ã‚»ãƒƒãƒˆã®ãƒ¡ãƒ¢ãƒªã¯ãƒ—ãƒ­ã‚°ãƒ©ãƒ çµ‚äº†æ™‚ã«è‡ªå‹•ã§è§£æ”¾ã•ã‚Œã‚‹ã€‚
+// Manager.hçµŒç”±ã§AssetManagerã¸ã‚¢ã‚¯ã‚»ã‚¹ã—ã€
+// ã‚¢ã‚»ãƒƒãƒˆæ“ä½œé–¢æ•°ã‚’å‘¼ã³å‡ºã™ã€‚ãã‚Œã«ã‚ˆã‚Š
+// Manager.hçµŒç”±ã§ObjectManagerã¸ã‚¢ã‚¯ã‚»ã‚¹ã—ã€
+// ã‚¢ã‚»ãƒƒãƒˆã®ãƒ¡ãƒ¢ãƒªã‚’å–å¾—ã™ã‚‹ã“ã¨ãŒå‡ºæ¥ã‚‹ã€‚
 // __________________________________________
 
 #include "Manager.h"
@@ -31,45 +31,52 @@
 
 #define SafeRelease(p) if(p){ (p)->Release(); (p)=nullptr; }
 
-//ƒOƒ[ƒoƒ‹_____________________
-std::vector<ID3D11ShaderResourceView*> g_textureSRV;        //ƒeƒNƒXƒ`ƒƒ•Û‘¶—pSRV
-std::vector<std::vector<ModelVertex>> g_modelVertex;        //Obj•Û‘¶—pSRV
-ID3D11SamplerState* g_samplerState;                         //ƒfƒtƒHƒ‹ƒgƒTƒ“ƒvƒ‰[ƒXƒe[ƒg
-//ƒL[ƒ}ƒbƒv
-KeyMap TextureMap;
-KeyMap ModelMap;
+//ã‚°ãƒ­ãƒ¼ãƒãƒ«_____________________
+static std::vector<ID3D11ShaderResourceView*> g_textureSRV;        //ãƒ†ã‚¯ã‚¹ãƒãƒ£ä¿å­˜ç”¨SRV
+static std::vector<std::vector<ModelVertex>> g_modelVertex;        //Objä¿å­˜ç”¨SRV
+static ID3D11SamplerState* g_samplerState;                         //ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã‚µãƒ³ãƒ—ãƒ©ãƒ¼ã‚¹ãƒ†ãƒ¼ãƒˆ
+//ã‚­ãƒ¼ãƒãƒƒãƒ—
+static KeyMap TextureMap;
+static KeyMap ModelMap;
 
 ID3D11ShaderResourceView* GetTextureSRV(const char* filename)
 {
-    int index = KeyMap_GetIndex(&TextureMap, filename);
-
-    if (index < 0 || index >= (int)g_textureSRV.size())
+    if (!filename) {
+        MessageBoxA(nullptr, "GetTextureSRV: key is null", "Error", MB_OK);
         return nullptr;
+    }
+
+    int index = KeyMap_GetIndex(&TextureMap, filename);
+    char buf[256];
+    sprintf_s(buf, "GetTextureSRV: key=%s index=%d", filename, index);
+    //MessageBoxA(nullptr, buf, "Debug", MB_OK);
+    if (index < 0 || index >= (int)g_textureSRV.size()) {
+        MessageBoxA(nullptr, "GetTextureSRV: invalid index", "Error", MB_OK);
+        return nullptr;
+    }
+
+    if (!g_textureSRV[index]) {
+        MessageBoxA(nullptr, "GetTextureSRV: SRV is null", "Error", MB_OK);
+        return nullptr;
+    }
 
     return g_textureSRV[index];
 }
-std::vector<ModelVertex>* GetModelVertex(const char* filename)
-{
-    int index = KeyMap_GetIndex(&ModelMap, filename);
-
-    if (index < 0 || index >= (int)g_modelVertex.size())
-        return nullptr;
-
-    return &g_modelVertex[index];
-}
 
  //---------------------------------
-// ƒeƒNƒXƒ`ƒƒ“Ç‚İ‚İ&•Û‘¶
+// ãƒ†ã‚¯ã‚¹ãƒãƒ£èª­ã¿è¾¼ã¿&ä¿å­˜
 bool IN_LoadTexture(const char* filename)
 {
-    //Šù‚Éƒ[ƒhÏ‚İ‚È‚çƒXƒLƒbƒv___________
-    int mapSize = KeyMap_GetSize(&TextureMap);
-    for (int i = 0; i < mapSize; i++) {
-        const char* key = KeyMap_GetKey(&TextureMap, i);
-        if (strcmp(key, filename) == 0) return true;
-    }
+    if (!filename) return false;
+
+    // æ—¢ã«ãƒ­ãƒ¼ãƒ‰æ¸ˆã¿ãªã‚‰ã‚¹ã‚­ãƒƒãƒ—
+    int index = KeyMap_GetIndex(&TextureMap, filename);
+    if (index >= 0 && index < (int)g_textureSRV.size() && g_textureSRV[index])
+        return true;
 
     int TextureIndex = KeyMap_Add(&TextureMap, filename);
+    if ((int)g_textureSRV.size() <= TextureIndex)
+        g_textureSRV.resize(TextureIndex + 1, nullptr);
 
     IWICImagingFactory* pWIC = nullptr;
     IWICBitmapDecoder* pDecoder = nullptr;
@@ -77,78 +84,34 @@ bool IN_LoadTexture(const char* filename)
     IWICFormatConverter* pConverter = nullptr;
     bool calledCoInit = false;
 
-    HRESULT hr = CoCreateInstance(
-        CLSID_WICImagingFactory,
-        nullptr,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(&pWIC));
-
-    //COM‚ª–¢‰Šú‰»‚È‚ç‰Šú‰»‚µ‚ÄÄs________
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pWIC));
     if (FAILED(hr)) {
         HRESULT hrInit = CoInitialize(nullptr);
         if (SUCCEEDED(hrInit)) calledCoInit = true;
-
-        hr = CoCreateInstance(
-            CLSID_WICImagingFactory,
-            nullptr,
-            CLSCTX_INPROC_SERVER,
-            IID_PPV_ARGS(&pWIC));
-
+        hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pWIC));
         if (FAILED(hr)) {
             if (calledCoInit) CoUninitialize();
             return false;
         }
     }
 
-    //‰æ‘œ“Ç‚İ‚İ_____________________
-    hr = pWIC->CreateDecoderFromFilename(
-        ConvertToWString(filename).c_str(),
-        nullptr,
-        GENERIC_READ,
-        WICDecodeMetadataCacheOnLoad,
-        &pDecoder);
+    hr = pWIC->CreateDecoderFromFilename(ConvertToWString(filename).c_str(), nullptr, GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
+    if (FAILED(hr)) { SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
 
-    if (FAILED(hr)) {
-        SafeRelease(pWIC);
-        if (calledCoInit) CoUninitialize();
-        return false;
-    }
     hr = pDecoder->GetFrame(0, &pFrame);
-    if (FAILED(hr)) {
-        SafeRelease(pDecoder);
-        SafeRelease(pWIC);
-        if (calledCoInit) CoUninitialize();
-        return false;
-    }
-    hr = pWIC->CreateFormatConverter(&pConverter);
-    if (FAILED(hr)) {
-        SafeRelease(pFrame);
-        SafeRelease(pDecoder);
-        SafeRelease(pWIC);
-        if (calledCoInit) CoUninitialize();
-        return false;
-    }
-    hr = pConverter->Initialize(
-        pFrame,
-        GUID_WICPixelFormat32bppRGBA,
-        WICBitmapDitherTypeNone,
-        nullptr, 0.0, WICBitmapPaletteTypeCustom);
-    if (FAILED(hr)) {
-        SafeRelease(pConverter);
-        SafeRelease(pFrame);
-        SafeRelease(pDecoder);
-        SafeRelease(pWIC);
-        if (calledCoInit) CoUninitialize();
-        return false;
-    }
+    if (FAILED(hr)) { SafeRelease(pDecoder); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
 
-    // --- ƒsƒNƒZƒ‹ƒf[ƒ^æ“¾ ---
+    hr = pWIC->CreateFormatConverter(&pConverter);
+    if (FAILED(hr)) { SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
+    hr = pConverter->Initialize(pFrame, GUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
+    if (FAILED(hr)) { SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
     UINT width, height;
     pConverter->GetSize(&width, &height);
     std::vector<BYTE> pixels(width * height * 4);
     pConverter->CopyPixels(nullptr, width * 4, (UINT)pixels.size(), pixels.data());
 
-    // --- DirectXƒeƒNƒXƒ`ƒƒì¬ ---
     D3D11_TEXTURE2D_DESC desc = {};
     desc.Width = width;
     desc.Height = height;
@@ -165,31 +128,15 @@ bool IN_LoadTexture(const char* filename)
 
     ID3D11Texture2D* texture = nullptr;
     hr = GetDevice()->CreateTexture2D(&desc, &initData, &texture);
-    if (FAILED(hr) || !texture) {
-        MessageBoxA(nullptr, "CreateTexture2D failed in LoadTexture()", "Error", MB_OK);
-        SafeRelease(pConverter);
-        SafeRelease(pFrame);
-        SafeRelease(pDecoder);
-        SafeRelease(pWIC);
-        if (calledCoInit) CoUninitialize();
-        return false;
-    }
+    if (FAILED(hr) || !texture) return false;
 
     ID3D11ShaderResourceView* srv = nullptr;
     hr = GetDevice()->CreateShaderResourceView(texture, nullptr, &srv);
-    if (FAILED(hr)) {
-        MessageBoxA(nullptr, "CreateShaderResourceView failed in LoadTexture()", "Error", MB_OK);
-        SafeRelease(texture);
-        SafeRelease(pConverter);
-        SafeRelease(pFrame);
-        SafeRelease(pDecoder);
-        SafeRelease(pWIC);
-        if (calledCoInit) CoUninitialize();
-        return false;
-    }
+    if (FAILED(hr) || !srv) { SafeRelease(texture); return false; }
 
-    // --- •Û‘¶ ---
-    g_textureSRV.push_back(srv);
+    // ğŸ”¸ push_back â†’ indexä»£å…¥
+    g_textureSRV[TextureIndex] = srv;
+
     SafeRelease(texture);
     SafeRelease(pConverter);
     SafeRelease(pFrame);
@@ -197,30 +144,26 @@ bool IN_LoadTexture(const char* filename)
     SafeRelease(pWIC);
     if (calledCoInit) CoUninitialize();
 
-    // ƒTƒ“ƒvƒ‰[ƒXƒe[ƒg
-    D3D11_SAMPLER_DESC sampDesc = {};
-    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sampDesc.AddressU = sampDesc.AddressV = sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    GetDevice()->CreateSamplerState(&sampDesc, &g_samplerState);
-
-
     return true;
 }
 
 
 bool IN_LoadModelObj(const char* filename)
 {
-    //Šù‚Éƒ[ƒhÏ‚İ‚È‚çƒXƒLƒbƒv___________
-    int mapSize = KeyMap_GetSize(&TextureMap);
+    //æ—¢ã«ãƒ­ãƒ¼ãƒ‰æ¸ˆã¿ãªã‚‰ã‚¹ã‚­ãƒƒãƒ—___________
+    int mapSize = KeyMap_GetSize(&ModelMap);
     for (int i = 0; i < mapSize; i++) {
-        const char* key = KeyMap_GetKey(&TextureMap, i);
+        const char* key = KeyMap_GetKey(&ModelMap, i);
         if (strcmp(key, filename) == 0) return true;
     }
 
-    int ModelIndex = KeyMap_Add(&TextureMap, filename);
-    std::ifstream file(ConvertToWString(filename));
+    int ModelIndex = KeyMap_Add(&ModelMap, filename);
+    std::ifstream file(filename);
 
     if (!file) return false;
+
+    if ((int)g_modelVertex.size() <= ModelIndex)
+        g_modelVertex.resize(ModelIndex + 1);
 
     std::vector<XMFLOAT3> positions;
     std::vector<XMFLOAT2> uvs;
@@ -258,7 +201,7 @@ bool IN_LoadModelObj(const char* filename)
             while (iss >> s)
                 tokens.push_back(s);
 
-            // OŠpŒ`‰» (OŠpƒ|ƒŠƒSƒ“‚Ì‚İ‘Î‰)
+            // ä¸‰è§’å½¢åŒ– (ä¸‰è§’ãƒãƒªã‚´ãƒ³ã®ã¿å¯¾å¿œ)
             for (size_t i = 1; i < tokens.size() - 1; ++i)
             {
                 int idx[3][3];
@@ -275,7 +218,7 @@ bool IN_LoadModelObj(const char* filename)
                     ModelVertex v;
                     v.pos = positions[idx[j][0] - 1];
                     v.uv = uvs[idx[j][1] - 1];
-                    v.uv.y = 1.0f - v.uv.y; // Y”½“]
+                    v.uv.y = 1.0f - v.uv.y; // Yåè»¢
                     v.normal = normals[idx[j][2] - 1];
                     g_modelVertex[ModelIndex].push_back(v);
                 }
@@ -284,7 +227,7 @@ bool IN_LoadModelObj(const char* filename)
     }
 
     if (g_modelVertex.empty()) {
-        MessageBoxA(NULL, "OBJ“Ç‚İ‚İ‚Å’¸“_‚ª0‚Å‚·", "Error", MB_OK);
+        MessageBoxA(NULL, "OBJèª­ã¿è¾¼ã¿ã§é ‚ç‚¹ãŒ0ã§ã™", "Error", MB_OK);
         return false;
     }
 
@@ -293,20 +236,20 @@ bool IN_LoadModelObj(const char* filename)
 
 bool IN_LoadFBX(const char* filename)
 {
-    // Šù‚Éƒ[ƒhÏ‚İ‚È‚çƒXƒLƒbƒv
+    // æ—¢ã«ãƒ­ãƒ¼ãƒ‰æ¸ˆã¿ãªã‚‰ã‚¹ã‚­ãƒƒãƒ—
     int mapSize = KeyMap_GetSize(&ModelMap);
     for (int i = 0; i < mapSize; ++i) {
         const char* key = KeyMap_GetKey(&ModelMap, i);
         if (strcmp(key, filename) == 0) return true;
     }
 
-    // KeyMap ‚É“o˜^‚µ‚ÄƒCƒ“ƒfƒbƒNƒX‚ğ“¾‚é
+    // KeyMap ã«ç™»éŒ²ã—ã¦ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’å¾—ã‚‹
     int ModelIndex = KeyMap_Add(&ModelMap, filename);
 
     // Assimp importer
     Assimp::Importer importer;
 
-    // Assimp ReadFile ‚É“n‚·ƒpƒX‚Í std::stringi‘Š‘ÎƒpƒX‚Ì‚Ü‚Ü“n‚·j
+    // Assimp ReadFile ã«æ¸¡ã™ãƒ‘ã‚¹ã¯ std::stringï¼ˆç›¸å¯¾ãƒ‘ã‚¹ã®ã¾ã¾æ¸¡ã™ï¼‰
     std::string sFilename = filename;
 
     const aiScene* scene = importer.ReadFile(
@@ -322,7 +265,7 @@ bool IN_LoadFBX(const char* filename)
         std::string err = importer.GetErrorString();
         if (err.empty()) err = "Unknown Assimp error";
         MessageBoxA(nullptr, err.c_str(), "IN_LoadFBX: Assimp error", MB_OK);
-        // “o˜^æ‚èÁ‚µiKeyMap_Add ‚ª•Ô‚µ‚½ index ‚ğ–³Œø‰»‚·‚éè’i‚ª‚È‚¢ê‡‚Í•ú’uj
+        // ç™»éŒ²å–ã‚Šæ¶ˆã—ï¼ˆKeyMap_Add ãŒè¿”ã—ãŸ index ã‚’ç„¡åŠ¹åŒ–ã™ã‚‹æ‰‹æ®µãŒãªã„å ´åˆã¯æ”¾ç½®ï¼‰
         return false;
     }
 
@@ -334,21 +277,21 @@ bool IN_LoadFBX(const char* filename)
     // Ensure g_modelVertex has entry for this ModelIndex
     if ((int)g_modelVertex.size() <= ModelIndex) g_modelVertex.resize(ModelIndex + 1);
 
-    // ‡¬æƒxƒNƒ^[iƒtƒ@ƒCƒ‹1‚Â -> 1‚Â‚Ìƒ‚ƒfƒ‹ƒGƒ“ƒgƒŠ‚ÖŒ‹‡j
+    // åˆæˆå…ˆãƒ™ã‚¯ã‚¿ãƒ¼ï¼ˆãƒ•ã‚¡ã‚¤ãƒ«1ã¤ -> 1ã¤ã®ãƒ¢ãƒ‡ãƒ«ã‚¨ãƒ³ãƒˆãƒªã¸çµåˆï¼‰
     std::vector<ModelVertex> outVerts;
     outVerts.clear();
 
-    // iterate meshes and append vertices (ƒCƒ“ƒfƒbƒNƒX‚ğg‚Á‚ÄOŠpŒ`‚ğì‚é)
+    // iterate meshes and append vertices (ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’ä½¿ã£ã¦ä¸‰è§’å½¢ã‚’ä½œã‚‹)
     for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi)
     {
         aiMesh* mesh = scene->mMeshes[mi];
         if (!mesh) continue;
 
-        // positions / uvs / normals ‚ªƒƒbƒVƒ…‚É‚ ‚é‚©ƒ`ƒFƒbƒN
+        // positions / uvs / normals ãŒãƒ¡ãƒƒã‚·ãƒ¥ã«ã‚ã‚‹ã‹ãƒã‚§ãƒƒã‚¯
         bool hasNormals = mesh->HasNormals();
-        bool hasTexCoords = mesh->HasTextureCoords(0); // set 0 ‚ğg—p
+        bool hasTexCoords = mesh->HasTextureCoords(0); // set 0 ã‚’ä½¿ç”¨
 
-        // “Ç‚İ‚İ: mesh ‚Ì’¸“_‚²‚Æ‚Éˆê”z—ñ‚ğì‚Á‚Ä‚¨‚­ipositions‚Ì‚İj
+        // èª­ã¿è¾¼ã¿: mesh ã®é ‚ç‚¹ã”ã¨ã«ä¸€æ™‚é…åˆ—ã‚’ä½œã£ã¦ãŠãï¼ˆpositionsã®ã¿ï¼‰
         std::vector<XMFLOAT3> positions;
         std::vector<XMFLOAT2> uvs;
         std::vector<XMFLOAT3> normals;
@@ -362,7 +305,7 @@ bool IN_LoadFBX(const char* filename)
             positions[v] = XMFLOAT3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z);
 
             if (hasTexCoords) {
-                // Assimp ‚ÌƒeƒNƒXƒ`ƒƒÀ•W‚Í aiVector3Diz ‚ğ–³‹j
+                // Assimp ã®ãƒ†ã‚¯ã‚¹ãƒãƒ£åº§æ¨™ã¯ aiVector3Dï¼ˆz ã‚’ç„¡è¦–ï¼‰
                 aiVector3D t = mesh->mTextureCoords[0][v];
                 uvs[v] = XMFLOAT2(t.x, t.y);
             }
@@ -378,20 +321,20 @@ bool IN_LoadFBX(const char* filename)
             }
         }
 
-        // faces -> OŠp‰»Ï‚İ‚È‚Ì‚ÅAŠe face ‚ÌƒCƒ“ƒfƒbƒNƒX‚ğ‘–¸‚µ‚Ä ModelVertex ‚ğ¶¬
+        // faces -> ä¸‰è§’åŒ–æ¸ˆã¿ãªã®ã§ã€å„ face ã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’èµ°æŸ»ã—ã¦ ModelVertex ã‚’ç”Ÿæˆ
         for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
         {
             aiFace& face = mesh->mFaces[f];
-            if (face.mNumIndices < 3) continue; // ˆÀ‘S
+            if (face.mNumIndices < 3) continue; // å®‰å…¨
 
-            // face ‚ªOŠpŒ`‚Ìê‡‚Í3‚ÂAƒ|ƒŠƒSƒ“itriangulatew’èÏ‚İ‚Ì‚Í3j
+            // face ãŒä¸‰è§’å½¢ã®å ´åˆã¯3ã¤ã€ãƒãƒªã‚´ãƒ³ï¼ˆtriangulateæŒ‡å®šæ¸ˆã¿ã®ã¯3ï¼‰
             for (unsigned int idx = 0; idx < face.mNumIndices; ++idx)
             {
                 unsigned int vi = face.mIndices[idx];
                 ModelVertex mv;
                 mv.pos = positions[vi];
                 mv.uv = uvs[vi];
-                // Y”½“]‚ª•K—v‚È‚ç‚±‚±‚Å mv.uv.y = 1.0f - mv.uv.y; ‚½‚¾‚µ Assimp ‘¤‚Å•ÏŠ·‚³‚ê‚Ä‚¢‚éê‡‚à‚ ‚é
+                // Yåè»¢ãŒå¿…è¦ãªã‚‰ã“ã“ã§ mv.uv.y = 1.0f - mv.uv.y; ãŸã ã— Assimp å´ã§å¤‰æ›ã•ã‚Œã¦ã„ã‚‹å ´åˆã‚‚ã‚ã‚‹
                 mv.normal = normals[vi];
                 outVerts.push_back(mv);
             }
@@ -403,13 +346,13 @@ bool IN_LoadFBX(const char* filename)
         return false;
     }
 
-    // æ“¾’¸“_‚ğ g_modelVertex[ModelIndex] ‚É•Û‚·‚é
+    // å–å¾—é ‚ç‚¹ã‚’ g_modelVertex[ModelIndex] ã«ä¿æŒã™ã‚‹
     g_modelVertex[ModelIndex] = std::move(outVerts);
 
-    // ƒ}ƒeƒŠƒAƒ‹ -> ƒeƒNƒXƒ`ƒƒ“Ç‚İ‚İiÅ‰‚ÌƒƒbƒVƒ…‚Ìƒ}ƒeƒŠƒAƒ‹‚Ì‚İˆ—j
+    // ãƒãƒ†ãƒªã‚¢ãƒ« -> ãƒ†ã‚¯ã‚¹ãƒãƒ£èª­ã¿è¾¼ã¿ï¼ˆæœ€åˆã®ãƒ¡ãƒƒã‚·ãƒ¥ã®ãƒãƒ†ãƒªã‚¢ãƒ«ã®ã¿å‡¦ç†ï¼‰
     if (scene->HasMaterials())
     {
-        // ‚Ü‚¸ mesh 0 ‚Ì material index ‚ğæ‚èA‚»‚Ì material ‚Ì diffuse ‚ğ’T‚·
+        // ã¾ãš mesh 0 ã® material index ã‚’å–ã‚Šã€ãã® material ã® diffuse ã‚’æ¢ã™
         aiMesh* firstMesh = scene->mMeshes[0];
         if (firstMesh && scene->mMaterials && firstMesh->mMaterialIndex >= 0)
         {
@@ -422,15 +365,15 @@ bool IN_LoadFBX(const char* filename)
                     std::string texStr = texPath.C_Str();
                     if (!texStr.empty())
                     {
-                        // ƒ‚ƒfƒ‹ƒtƒ@ƒCƒ‹‚ÌƒtƒHƒ‹ƒ_‚ğŠî€‚É‚·‚éi‘Š‘ÎƒpƒX‘Îôj
-                        // filename ‚Í char* i—á: "assets/models/model.fbx"j
+                        // ãƒ¢ãƒ‡ãƒ«ãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ•ã‚©ãƒ«ãƒ€ã‚’åŸºæº–ã«ã™ã‚‹ï¼ˆç›¸å¯¾ãƒ‘ã‚¹å¯¾ç­–ï¼‰
+                        // filename ã¯ char* ï¼ˆä¾‹: "assets/models/model.fbx"ï¼‰
                         std::string sfilename = filename;
                         size_t pos = sfilename.find_last_of("/\\");
                         std::string folder = (pos == std::string::npos) ? std::string() : sfilename.substr(0, pos + 1);
                         std::string fullTex = folder + texStr;
 
-                        // IN_LoadTexture ‚Í wchar ‚ğŠú‘Ò‚·‚é‰Â”\«‚ª‚ ‚é‚½‚ßA‚±‚±‚ÍŠù‘¶ IN_LoadTexture ‚ÌƒVƒOƒlƒ`ƒƒ‚É‡‚í‚¹‚Ä“n‚·
-                        // Šù‘¶‚Ì IN_LoadTexture ‚Í const char* ‚ğó‚¯æ‚éŒ`‚É‡‚í‚¹‚Ä fullTex.c_str() ‚ğ“n‚µ‚Ü‚·
+                        // IN_LoadTexture ã¯ wchar ã‚’æœŸå¾…ã™ã‚‹å¯èƒ½æ€§ãŒã‚ã‚‹ãŸã‚ã€ã“ã“ã¯æ—¢å­˜ IN_LoadTexture ã®ã‚·ã‚°ãƒãƒãƒ£ã«åˆã‚ã›ã¦æ¸¡ã™
+                        // æ—¢å­˜ã® IN_LoadTexture ã¯ const char* ã‚’å—ã‘å–ã‚‹å½¢ã«åˆã‚ã›ã¦ fullTex.c_str() ã‚’æ¸¡ã—ã¾ã™
                         IN_LoadTexture(fullTex.c_str());
                     }
                 }
@@ -439,4 +382,179 @@ bool IN_LoadFBX(const char* filename)
     }
 
     return true;
+}
+
+// ================================================================
+// Texture ãƒ¡ãƒ¢ãƒªãƒ­ãƒ¼ãƒ‰
+// ================================================================
+bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t size)
+{
+    if (!data || size == 0) return false;
+
+    if (!GetDevice())
+    {
+        MessageBoxA(nullptr, "Device is NULL in IN_LoadTexture_Memory", "Error", MB_OK);
+        return false;
+    }
+
+    int TextureIndex = KeyMap_Add(&TextureMap, name);
+    if ((int)g_textureSRV.size() <= TextureIndex)
+        g_textureSRV.resize(TextureIndex + 1, nullptr);
+
+    IWICImagingFactory* pWIC = nullptr;
+    IWICStream* pStream = nullptr;
+    IWICBitmapDecoder* pDecoder = nullptr;
+    IWICBitmapFrameDecode* pFrame = nullptr;
+    IWICFormatConverter* pConverter = nullptr;
+    bool calledCoInit = false;
+
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pWIC));
+    if (FAILED(hr)) {
+        HRESULT hrInit = CoInitialize(nullptr);
+        if (SUCCEEDED(hrInit)) calledCoInit = true;
+        hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pWIC));
+        if (FAILED(hr)) {
+            if (calledCoInit) CoUninitialize();
+            return false;
+        }
+    }
+
+    hr = pWIC->CreateStream(&pStream);
+    if (FAILED(hr)) return false;
+    hr = pStream->InitializeFromMemory((WICInProcPointer)data, (DWORD)size);
+    if (FAILED(hr)) return false;
+
+    hr = pWIC->CreateDecoderFromStream(pStream, nullptr, WICDecodeMetadataCacheOnLoad, &pDecoder);
+    if (FAILED(hr)) return false;
+    hr = pDecoder->GetFrame(0, &pFrame);
+    if (FAILED(hr)) return false;
+
+    hr = pWIC->CreateFormatConverter(&pConverter);
+    if (FAILED(hr)) return false;
+    hr = pConverter->Initialize(pFrame, GUID_WICPixelFormat32bppRGBA,
+        WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
+    if (FAILED(hr)) return false;
+
+    UINT width, height;
+    pConverter->GetSize(&width, &height);
+    std::vector<BYTE> pixels(width * height * 4);
+    pConverter->CopyPixels(nullptr, width * 4, (UINT)pixels.size(), pixels.data());
+
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    D3D11_SUBRESOURCE_DATA initData = {};
+    initData.pSysMem = pixels.data();
+    initData.SysMemPitch = width * 4;
+
+    ID3D11Texture2D* texture = nullptr;
+    hr = GetDevice()->CreateTexture2D(&desc, &initData, &texture);
+    if (FAILED(hr)) return false;
+
+    ID3D11ShaderResourceView* srv = nullptr;
+    hr = GetDevice()->CreateShaderResourceView(texture, nullptr, &srv);
+    if (FAILED(hr)) { texture->Release(); return false; }
+
+    g_textureSRV[TextureIndex] = srv;
+
+    SafeRelease(texture);
+    SafeRelease(pConverter);
+    SafeRelease(pFrame);
+    SafeRelease(pDecoder);
+    SafeRelease(pStream);
+    SafeRelease(pWIC);
+    if (calledCoInit) CoUninitialize();
+
+    return true;
+}
+
+// ================================================================
+// Obj / FBX ãƒ¡ãƒ¢ãƒªãƒ­ãƒ¼ãƒ‰ï¼ˆAssimpåˆ©ç”¨ï¼‰
+// ================================================================
+static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* data, size_t size, bool isFBX)
+{
+    if (!data || size == 0) return false;
+
+    // æ—¢ã«ãƒ­ãƒ¼ãƒ‰æ¸ˆã¿ã‹ï¼Ÿ
+    int mapSize = KeyMap_GetSize(&ModelMap);
+    for (int i = 0; i < mapSize; ++i) {
+        const char* key = KeyMap_GetKey(&ModelMap, i);
+        if (strcmp(key, name) == 0) return true;
+    }
+
+    int ModelIndex = KeyMap_Add(&ModelMap, name);
+    if ((int)g_modelVertex.size() <= ModelIndex)
+        g_modelVertex.resize(ModelIndex + 1);
+
+    Assimp::Importer importer;
+
+    const aiScene* scene = importer.ReadFileFromMemory(
+        data,
+        size,
+        aiProcess_Triangulate |
+        aiProcess_GenNormals |
+        aiProcess_CalcTangentSpace |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_ConvertToLeftHanded,
+        isFBX ? "fbx" : "obj"
+    );
+
+    if (!scene || !scene->HasMeshes()) {
+        std::string err = importer.GetErrorString();
+        MessageBoxA(nullptr, ("Assimp: " + err).c_str(), "LoadModel_Memory Error", MB_OK);
+        return false;
+    }
+
+    std::vector<ModelVertex> outVerts;
+
+    for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi)
+    {
+        aiMesh* mesh = scene->mMeshes[mi];
+        if (!mesh) continue;
+
+        bool hasNormals = mesh->HasNormals();
+        bool hasTexCoords = mesh->HasTextureCoords(0);
+
+        for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
+        {
+            aiFace& face = mesh->mFaces[f];
+            if (face.mNumIndices < 3) continue;
+            for (unsigned int j = 0; j < face.mNumIndices; ++j)
+            {
+                unsigned int vi = face.mIndices[j];
+                ModelVertex v;
+                v.pos = DirectX::XMFLOAT3(mesh->mVertices[vi].x, mesh->mVertices[vi].y, mesh->mVertices[vi].z);
+                v.normal = hasNormals ? DirectX::XMFLOAT3(mesh->mNormals[vi].x, mesh->mNormals[vi].y, mesh->mNormals[vi].z)
+                    : DirectX::XMFLOAT3(0, 0, 0);
+                if (hasTexCoords)
+                    v.uv = DirectX::XMFLOAT2(mesh->mTextureCoords[0][vi].x, mesh->mTextureCoords[0][vi].y);
+                else
+                    v.uv = DirectX::XMFLOAT2(0, 0);
+                outVerts.push_back(v);
+            }
+        }
+    }
+
+    g_modelVertex[ModelIndex] = std::move(outVerts);
+    return true;
+}
+
+// ================================================================
+// FBX / OBJ wrapper
+// ================================================================
+bool IN_LoadFBX_Memory(const char* name, const unsigned char* data, size_t size)
+{
+    return LoadModel_Assimp_FromMemory(name, data, size, true);
+}
+
+bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t size)
+{
+    return LoadModel_Assimp_FromMemory(name, data, size, false);
 }
