@@ -12,6 +12,7 @@ typedef struct {
     int StartIndex_GridPolygon, EndIndex_GridPolygon;
     int StartIndex_Camera, EndIndex_Camera;
     int StartIndex_SpriteWorld, EndIndex_SpriteWorld;
+    int StartIndex_SpriteScreen, EndIndex_SpriteScreen;
     int UseCameraIndex;
     bool Finalized;
 } SceneRange;
@@ -39,6 +40,8 @@ void AddScene(const char* name)
     range.EndIndex_Camera = idx->CameraIndex;
     range.StartIndex_SpriteWorld = idx->SpriteWorldIndex;
     range.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
+    range.StartIndex_SpriteScreen = idx->SpriteScreenIndex;
+    range.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
     range.StartIndex_GridBox = idx->GridBoxIndex;
     range.EndIndex_GridBox = idx->GridBoxIndex;
     range.StartIndex_GridPolygon = idx->GridPolygonIndex;
@@ -59,6 +62,7 @@ void SceneEndPoint()
 
     r.EndIndex_Camera = idx->CameraIndex;
     r.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
+    r.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
     r.EndIndex_GridBox = idx->GridBoxIndex;
     r.EndIndex_GridPolygon = idx->GridPolygonIndex;
     r.EndIndex_Grid = idx->GridLineIndex;
@@ -76,6 +80,7 @@ void RefreshSceneRange()
     ObjectIndex* idx = GetObjectIndex();
     range.EndIndex_Camera = idx->CameraIndex;
     range.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
+    range.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
     range.EndIndex_GridBox = idx->GridBoxIndex;
     range.EndIndex_GridPolygon = idx->GridPolygonIndex;
     range.EndIndex_Grid = idx->GridLineIndex;
@@ -251,7 +256,7 @@ void DrawScene()
             GetObjectClass()->GetComponent<SpriteWorld>(i)->SetSize(v4Size.X, v4Size.Y);
             GetObjectClass()->GetComponent<SpriteWorld>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
 
-            // ← 追加: カメラ行列を渡す（必須）
+            //カメラ行列を渡す
             if (GetObjectClass()->GetComponent<Camera>(useCam)) {
                 GetObjectClass()->GetComponent<SpriteWorld>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
                 GetObjectClass()->GetComponent<SpriteWorld>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
@@ -261,6 +266,24 @@ void DrawScene()
                 MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
             }
 
+        }
+    }
+    //SpriteScreen
+    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteScreen >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_SpriteWorld <= (int)pool->SpriteWorldPos.size)
+    {
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteScreen; i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteScreen; i++)
+        {
+            if (i < 0 || i >= (int)pool->SpriteWorldPos.size) continue;
+            Vec4 v4Pos = Vec4_Get(&pool->SpriteScreenPos, i);
+            Vec4 v4Size = Vec4_Get(&pool->SpriteScreenSize, i);
+            Vec4 v4Color = Vec4_Get(&pool->SpriteScreenColor, i);
+            int vIAngle = VecInt_Get(&pool->SpriteScreenAngle, i);
+
+            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPos(v4Pos.X, v4Pos.Y);
+            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize(v4Size.X, v4Size.Y);
+            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
+
+            //カメラ行列を渡す
         }
     }
 }

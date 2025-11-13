@@ -9,6 +9,7 @@
 #include "Manager.h"
 #include "ComponentCamera.h"
 #include "ComponentSpriteWorld.h"
+#include "ComponentSpriteScreen.h"
 #include <string>
 
 // ======================================================
@@ -30,6 +31,7 @@ static int UseCamera = -1;
 static int CameraIndex = 0, CameraOldIdx = 0;
 static int UIIndex = 0, UIOldIndex = 0;
 static int SpriteWorldIndex = 0, SpriteWorldOldIndex = 0;
+static int SpriteScreenIndex = 0, SpriteScreenOldIndex = 0;
 static int ModelIndex = 0, ModelOldIndex = 0;
 static int BoxColliderIndex = 0, BoxColliderOldIndex = 0;
 static int GridBoxIndex = 0, GridBoxOldIndex = 0;
@@ -150,6 +152,46 @@ void SetSpriteWorldColor(const char* name, float r, float g, float b, float a)
 }
 
 //-----------------------------------------
+// SpriteScreen
+//-----------------------------------------
+void AddSpriteScreen(const char* name, const char* pathName)
+{
+    Vec4_PushBack(&g_ObjectPool.SpriteScreenPos, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.SpriteScreenSize, { 1,1,1,1 });
+    Vec4_PushBack(&g_ObjectPool.SpriteScreenColor, { 1,1,1,1 });
+    VecInt_PushBack(&g_ObjectPool.SpriteScreenAngle, 0);
+    KeyMap_Add(&g_ObjectPool.SpriteScreenMap, name);
+    KeyMap_Add(&g_ObjectPool.TexturePathMap, pathName);
+    SpriteScreenIndex++;
+    ObjectIdx.SpriteWorldIndex = SpriteScreenIndex;
+}
+void SetSpriteScreenPos(const char* name, float x, float y)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteScreenMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteScreenPos : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteScreenPos, idx, { x, y, 0, 0 });
+}
+
+void SetSpriteScreenSize(const char* name, float x, float y)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteScreenMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteScreenSize : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteScreenSize, idx, { x, y, 1, 1 });
+}
+void SetSpriteScreenAngle(const char* name, float angle)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteScreenMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteScreenAngle : sprite not found", name)); return; }
+    VecInt_Set(&g_ObjectPool.SpriteScreenAngle, idx, angle);
+}
+void SetSpriteScreenColor(const char* name, float r, float g, float b, float a)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteScreenMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteScreenColor : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteScreenColor, idx, { r, g, b, a });
+}
+
+//-----------------------------------------
 // GridŠÇ—
 //-----------------------------------------
 void AddGridBox(const char* Name)
@@ -239,6 +281,13 @@ void CreateObject()
 
         object->AddComponent<SpriteWorld>()->SetTexture(texPath);
         SpriteWorldOldIndex++;
+    }
+    while (SpriteScreenOldIndex < SpriteScreenIndex)
+    {
+        const char* texPath = KeyMap_GetKey(&g_ObjectPool.TexturePathMap, SpriteScreenOldIndex);
+
+        object->AddComponent<SpriteScreen>()->SetTexture(texPath);
+        SpriteScreenOldIndex++;
     }
 }
 

@@ -85,11 +85,16 @@ struct ObjectDataPool {
     Vec4Vector UITBLR;
     Vec4Vector UIAngle;
     Vec4Vector UIColor;
-    // World2D
+    // SpriteWorld
     Vec4Vector SpriteWorldPos;
     Vec4Vector SpriteWorldSize;
     Vec4Vector SpriteWorldAngle;
     Vec4Vector SpriteWorldColor;
+    // SpriteScreen
+    Vec4Vector SpriteScreenPos;
+    Vec4Vector SpriteScreenSize;
+    Vec4Vector SpriteScreenColor;
+    IntVector  SpriteScreenAngle;
     // Model
     Vec4Vector ModelPos;
     Vec4Vector ModelSize;
@@ -119,6 +124,7 @@ struct ObjectDataPool {
     KeyMap ModelMap;
     KeyMap TextureMap;
     KeyMap SpriteWorldMap;
+    KeyMap SpriteScreenMap;
     KeyMap UIMap;
     KeyMap BoxColliderMap;
     KeyMap GridBoxMap;
@@ -149,6 +155,12 @@ void SetSpriteWorldPos(const char* name, float x, float y, float z);
 void SetSpriteWorldSize(const char* name, float x, float y, float z);
 void SetSpriteWorldAngle(const char* name, float x, float y, float z);
 void SetSpriteWorldColor(const char* name, float r, float g, float b, float a);
+//|| SpriteScreen ||_________________
+void AddSpriteScreen(const char* name, const char* pathName);
+void SetSpriteScreenPos(const char* name, float x, float y);
+void SetSpriteScreenSize(const char* name, float x, float y);
+void SetSpriteScreenAngle(const char* name, float angle);
+void SetSpriteScreenColor(const char* name, float r, float g, float b, float a);
 //|| Grid   ||_______________________
 // Grid Line
 

@@ -158,6 +158,7 @@ void SpriteWorld::Draw()
     GetContext()->Draw(4, 0);
 
     //GetContext()->OMSetDepthStencilState(m_noDepthState, 0);
+
 }
 
 void SpriteWorld::Release()
