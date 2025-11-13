@@ -18,6 +18,7 @@
 
 #include "Manager.h"
 #include "Main.h"
+#include "AssetLoad.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -41,22 +42,24 @@ static KeyMap ModelMap;
 
 ID3D11ShaderResourceView* GetTextureSRV(const char* filename)
 {
-    if (!filename) {
-        MessageBoxA(nullptr, "GetTextureSRV: key is null", "Error", MB_OK);
-        return nullptr;
-    }
+    if (!filename) return nullptr;
 
+    // すでに登録済みならそのSRVを返す
     int index = KeyMap_GetIndex(&TextureMap, filename);
-    char buf[256];
-    sprintf_s(buf, "GetTextureSRV: key=%s index=%d", filename, index);
-    //MessageBoxA(nullptr, buf, "Debug", MB_OK);
-    if (index < 0 || index >= (int)g_textureSRV.size()) {
-        MessageBoxA(nullptr, "GetTextureSRV: invalid index", "Error", MB_OK);
+    if (index >= 0 && index < (int)g_textureSRV.size()) {
+        return g_textureSRV[index];
+    }
+
+    // pkgから読み込み
+    if (!AL_LoadFromPackageByName(filename)) {
+        MessageBoxA(nullptr, ("Texture not found: " + std::string(filename)).c_str(), "AssetManager", MB_OK);
         return nullptr;
     }
 
-    if (!g_textureSRV[index]) {
-        MessageBoxA(nullptr, "GetTextureSRV: SRV is null", "Error", MB_OK);
+    // KeyMapが更新されているはずなので再取得
+    index = KeyMap_GetIndex(&TextureMap, filename);
+    if (index < 0 || index >= (int)g_textureSRV.size()) {
+        MessageBoxA(nullptr, "GetOrLoadTextureSRV: invalid index after load", "Error", MB_OK);
         return nullptr;
     }
 

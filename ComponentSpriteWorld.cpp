@@ -69,7 +69,7 @@ void SpriteWorld::SetTexture(const char* assetPath)
 {
     // AssetManagerŒo—R‚ÅŽæ“¾
     if (!assetPath || strlen(assetPath) == 0) {
-        MessageBoxA(nullptr, assetPath, "SpriteWorld::SetTexture: Invalid", MB_OK);
+        MessageBoxA(nullptr, assetPath, "SpriteWorld::SetTexture: Error Invalid", MB_OK);
         return;
     }
 

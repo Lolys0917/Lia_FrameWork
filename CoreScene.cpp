@@ -17,7 +17,7 @@ void CoreStartUp()
     AL_RegisterAssetToBatch("asset/est.png");
     //AL_RegisterAssetToBatch("asset/model/player.fbx");
     //AL_RegisterAssetToBatch("asset/model/ground.obj");
-
+    
     // pkgファイル化（ゲーム出力時のみ使用）
     AL_SaveAllPackages("saved/pkg/");
 

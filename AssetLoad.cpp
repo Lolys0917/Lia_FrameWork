@@ -232,33 +232,33 @@ static bool WriteTempAndCallLoader(const PackageEntry& e) {
     if (ext.size() && ext[0] == '.') ext.erase(0, 1);
     ext = ToLowerExt(ext);
 
-    std::string tmpFolder = "saved/tmp/";
-    fs::create_directories(tmpFolder);
-    // create unique temp name using entry name sanitized
-    std::string base = fs::path(e.name).filename().string(); // e.g. "Player.png"
-    std::string tmpPath = tmpFolder + base;
-
-    // if file exists, append counter
-    int c = 0;
-    while (fs::exists(tmpPath) && c < 1000) {
-        tmpPath = tmpFolder + std::to_string(c) + "_" + base;
-        ++c;
-    }
-
-    // write binary
-    std::ofstream out(tmpPath, std::ios::binary | std::ios::trunc);
-    if (!out.is_open()) return false;
-    if (!e.data.empty()) {
-        out.write((char*)e.data.data(), e.data.size());
-    }
-    else {
-        // if .data is empty, we may be in case where entries were loaded from .pkg (no memory)
-        // In that case caller must have filled e.data or we need to read from pkg stream.
-        // This function expects e.data valid.
-        out.close();
-        return false;
-    }
-    out.close();
+    //std::string tmpFolder = "saved/tmp/";
+    //fs::create_directories(tmpFolder);
+    //// create unique temp name using entry name sanitized
+    //std::string base = fs::path(e.name).filename().string(); // e.g. "Player.png"
+    //std::string tmpPath = tmpFolder + base;
+    //
+    //// if file exists, append counter
+    //int c = 0;
+    //while (fs::exists(tmpPath) && c < 1000) {
+    //    tmpPath = tmpFolder + std::to_string(c) + "_" + base;
+    //    ++c;
+    //}
+    //
+    //// write binary
+    //std::ofstream out(tmpPath, std::ios::binary | std::ios::trunc);
+    //if (!out.is_open()) return false;
+    //if (!e.data.empty()) {
+    //    out.write((char*)e.data.data(), e.data.size());
+    //}
+    //else {
+    //    // if .data is empty, we may be in case where entries were loaded from .pkg (no memory)
+    //    // In that case caller must have filled e.data or we need to read from pkg stream.
+    //    // This function expects e.data valid.
+    //    out.close();
+    //    return false;
+    //}
+    //out.close();
 
     // call loader based on ext
     if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp")
