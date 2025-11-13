@@ -81,7 +81,7 @@ void Grid::Draw()
     cb.lineColor = ColorSet;
 
     GetContext()->UpdateSubresource(m_constantBuffer, 0, nullptr, &cb, 0, 0);
-
+    
     // ƒoƒCƒ“ƒh
     UINT stride = sizeof(Vertex);
     UINT offset = 0;

@@ -182,7 +182,7 @@ void DrawScene()
     GetGridClass()->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
 
     // GridBase
-    GetGridClass()->SetColor({ 0,0,0,0 });
+    GetGridClass()->SetColor({ 0,0,0,1 });
 
     for (int i = 0; i < 10; i++)
     {
