@@ -133,9 +133,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AssetLoad.cpp" />
     <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="ComponentCamera.cpp" />
+    <ClCompile Include="ComponentModel.cpp" />
     <ClCompile Include="ComponentSpriteScreen.cpp" />
+    <ClCompile Include="ComponentSpriteWorld.cpp" />
     <ClCompile Include="ComponentSpriteWorld.h" />
     <ClCompile Include="CoreScene.cpp" />
     <ClCompile Include="Grid.cpp" />
@@ -145,6 +148,7 @@
     <ClCompile Include="UtilManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AssetLoad.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentCamera.h" />
     <ClInclude Include="CoreScene.h" />
@@ -161,7 +165,17 @@
   <ItemGroup>
     <Text Include="ObjectMemo.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\assimp-v143.5.4.3\build\native\assimp-v143.targets" Condition="Exists('packages\assimp-v143.5.4.3\build\native\assimp-v143.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>このプロジェクトは、このコンピューター上にない NuGet パッケージを参照しています。それらのパッケージをダウンロードするには、[NuGet パッケージの復元] を使用します。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイルは {0} です。</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\assimp-v143.5.4.3\build\native\assimp-v143.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\assimp-v143.5.4.3\build\native\assimp-v143.targets'))" />
+  </Target>
 </Project>

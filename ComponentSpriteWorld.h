@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Component.h"
-
-#include <string>
-
-#include <d3d11.h>
-#include <DirectXMath.h>
+#pragma once
+#include "Manager.h"
+#include <d3dcompiler.h>
+#include <wrl/client.h>
+#include <vector>
+using Microsoft::WRL::ComPtr;
 
 using namespace DirectX;
 
@@ -13,77 +13,56 @@ class SpriteWorld : public Component
 {
 public:
     using Component::Component;
-    ~SpriteWorld() override;
+    ~SpriteWorld() override {};
 
-    void Draw()override;
+    void Init() override;
+    void Draw() override;
+    void Release() override;
 
-    bool Setting(const std::wstring& texturePath);
-
+    void SetTexture(const char* assetPath);  // AssetManagerÇ©ÇÁéÊìæ
+    void SetPos(float x, float y, float z);
+    void SetSize(float w, float h);
+    void SetAngle(float rx, float ry, float rz);
     void SetView(const XMMATRIX& view);
     void SetProj(const XMMATRIX& proj);
     void SetColor(const XMFLOAT4& color);
-
-    void SetSize(float SizeW, float SizeH);
-    void SetPos(float PosX, float PosY, float PosZ);
-    void SetAngle(float AngleX, float AngleY, float AngleZ);
-
-    void SetIfBillboard(bool Judge);
+    void SetBillboard(bool enable);
 private:
-
-
-    struct Vertex
-    {
-        XMFLOAT3 position;
+    struct Vertex {
+        XMFLOAT3 pos;
         XMFLOAT2 uv;
     };
-
-    _declspec(align(16))
-        struct MatrixBuffer
-    {
-        XMMATRIX mvp;
+    struct MatrixBuffer {
+        XMMATRIX mvp;           // 64 bytes
+        XMFLOAT4 diffuseColor;  // 16 bytes
+        int useTexture;         // 4 bytes
+        XMFLOAT3 pad;           // 12 bytes -> çáåv 96 (=16*6)
     };
-    _declspec(align(16))
-        struct ColorBuffer
-    {
+    struct ColorBuffer {
         XMFLOAT4 color;
     };
 
-    float PosX;
-    float PosY;
-    float PosZ;
-
-    float SizeW;
-    float SizeH;
-
-    float AngleX;
-    float AngleY;
-    float AngleZ;
-
-    bool Billboard;
-
     XMMATRIX ViewSet;
     XMMATRIX ProjSet;
-    XMFLOAT4 ColorSet;
 
-    XMMATRIX MatPos;
-    XMMATRIX MatSize;
-    XMMATRIX MatAngle;
+    bool m_isBillboard = false;
+    XMFLOAT3 m_pos{ 0,0,0 };
+    XMFLOAT3 m_angle{ 0,0,0 };
+    XMFLOAT2 m_size{ 1,1 };
+    XMFLOAT4 m_color{ 1,1,1,1 };
 
-    XMMATRIX world;
+    ID3D11ShaderResourceView* m_srv = nullptr;
 
-    ID3D11Buffer* m_vertexBuffer = nullptr;
-    ID3D11Buffer* m_matrixBuffer = nullptr;
-    ID3D11Buffer* m_colorBuffer = nullptr;
+    ComPtr<ID3D11Buffer> m_vb;
+    ComPtr<ID3D11Buffer> m_matrixBuf;
+    ComPtr<ID3D11Buffer> m_colorBuf;
+    ComPtr<ID3D11InputLayout> m_layout;
+    ComPtr<ID3D11VertexShader> m_vs;
+    ComPtr<ID3D11PixelShader> m_ps;
 
-    ID3D11VertexShader* m_vertexShader = nullptr;
-    ID3D11PixelShader* m_pixelShader = nullptr;
-    ID3D11InputLayout* m_inputLayout = nullptr;
-    ID3D11ShaderResourceView* m_textureSRV = nullptr;
     ID3D11SamplerState* m_samplerState = nullptr;
     ID3D11BlendState* m_blendState = nullptr;
 
     ID3D11DepthStencilState* m_depthState = nullptr;
     ID3D11DepthStencilState* m_noDepthState = nullptr;
-
-    bool LoadTextureFromFile(const std::wstring& filename);
 };
