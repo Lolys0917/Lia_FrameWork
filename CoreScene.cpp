@@ -59,13 +59,16 @@ void CoreStartUp()
     SetSpriteWorldSize("TestSprite01", 3, 3, 3);
     SetSpriteWorldPos("TestSprite01", 0, 0, 0);
 
-    AddSpriteScreen("TestUI01", "asset/test.png");
-
     AddSpriteWorld("TestSprite02", "asset/est.png");
     SetSpriteWorldColor("TestSprite02", 1, 1, 1, 1);
     SetSpriteWorldSize("TestSprite02", 3, 3, 3);
     SetSpriteWorldPos("TestSprite02", 0, 0, 0);
     SetSpriteWorldAngle("TestSprite02", 0, 0.6f, 0);
+
+    AddSpriteScreen("TestUI01", "asset/test.png");
+    SetSpriteScreenPos("TestUI01", 0, 0);
+    SetSpriteScreenSize("TestUI01", 100, 100);
+    SetSpriteScreenColor("TestUI01", 1, 1, 1, 1);
 
     //AddSpriteScreen("TestUI02", "asset/test.png");
 

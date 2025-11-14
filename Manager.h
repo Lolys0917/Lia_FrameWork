@@ -129,7 +129,8 @@ struct ObjectDataPool {
     KeyMap BoxColliderMap;
     KeyMap GridBoxMap;
     KeyMap GridPolygonMap;
-    KeyMap TexturePathMap;
+    KeyMap SpriteWorldTexturePathMap;
+    KeyMap SpriteScreenTexturePathMap;
 };
 ObjectDataPool* GetObjectDataPool();
 

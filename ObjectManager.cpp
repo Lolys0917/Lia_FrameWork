@@ -122,7 +122,7 @@ void AddSpriteWorld(const char* name, const char* pathName)
     Vec4_PushBack(&g_ObjectPool.SpriteWorldAngle, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteWorldColor, { 1,1,1,1 });
     KeyMap_Add(&g_ObjectPool.SpriteWorldMap, name);
-    KeyMap_Add(&g_ObjectPool.TexturePathMap, pathName);
+    KeyMap_Add(&g_ObjectPool.SpriteWorldTexturePathMap, pathName);
     SpriteWorldIndex++;
     ObjectIdx.SpriteWorldIndex = SpriteWorldIndex;
 }
@@ -157,13 +157,13 @@ void SetSpriteWorldColor(const char* name, float r, float g, float b, float a)
 void AddSpriteScreen(const char* name, const char* pathName)
 {
     Vec4_PushBack(&g_ObjectPool.SpriteScreenPos, { 0,0,0,0 });
-    Vec4_PushBack(&g_ObjectPool.SpriteScreenSize, { 1,1,1,1 });
+    Vec4_PushBack(&g_ObjectPool.SpriteScreenSize, { 100, 100, 100, 100 });
     Vec4_PushBack(&g_ObjectPool.SpriteScreenColor, { 1,1,1,1 });
     VecInt_PushBack(&g_ObjectPool.SpriteScreenAngle, 0);
     KeyMap_Add(&g_ObjectPool.SpriteScreenMap, name);
-    KeyMap_Add(&g_ObjectPool.TexturePathMap, pathName);
+    KeyMap_Add(&g_ObjectPool.SpriteScreenTexturePathMap, pathName);
     SpriteScreenIndex++;
-    ObjectIdx.SpriteWorldIndex = SpriteScreenIndex;
+    ObjectIdx.SpriteScreenIndex = SpriteScreenIndex;
 }
 void SetSpriteScreenPos(const char* name, float x, float y)
 {
@@ -277,14 +277,14 @@ void CreateObject()
     //SpriteWorld
     while (SpriteWorldOldIndex < SpriteWorldIndex)
     {
-        const char* texPath = KeyMap_GetKey(&g_ObjectPool.TexturePathMap, SpriteWorldOldIndex);
+        const char* texPath = KeyMap_GetKey(&g_ObjectPool.SpriteWorldTexturePathMap, SpriteWorldOldIndex);
 
         object->AddComponent<SpriteWorld>()->SetTexture(texPath);
         SpriteWorldOldIndex++;
     }
     while (SpriteScreenOldIndex < SpriteScreenIndex)
     {
-        const char* texPath = KeyMap_GetKey(&g_ObjectPool.TexturePathMap, SpriteScreenOldIndex);
+        const char* texPath = KeyMap_GetKey(&g_ObjectPool.SpriteScreenTexturePathMap, SpriteScreenOldIndex);
 
         object->AddComponent<SpriteScreen>()->SetTexture(texPath);
         SpriteScreenOldIndex++;
@@ -371,7 +371,8 @@ void InitDo()
     KeyMap_Init(&p->BoxColliderMap);
     KeyMap_Init(&p->GridBoxMap);
     KeyMap_Init(&p->GridPolygonMap);
-    KeyMap_Init(&p->TexturePathMap);
+    KeyMap_Init(&p->SpriteWorldTexturePathMap);
+    KeyMap_Init(&p->SpriteScreenTexturePathMap);
 
     // ƒNƒ‰ƒXŽæ“¾
     grid = new Grid();

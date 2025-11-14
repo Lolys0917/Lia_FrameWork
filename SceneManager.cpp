@@ -269,11 +269,13 @@ void DrawScene()
         }
     }
     //SpriteScreen
-    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteScreen >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_SpriteWorld <= (int)pool->SpriteWorldPos.size)
+    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteScreen >= 0 &&
+        SceneRanges[CurrentSceneIndex].EndIndex_SpriteScreen <= (int)pool->SpriteScreenPos.size)
     {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteScreen; i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteScreen; i++)
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteScreen;
+            i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteScreen; ++i)
         {
-            if (i < 0 || i >= (int)pool->SpriteWorldPos.size) continue;
+            if (i < 0 || i >= (int)pool->SpriteScreenPos.size) continue;
             Vec4 v4Pos = Vec4_Get(&pool->SpriteScreenPos, i);
             Vec4 v4Size = Vec4_Get(&pool->SpriteScreenSize, i);
             Vec4 v4Color = Vec4_Get(&pool->SpriteScreenColor, i);
@@ -282,8 +284,6 @@ void DrawScene()
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPos(v4Pos.X, v4Pos.Y);
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize(v4Size.X, v4Size.Y);
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
-
-            //カメラ行列を渡す
         }
     }
 }
