@@ -13,6 +13,7 @@ typedef struct {
     int StartIndex_Camera, EndIndex_Camera;
     int StartIndex_SpriteWorld, EndIndex_SpriteWorld;
     int StartIndex_SpriteScreen, EndIndex_SpriteScreen;
+    int StartIndex_SpriteCylinder, EndIndex_SpriteCylinder;
     int UseCameraIndex;
     bool Finalized;
 } SceneRange;
@@ -32,7 +33,7 @@ void AddScene(const char* name)
     KeyMap_Add(&SceneMap, name);
     int newIndex = KeyMap_GetIndex(&SceneMap, name);
     CurrentSceneIndex = newIndex;
-    ActiveSceneIndex = newIndex; // ✅追加された瞬間アクティブ化
+    ActiveSceneIndex = newIndex; // 追加された瞬間アクティブ化
 
     ObjectIndex* idx = GetObjectIndex();
     SceneRange range{};
@@ -42,6 +43,8 @@ void AddScene(const char* name)
     range.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
     range.StartIndex_SpriteScreen = idx->SpriteScreenIndex;
     range.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
+    range.StartIndex_SpriteCylinder = idx->SpriteCylinderIndex;
+    range.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
     range.StartIndex_GridBox = idx->GridBoxIndex;
     range.EndIndex_GridBox = idx->GridBoxIndex;
     range.StartIndex_GridPolygon = idx->GridPolygonIndex;
@@ -63,6 +66,7 @@ void SceneEndPoint()
     r.EndIndex_Camera = idx->CameraIndex;
     r.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
     r.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
+    r.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
     r.EndIndex_GridBox = idx->GridBoxIndex;
     r.EndIndex_GridPolygon = idx->GridPolygonIndex;
     r.EndIndex_Grid = idx->GridLineIndex;
@@ -266,6 +270,35 @@ void DrawScene()
                 MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
             }
 
+        }
+    }
+    //SpriteCylinder
+    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteCylinder >= 0 &&
+        SceneRanges[CurrentSceneIndex].EndIndex_SpriteCylinder <= (int)pool->SpriteCylinderPos.size)
+    {
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteCylinder;
+            i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteCylinder; ++i)
+        {
+            if (i < 0 || i >= (int)pool->SpriteCylinderPos.size) continue;
+            Vec4 v4Pos = Vec4_Get(&pool->SpriteCylinderPos, i);
+            Vec4 v4Size = Vec4_Get(&pool->SpriteCylinderSize, i);
+            Vec4 v4Color = Vec4_Get(&pool->SpriteCylinderColor, i);
+            Vec4 v4Angle = Vec4_Get(&pool->SpriteCylinderAngle, i);
+
+            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetSize(v4Size.X, v4Size.Y);
+            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
+
+            //カメラ行列を渡す
+            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+                GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+                GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+            }
+            else
+            {
+                MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
+            }
         }
     }
     //SpriteScreen

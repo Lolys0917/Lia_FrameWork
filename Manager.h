@@ -26,6 +26,7 @@ typedef struct { float X, Y, Z, W; } Vec4;
 typedef struct { Vec4* data;  size_t size; size_t capacity; } Vec4Vector;
 typedef struct { char** data; size_t size; size_t capacity; } CharVector;
 typedef struct { int* data;   size_t size; size_t capacity; } IntVector;
+typedef struct { float* data; size_t size; size_t capacity; } FloatVector;
 typedef struct { bool* data;  size_t size; size_t capacity; } BoolVector;
 typedef struct { char** keys; size_t size; size_t capacity; } KeyMap;
 // ObjectIndexç\ë¢ëÃ
@@ -33,6 +34,7 @@ typedef struct {
 	int CameraIndex;        //Camera_________
     int SpriteWorldIndex;	//Sprite_________
     int SpriteScreenIndex;
+    int SpriteCylinderIndex;
 	int ModelIndex;			//Model__________
 	int BoxColliderIndex;	//Collider_______
 	int SphereColliderIndex;
@@ -95,6 +97,12 @@ struct ObjectDataPool {
     Vec4Vector SpriteScreenSize;
     Vec4Vector SpriteScreenColor;
     IntVector  SpriteScreenAngle;
+    //SpriteCylinder
+    Vec4Vector SpriteCylinderPos;
+    Vec4Vector SpriteCylinderSize;
+    Vec4Vector SpriteCylinderAngle;
+    Vec4Vector SpriteCylinderColor;
+    IntVector  SpriteCylinderSegment;
     // Model
     Vec4Vector ModelPos;
     Vec4Vector ModelSize;
@@ -125,18 +133,25 @@ struct ObjectDataPool {
     KeyMap TextureMap;
     KeyMap SpriteWorldMap;
     KeyMap SpriteScreenMap;
+    KeyMap SpriteCylinderMap;
     KeyMap UIMap;
     KeyMap BoxColliderMap;
     KeyMap GridBoxMap;
     KeyMap GridPolygonMap;
     KeyMap SpriteWorldTexturePathMap;
     KeyMap SpriteScreenTexturePathMap;
+    KeyMap SpriteCylinderTopTexturePathMap;
+    KeyMap SpriteCylinderBottomTexturePathMap;
+    KeyMap SpriteCylinderSideTexturePathMap;
 };
 ObjectDataPool* GetObjectDataPool();
 
   ///////////////////
  // ObjectManager //
 ///////////////////
+
+//Å´APIópä÷êî //////////////////////
+//
 //|| ä«óù   ||_______________________
 void InitDo();
 void UpdateDo();
@@ -162,6 +177,16 @@ void SetSpriteScreenPos(const char* name, float x, float y);
 void SetSpriteScreenSize(const char* name, float x, float y);
 void SetSpriteScreenAngle(const char* name, float angle);
 void SetSpriteScreenColor(const char* name, float r, float g, float b, float a);
+//|| SpriteCylinder ||_______________
+void AddSpriteCylinder(const char* name, const char* pathName);
+void SetSpriteCylinderPos(const char* name, float x, float y, float z);
+void SetSpriteCylinderSize(const char* name, float x, float y);
+void SetSpriteCylinderAngle(const char* name, float x, float y, float z);
+void SetSpriteCylinderColor(const char* name, float r, float g, float b, float a);
+void SetSpriteCylinderSegment(const char* name, int sengment);
+void SetSpriteCylinderTextureTop(const char* name, const char* pathName);
+void SetSpriteCylinderTextureBottom(const char* name, const char* pathName);
+void SetSpriteCylinderTextureSide(const char* name, const char* pathName);
 //|| Grid   ||_______________________
 // Grid Line
 
@@ -175,6 +200,8 @@ void AddGridPolygon(const char* name);
 void SetGridPolygonPos(const char* name, float x, float y, float z);
 void SetGridPolygonColor(const char* name, float R, float G, float B, float A);
 void SetGridPolygonSides(const char* name, int sides);
+
+///////////////////////////////////
 
 void OutObjectIndex(ObjectIndex* out);
 ObjectIndex* GetObjectIndex();
@@ -252,4 +279,5 @@ int KeyMap_Add(KeyMap* map, const char* key);
 int KeyMap_GetIndex(KeyMap* map, const char* key);
 const char* KeyMap_GetKey(KeyMap* map, int index);
 int KeyMap_GetSize(KeyMap* map);
+void KeyMap_SetKey(KeyMap* map, size_t index, const char* key);
 void KeyMap_Free(KeyMap* map);

@@ -137,6 +137,7 @@
     <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="ComponentCamera.cpp" />
     <ClCompile Include="ComponentModel.cpp" />
+    <ClCompile Include="ComponentSpriteCylinder.cpp" />
     <ClCompile Include="ComponentSpriteScreen.cpp" />
     <ClCompile Include="ComponentSpriteWorld.cpp" />
     <ClCompile Include="ComponentSpriteWorld.h" />
@@ -151,16 +152,14 @@
     <ClInclude Include="AssetLoad.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentCamera.h" />
+    <ClInclude Include="ComponentSpriteCylinder.h" />
     <ClInclude Include="CoreScene.h" />
     <ClInclude Include="Grid.h" />
     <ClInclude Include="ComponentModel.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="Manager.h" />
     <ClInclude Include="Object.h" />
-    <ClInclude Include="ObjectManager.h" />
     <ClInclude Include="ComponentSpriteScreen.h" />
-    <ClInclude Include="SceneManager.h" />
-    <ClInclude Include="UtilManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ObjectMemo.txt" />

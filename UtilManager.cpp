@@ -303,6 +303,20 @@ int KeyMap_GetSize(KeyMap* map)
 {
 	return (int)map->size;
 }
+void KeyMap_SetKey(KeyMap* map, size_t index, const char* key)
+{
+    if (index >= map->size) {
+        AddMessage("\nerror : KeyMap_set/インデックス範囲外\n");
+        return;
+    }
+    map->keys[index] = NULL;
+
+    size_t len = strlen(key) + 1;
+    char* copy = (char*)malloc(len);
+    memcpy(copy, key, len);
+
+    map->keys[index] = copy;
+}
 const char* KeyMap_GetKey(KeyMap* map, int index) {
     if (index < 0 || (size_t)index >= map->size) {
         AddMessage("\nerror : keymap_getkey/インデックス範囲外\n");

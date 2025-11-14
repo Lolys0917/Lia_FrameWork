@@ -28,6 +28,9 @@
     <Filter Include="ソース ファイル\Manager">
       <UniqueIdentifier>{22cbce6e-5121-4828-bd4d-60cda55cdce2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\Manager\Loader">
+      <UniqueIdentifier>{4f7653b7-bfcf-4703-bd50-0c73e5551a4b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -63,11 +66,14 @@
     <ClCompile Include="ComponentModel.cpp">
       <Filter>ソース ファイル\Component</Filter>
     </ClCompile>
-    <ClCompile Include="AssetLoad.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="ComponentSpriteWorld.cpp">
       <Filter>ソース ファイル\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="ComponentSpriteCylinder.cpp">
+      <Filter>ソース ファイル\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="AssetLoad.cpp">
+      <Filter>ソース ファイル\Manager\Loader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -86,9 +92,6 @@
     <ClInclude Include="Object.h">
       <Filter>ソース ファイル\Manager</Filter>
     </ClInclude>
-    <ClInclude Include="ObjectManager.h">
-      <Filter>ソース ファイル\Manager</Filter>
-    </ClInclude>
     <ClInclude Include="Main.h">
       <Filter>ソース ファイル</Filter>
     </ClInclude>
@@ -98,17 +101,14 @@
     <ClInclude Include="CoreScene.h">
       <Filter>ソース ファイル\ForUsers</Filter>
     </ClInclude>
-    <ClInclude Include="SceneManager.h">
-      <Filter>ソース ファイル\Manager</Filter>
-    </ClInclude>
-    <ClInclude Include="UtilManager.h">
-      <Filter>ソース ファイル\Manager</Filter>
-    </ClInclude>
     <ClInclude Include="Manager.h">
       <Filter>ソース ファイル\Manager</Filter>
     </ClInclude>
+    <ClInclude Include="ComponentSpriteCylinder.h">
+      <Filter>ソース ファイル\Component</Filter>
+    </ClInclude>
     <ClInclude Include="AssetLoad.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>ソース ファイル\Manager\Loader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

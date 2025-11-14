@@ -70,6 +70,8 @@ void CoreStartUp()
     SetSpriteScreenSize("TestUI01", 100, 100);
     SetSpriteScreenColor("TestUI01", 1, 1, 1, 1);
 
+    //AddSpriteCylinder("Cylinder01", "asset/test.png");
+    //SetSpriteCylinderSize("Cylinder01", 5, 5);
     //AddSpriteScreen("TestUI02", "asset/test.png");
 
 	SceneEndPoint();
@@ -80,6 +82,9 @@ void CoreStartUp()
     SetGridPolygonPos("PolyA", 0, 0, 0);
 	SetGridPolygonColor("PolyA", 0, 1, 1, 1);
     SetGridPolygonSides("PolyA", 6);
+
+    AddSpriteCylinder("Cylinder01", "asset/test.png");
+    SetSpriteCylinderSize("Cylinder01", 1, 1);
     SceneEndPoint();
 
     // --- シーンごとのカメラ割当 ---
@@ -88,6 +93,7 @@ void CoreStartUp()
     SetSceneCamera("Scene2", "SideCamera");
     // 最初のシーン設定
     ChangeScene("Scene3");
+    //ChangeScene("Scene3");
 
     AddGridBox("BoxC");
     SetGridBoxPos("BoxC", 0, 0, 0);
@@ -103,6 +109,14 @@ void CoreSceneUpdate()
     static float pos = 0.0f;
 	pos += 0.01f;
     SetGridBoxPos("BoxC", pos, 0, 0);
+
+    static int frameCnt = 0;
+    static int frameStop = 1000;
+    static int changeNo = 0;
+
+    frameCnt++;
+
+    //ChangeScene("Scene1");
 }
 void CoreSceneDraw()
 {

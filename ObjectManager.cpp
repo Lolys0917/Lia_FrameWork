@@ -10,6 +10,7 @@
 #include "ComponentCamera.h"
 #include "ComponentSpriteWorld.h"
 #include "ComponentSpriteScreen.h"
+#include "ComponentSpriteCylinder.h"
 #include <string>
 
 // ======================================================
@@ -32,6 +33,7 @@ static int CameraIndex = 0, CameraOldIdx = 0;
 static int UIIndex = 0, UIOldIndex = 0;
 static int SpriteWorldIndex = 0, SpriteWorldOldIndex = 0;
 static int SpriteScreenIndex = 0, SpriteScreenOldIndex = 0;
+static int SpriteCylinderIndex = 0, SpriteCylinderOldIndex = 0;
 static int ModelIndex = 0, ModelOldIndex = 0;
 static int BoxColliderIndex = 0, BoxColliderOldIndex = 0;
 static int GridBoxIndex = 0, GridBoxOldIndex = 0;
@@ -192,6 +194,72 @@ void SetSpriteScreenColor(const char* name, float r, float g, float b, float a)
 }
 
 //-----------------------------------------
+// SpriteCylinder
+//-----------------------------------------
+void AddSpriteCylinder(const char* name, const char* pathName)
+{
+    Vec4_PushBack(&g_ObjectPool.SpriteCylinderPos,   { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.SpriteCylinderSize,  { 1,1,1,1 });
+    Vec4_PushBack(&g_ObjectPool.SpriteCylinderAngle, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.SpriteCylinderColor, { 1,1,1,1 });
+    VecInt_PushBack(&g_ObjectPool.SpriteCylinderSegment, 32);
+    KeyMap_Add(&g_ObjectPool.SpriteCylinderMap, name);
+    KeyMap_Add(&g_ObjectPool.SpriteCylinderTopTexturePathMap, pathName);
+    KeyMap_Add(&g_ObjectPool.SpriteCylinderBottomTexturePathMap, pathName);
+    KeyMap_Add(&g_ObjectPool.SpriteCylinderSideTexturePathMap, pathName);
+    SpriteCylinderIndex++;
+    ObjectIdx.SpriteCylinderIndex = SpriteCylinderIndex;
+}
+void SetSpriteCylinderPos(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderPos : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteCylinderPos, idx, { x,y,z,0 });
+}
+void SetSpriteCylinderSize(const char* name, float x, float y)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderSize : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteCylinderSize, idx, { x,y,0,0 });
+}
+void SetSpriteCylinderAngle(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderAngle : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteCylinderAngle, idx, { x,y,z,0 });
+}
+void SetSpriteCylinderColor(const char* name, float r, float g, float b, float a)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderColor : sprite not found", name)); return; }
+    Vec4_Set(&g_ObjectPool.SpriteCylinderColor, idx, { r,g,b,a });
+}
+void SetSpriteCylinderSegment(const char* name, int segment)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderSegment : sprite not found", name)); return; }
+    VecInt_Set(&g_ObjectPool.SpriteCylinderSegment, idx, segment);
+}
+void SetSpriteCylinderTextureTop(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderTopTexture : sprite not found", name)); return; }
+    KeyMap_SetKey(&g_ObjectPool.SpriteCylinderTopTexturePathMap, idx, name);
+}
+void SetSpriteCylinderTextureBottom(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderBottomTexture : sprite not found", name)); return; }
+    KeyMap_SetKey(&g_ObjectPool.SpriteCylinderBottomTexturePathMap, idx, name);
+}
+void SetSpriteCylinderTextureSide(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderSideTexture : sprite not found", name)); return; }
+    KeyMap_SetKey(&g_ObjectPool.SpriteCylinderSideTexturePathMap, idx, name);
+}
+
+//-----------------------------------------
 // GridŠÇ—
 //-----------------------------------------
 void AddGridBox(const char* Name)
@@ -288,6 +356,18 @@ void CreateObject()
 
         object->AddComponent<SpriteScreen>()->SetTexture(texPath);
         SpriteScreenOldIndex++;
+    }
+    while (SpriteCylinderOldIndex < SpriteCylinderIndex)
+    {
+        const char* topTexPath = KeyMap_GetKey(&g_ObjectPool.SpriteCylinderTopTexturePathMap, SpriteCylinderOldIndex);
+        const char* bottomTexPath = KeyMap_GetKey(&g_ObjectPool.SpriteCylinderBottomTexturePathMap, SpriteCylinderOldIndex);
+        const char* sideTexPath = KeyMap_GetKey(&g_ObjectPool.SpriteCylinderSideTexturePathMap, SpriteCylinderOldIndex);
+
+        object->AddComponent<SpriteCylinder>()->SetTopTexture(topTexPath);
+        object->AddComponent<SpriteCylinder>()->SetBottomTexture(bottomTexPath);
+        object->AddComponent<SpriteCylinder>()->SetSideTexture(sideTexPath);
+
+        SpriteCylinderOldIndex++;
     }
 }
 
