@@ -180,7 +180,7 @@ void SetSpriteScreenColor(const char* name, float r, float g, float b, float a);
 //|| SpriteCylinder ||_______________
 void AddSpriteCylinder(const char* name, const char* pathName);
 void SetSpriteCylinderPos(const char* name, float x, float y, float z);
-void SetSpriteCylinderSize(const char* name, float x, float y);
+void SetSpriteCylinderSize(const char* name, float x, float y, float z);
 void SetSpriteCylinderAngle(const char* name, float x, float y, float z);
 void SetSpriteCylinderColor(const char* name, float r, float g, float b, float a);
 void SetSpriteCylinderSegment(const char* name, int sengment);

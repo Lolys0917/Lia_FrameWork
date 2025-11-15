@@ -15,6 +15,8 @@ void CoreStartUp()
     // 読み込み予定のアセット登録
     AL_RegisterAssetToBatch("asset/test.png");
     AL_RegisterAssetToBatch("asset/est.png");
+    AL_RegisterAssetToBatch("asset/DiscUR_Reel1.png");
+    AL_RegisterAssetToBatch("asset/hamu.png");
     //AL_RegisterAssetToBatch("asset/model/player.fbx");
     //AL_RegisterAssetToBatch("asset/model/ground.obj");
     
@@ -29,6 +31,8 @@ void CoreStartUp()
     // .pkgからインデックスで読み込み（DirectXリソース生成）
     AL_LoadFromPackageByName("asset/test.png");
     AL_LoadFromPackageByName("asset/est.png");
+    AL_LoadFromPackageByName("asset/DiscUR_Reel1.png");
+    AL_LoadFromPackageByName("asset/hamu.png");
     //AL_LoadFromPackageByName("asset/model/player.fbx");
 
     // --- カメラ初期化 ---
@@ -57,12 +61,12 @@ void CoreStartUp()
     AddSpriteWorld("TestSprite01", "asset/test.png");
     SetSpriteWorldColor("TestSprite01", 1, 1, 1, 1);
     SetSpriteWorldSize("TestSprite01", 3, 3, 3);
-    SetSpriteWorldPos("TestSprite01", 0, 0, 0);
+    SetSpriteWorldPos("TestSprite01", -2, 0, 0);
 
     AddSpriteWorld("TestSprite02", "asset/est.png");
     SetSpriteWorldColor("TestSprite02", 1, 1, 1, 1);
     SetSpriteWorldSize("TestSprite02", 3, 3, 3);
-    SetSpriteWorldPos("TestSprite02", 0, 0, 0);
+    SetSpriteWorldPos("TestSprite02", -2, 0, 0);
     SetSpriteWorldAngle("TestSprite02", 0, 0.6f, 0);
 
     AddSpriteScreen("TestUI01", "asset/test.png");
@@ -70,9 +74,14 @@ void CoreStartUp()
     SetSpriteScreenSize("TestUI01", 100, 100);
     SetSpriteScreenColor("TestUI01", 1, 1, 1, 1);
 
-    //AddSpriteCylinder("Cylinder01", "asset/test.png");
-    //SetSpriteCylinderSize("Cylinder01", 5, 5);
-    //AddSpriteScreen("TestUI02", "asset/test.png");
+    AddSpriteCylinder("Cylinder01", "asset/DiscUR_Reel1.png");
+    SetSpriteCylinderTextureSide("Cylinder01", "asset/DiscUR_Reel1.png");   // ★追加
+    SetSpriteCylinderTextureTop("Cylinder01", "asset/hamu.png");    // ★追加
+    SetSpriteCylinderTextureBottom("Cylinder01", "asset/hamu.png"); // ★追加
+    SetSpriteCylinderSize("Cylinder01", 1, 2, 1);
+    SetSpriteCylinderSegment("Cylinder01", 32);
+    SetSpriteCylinderPos("Cylinder01", 0, 0, 0);
+    SetSpriteCylinderAngle("Cylinder01", 0, 1.57f, 0);
 
 	SceneEndPoint();
 
@@ -82,9 +91,6 @@ void CoreStartUp()
     SetGridPolygonPos("PolyA", 0, 0, 0);
 	SetGridPolygonColor("PolyA", 0, 1, 1, 1);
     SetGridPolygonSides("PolyA", 6);
-
-    AddSpriteCylinder("Cylinder01", "asset/test.png");
-    SetSpriteCylinderSize("Cylinder01", 1, 1);
     SceneEndPoint();
 
     // --- シーンごとのカメラ割当 ---
@@ -93,30 +99,25 @@ void CoreStartUp()
     SetSceneCamera("Scene2", "SideCamera");
     // 最初のシーン設定
     ChangeScene("Scene3");
-    //ChangeScene("Scene3");
 
     AddGridBox("BoxC");
     SetGridBoxPos("BoxC", 0, 0, 0);
 
-
     AddGridBox("BoxD");
     SetGridBoxPos("BoxD", 2, 0, 0);
-    // Camera, Gridなど初期化
 
 }
 void CoreSceneUpdate()
 {
-    static float pos = 0.0f;
+    static float pos = -3.0f;
 	pos += 0.01f;
     SetGridBoxPos("BoxC", pos, 0, 0);
 
-    static int frameCnt = 0;
-    static int frameStop = 1000;
-    static int changeNo = 0;
-
-    frameCnt++;
-
-    //ChangeScene("Scene1");
+    static float Reel = 0.0f;
+    Reel += 0.1f;
+    SetCameraPos("SubCamera", pos, 5, -5);
+    SetSpriteCylinderAngle("Cylinder01", Reel, 0, 1.56);
+    SetSpriteCylinderSize("Cylinder01", 2, 1, 2);
 }
 void CoreSceneDraw()
 {

@@ -1,10 +1,10 @@
-// ObjectManager.cpp
-// C³”ÅFObjectDataPool ‚Ì‘SƒtƒB[ƒ‹ƒh‰Šú‰»^‰ğ•úAObjectIdx “¯ŠúA‹«ŠEƒ`ƒFƒbƒN‚È‚Ç‚ğ’Ç‰Á
-// Object‚Ìì¬EŠÇ—
-// Component‚ÌŠÇ—‚ğs‚¤
-// XV‚Éƒ†[ƒU[‚É‚æ‚é‘€ì‚ğ”½‰f‚³‚¹‚é
-// Manager.hŒo—R‚ÅSceneManager‚Æ˜AŒg‚µAƒV[ƒ“‚²‚Æ‚ÌƒIƒuƒWƒFƒNƒgŠÇ—‚ğs‚¤
-// ObjectManager‚ÍƒV[ƒ““à‚ÌƒIƒuƒWƒFƒNƒg‚ğŠÇ—‚µA•K—v‚É‰‚¶‚Ä¶¬Eíœ‚ğs‚¤B
+ï»¿// ObjectManager.cpp
+// ä¿®æ­£ç‰ˆï¼šObjectDataPool ã®å…¨ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰åˆæœŸåŒ–ï¼è§£æ”¾ã€ObjectIdx åŒæœŸã€å¢ƒç•Œãƒã‚§ãƒƒã‚¯ãªã©ã‚’è¿½åŠ 
+// Objectã®ä½œæˆãƒ»ç®¡ç†
+// Componentã®ç®¡ç†ã‚’è¡Œã†
+// æ›´æ–°æ™‚ã«ãƒ¦ãƒ¼ã‚¶ãƒ¼ã«ã‚ˆã‚‹æ“ä½œã‚’åæ˜ ã•ã›ã‚‹
+// Manager.hçµŒç”±ã§SceneManagerã¨é€£æºã—ã€ã‚·ãƒ¼ãƒ³ã”ã¨ã®ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆç®¡ç†ã‚’è¡Œã†
+// ObjectManagerã¯ã‚·ãƒ¼ãƒ³å†…ã®ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ç®¡ç†ã—ã€å¿…è¦ã«å¿œã˜ã¦ç”Ÿæˆãƒ»å‰Šé™¤ã‚’è¡Œã†ã€‚
 
 #include "Manager.h"
 #include "ComponentCamera.h"
@@ -14,19 +14,19 @@
 #include <string>
 
 // ======================================================
-// ObjectManager.cppi“‡E‚‘¬‰»”Åj
+// ObjectManager.cppï¼ˆçµ±åˆãƒ»é«˜é€ŸåŒ–ç‰ˆï¼‰
 // ======================================================
 
 //-----------------------------------------
-// ƒOƒ[ƒoƒ‹Ã“IƒIƒuƒWƒFƒNƒg
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«é™çš„ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ
 //-----------------------------------------
 static Grid* grid = nullptr;
 static Object* object = nullptr;
 static ObjectIndex ObjectIdx;
-static ObjectDataPool g_ObjectPool; // À‘Ì
+static ObjectDataPool g_ObjectPool; // å®Ÿä½“
 
 //-----------------------------------------
-// IndexŠÇ—i•Û‚Í ObjectIdx ‚Æ“¯Šúj
+// Indexç®¡ç†ï¼ˆä¿æŒã¯ ObjectIdx ã¨åŒæœŸï¼‰
 //-----------------------------------------
 static int UseCamera = -1;
 static int CameraIndex = 0, CameraOldIdx = 0;
@@ -40,7 +40,7 @@ static int GridBoxIndex = 0, GridBoxOldIndex = 0;
 static int GridPolygonIndex = 0, GridPolygonOldIndex = 0;
 
 //-----------------------------------------
-// GetterŒQ
+// Getterç¾¤
 //-----------------------------------------
 ObjectDataPool* GetObjectDataPool() { return &g_ObjectPool; }
 Grid* GetGridClass() { return grid; }
@@ -50,7 +50,7 @@ KeyMap* GetCameraKeyMap() { return &g_ObjectPool.CameraMap; }
 int GetUseCamera() { return UseCamera; }
 
 //-----------------------------------------
-// ”Ä—pVec4ƒAƒNƒZƒXƒ‰ƒbƒpi•Û‚Íc‚·j
+// æ±ç”¨Vec4ã‚¢ã‚¯ã‚»ã‚¹ãƒ©ãƒƒãƒ‘ï¼ˆä¿æŒã¯æ®‹ã™ï¼‰
 //-----------------------------------------
 Vec4 GetVec4FromPool(IndexType type, int index)
 {
@@ -79,7 +79,7 @@ void SetVec4ToPool(IndexType type, int index, Vec4 v)
 }
 
 //-----------------------------------------
-// CameraŠÇ—
+// Cameraç®¡ç†
 //-----------------------------------------
 void AddCamera(const char* name) {
     Vec4_PushBack(&g_ObjectPool.CameraPos, { 0,0,0,0 });
@@ -87,7 +87,7 @@ void AddCamera(const char* name) {
     KeyMap_Add(&g_ObjectPool.CameraMap, name);
     CameraIndex++;
     ObjectIdx.CameraIndex = CameraIndex;
-    // ‰‰ñƒJƒƒ‰‚Íƒ‹[ƒgg—pƒJƒƒ‰‚É‚µ‚Ä‚¨‚­iˆÀ‘Sj
+    // åˆå›ã‚«ãƒ¡ãƒ©ã¯ãƒ«ãƒ¼ãƒˆä½¿ç”¨ã‚«ãƒ¡ãƒ©ã«ã—ã¦ãŠãï¼ˆå®‰å…¨ï¼‰
     if (UseCamera < 0) UseCamera = 0;
 }
 void SetCameraPos(const char* name, float x, float y, float z) {
@@ -216,11 +216,11 @@ void SetSpriteCylinderPos(const char* name, float x, float y, float z)
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderPos : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteCylinderPos, idx, { x,y,z,0 });
 }
-void SetSpriteCylinderSize(const char* name, float x, float y)
+void SetSpriteCylinderSize(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderSize : sprite not found", name)); return; }
-    Vec4_Set(&g_ObjectPool.SpriteCylinderSize, idx, { x,y,0,0 });
+    Vec4_Set(&g_ObjectPool.SpriteCylinderSize, idx, { x,y,z,0 });
 }
 void SetSpriteCylinderAngle(const char* name, float x, float y, float z)
 {
@@ -240,27 +240,27 @@ void SetSpriteCylinderSegment(const char* name, int segment)
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderSegment : sprite not found", name)); return; }
     VecInt_Set(&g_ObjectPool.SpriteCylinderSegment, idx, segment);
 }
-void SetSpriteCylinderTextureTop(const char* name, const char* pathName)
-{
+void SetSpriteCylinderTextureSide(const char* name, const char* pathName){
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
-    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderTopTexture : sprite not found", name)); return; }
-    KeyMap_SetKey(&g_ObjectPool.SpriteCylinderTopTexturePathMap, idx, name);
+    if (idx < 0) { AddMessage("SetSpriteCylinderSideTexture : sprite not found"); return; }
+
+    KeyMap_SetKey(&g_ObjectPool.SpriteCylinderSideTexturePathMap, idx, pathName);
 }
-void SetSpriteCylinderTextureBottom(const char* name, const char* pathName)
-{
+void SetSpriteCylinderTextureTop(const char* name, const char* pathName){
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
-    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderBottomTexture : sprite not found", name)); return; }
-    KeyMap_SetKey(&g_ObjectPool.SpriteCylinderBottomTexturePathMap, idx, name);
+    if (idx < 0) { AddMessage("SetSpriteCylinderTopTexture : sprite not found"); return; }
+
+    KeyMap_SetKey(&g_ObjectPool.SpriteCylinderTopTexturePathMap, idx, pathName);
 }
-void SetSpriteCylinderTextureSide(const char* name, const char* pathName)
-{
+void SetSpriteCylinderTextureBottom(const char* name, const char* pathName){
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
-    if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderSideTexture : sprite not found", name)); return; }
-    KeyMap_SetKey(&g_ObjectPool.SpriteCylinderSideTexturePathMap, idx, name);
+    if (idx < 0) { AddMessage("SetSpriteCylinderBottomTexture : sprite not found"); return; }
+
+    KeyMap_SetKey(&g_ObjectPool.SpriteCylinderBottomTexturePathMap, idx, pathName);
 }
 
 //-----------------------------------------
-// GridŠÇ—
+// Gridç®¡ç†
 //-----------------------------------------
 void AddGridBox(const char* Name)
 {
@@ -330,10 +330,10 @@ void SetGridPolygonSides(const char* Name, int sides)
 }
 
 
-// ƒIƒuƒWƒFƒNƒg‚Ìì¬EŠÇ—
+// ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®ä½œæˆãƒ»ç®¡ç†
 void CreateObject()
 {
-	//¦ ƒRƒ“ƒ|[ƒlƒ“ƒg(ObjectClass“à)‚Ì‚İ’Ç‰Á‚·‚é
+	//â€» ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆ(ObjectClasså†…)ã®ã¿è¿½åŠ ã™ã‚‹
     if (!object) return;
 
 	// Camera
@@ -364,8 +364,8 @@ void CreateObject()
         const char* sideTexPath = KeyMap_GetKey(&g_ObjectPool.SpriteCylinderSideTexturePathMap, SpriteCylinderOldIndex);
 
         object->AddComponent<SpriteCylinder>()->SetTopTexture(topTexPath);
-        object->AddComponent<SpriteCylinder>()->SetBottomTexture(bottomTexPath);
-        object->AddComponent<SpriteCylinder>()->SetSideTexture(sideTexPath);
+        object->GetComponent<SpriteCylinder>(SpriteCylinderOldIndex)->SetBottomTexture(bottomTexPath);
+        object->GetComponent<SpriteCylinder>(SpriteCylinderOldIndex)->SetSideTexture(sideTexPath);
 
         SpriteCylinderOldIndex++;
     }
@@ -373,11 +373,11 @@ void CreateObject()
 
 
 //-----------------------------------------
-// ƒ‰ƒCƒtƒTƒCƒNƒ‹
+// ãƒ©ã‚¤ãƒ•ã‚µã‚¤ã‚¯ãƒ«
 //-----------------------------------------
 void InitDo()
 {
-    // ƒCƒ“ƒfƒbƒNƒX‰Šú‰»EObjectIdx ƒŠƒZƒbƒg
+    // ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹åˆæœŸåŒ–ãƒ»ObjectIdx ãƒªã‚»ãƒƒãƒˆ
     UseCamera = -1;
     CameraIndex = UIIndex = SpriteWorldIndex = ModelIndex = BoxColliderIndex = GridBoxIndex = GridPolygonIndex = 0;
     CameraOldIdx = UIOldIndex = SpriteWorldOldIndex = ModelOldIndex = BoxColliderOldIndex = GridBoxOldIndex = GridPolygonOldIndex = 0;
@@ -396,7 +396,7 @@ void InitDo()
     ObjectIdx.GridCapsuleIndex = 0;
     ObjectIdx.EffectIndex = 0;
 
-    // Vec4InitiPool ‘S•”j --- ‚±‚±‚ğ•K‚¸‚·‚×‚Ä—ñ‹“‚·‚é‚±‚Æ‚ªd—v
+    // Vec4Initï¼ˆPool å…¨éƒ¨ï¼‰ --- ã“ã“ã‚’å¿…ãšã™ã¹ã¦åˆ—æŒ™ã™ã‚‹ã“ã¨ãŒé‡è¦
     ObjectDataPool* p = &g_ObjectPool;
 
     // Camera
@@ -454,7 +454,7 @@ void InitDo()
     KeyMap_Init(&p->SpriteWorldTexturePathMap);
     KeyMap_Init(&p->SpriteScreenTexturePathMap);
 
-    // ƒNƒ‰ƒXæ“¾
+    // ã‚¯ãƒ©ã‚¹å–å¾—
     grid = new Grid();
     grid->Init();
     object = new Object();
@@ -526,7 +526,7 @@ void ReleaseDo()
     KeyMap_Free(&p->GridBoxMap);
     KeyMap_Free(&p->GridPolygonMap);
 
-    // ƒIƒuƒWƒFƒNƒg‰ğ•ú
+    // ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆè§£æ”¾
     if (object) { delete object; object = nullptr; }
     if (grid) { delete grid; grid = nullptr; }
 }

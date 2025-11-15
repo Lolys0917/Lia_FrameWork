@@ -98,8 +98,7 @@ void SpriteWorld::Draw()
     char buf[256];
     sprintf_s(buf, "Draw: srv=%p pos=(%f,%f,%f) size=(%f,%f) angle=(%f,%f,%f)",
         m_srv, m_pos.x, m_pos.y, m_pos.z, m_size.x, m_size.y, m_angle.x, m_angle.y, m_angle.z);
-    AddMessage(buf);
-    //MessageBoxA(nullptr, buf, "Draw", MB_OK);
+
     // í∏ì_ê›íË
     float hw = m_size.x * 0.5f, hh = m_size.y * 0.5f;
     Vertex verts[4] = {

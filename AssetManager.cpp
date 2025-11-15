@@ -43,7 +43,6 @@ static KeyMap ModelMap;
 ID3D11ShaderResourceView* GetTextureSRV(const char* filename)
 {
     if (!filename) return nullptr;
-
     // すでに登録済みならそのSRVを返す
     int index = KeyMap_GetIndex(&TextureMap, filename);
     if (index >= 0 && index < (int)g_textureSRV.size()) {

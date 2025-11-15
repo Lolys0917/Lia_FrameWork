@@ -33,7 +33,7 @@ void AddScene(const char* name)
     KeyMap_Add(&SceneMap, name);
     int newIndex = KeyMap_GetIndex(&SceneMap, name);
     CurrentSceneIndex = newIndex;
-    ActiveSceneIndex = newIndex; // 追加された瞬間アクティブ化
+    ActiveSceneIndex = newIndex; // 追加された瞬間アaクティブ化
 
     ObjectIndex* idx = GetObjectIndex();
     SceneRange range{};
@@ -286,7 +286,7 @@ void DrawScene()
             Vec4 v4Angle = Vec4_Get(&pool->SpriteCylinderAngle, i);
 
             GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
-            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetSize(v4Size.X, v4Size.Y);
+            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
             GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
             GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
 

@@ -147,8 +147,8 @@ void SpriteScreen::Draw()
     GetContext()->OMSetDepthStencilState(prevDepth, stencilRef);
     if (prevDepth) prevDepth->Release();
 
-    ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
-    GetContext()->PSSetShaderResources(0, 1, nullSRV);
+    /*ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+    GetContext()->PSSetShaderResources(0, 1, nullSRV);*/
 }
 
 // -----------------------------------------------------------

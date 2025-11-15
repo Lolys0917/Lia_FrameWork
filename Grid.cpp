@@ -339,7 +339,7 @@ void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size,
         indices.push_back(i + sides);
     }
 
-    // --- 4. バッファ生成（省略可：元コードと同じ）---
+    // --- 4. バッファ生成---
     D3D11_BUFFER_DESC vbd{};
     vbd.Usage = D3D11_USAGE_IMMUTABLE;
     vbd.ByteWidth = sizeof(Vertex) * verts.size();
