@@ -13,6 +13,7 @@ typedef struct {
     int StartIndex_Camera, EndIndex_Camera;
     int StartIndex_SpriteWorld, EndIndex_SpriteWorld;
     int StartIndex_SpriteScreen, EndIndex_SpriteScreen;
+    int StartIndex_SpriteBox, EndIndex_SpriteBox;
     int StartIndex_SpriteCylinder, EndIndex_SpriteCylinder;
     int UseCameraIndex;
     bool Finalized;
@@ -43,6 +44,8 @@ void AddScene(const char* name)
     range.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
     range.StartIndex_SpriteScreen = idx->SpriteScreenIndex;
     range.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
+    range.StartIndex_SpriteBox = idx->SpriteBoxIndex;
+    range.EndIndex_SpriteBox = idx->SpriteBoxIndex;
     range.StartIndex_SpriteCylinder = idx->SpriteCylinderIndex;
     range.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
     range.StartIndex_GridBox = idx->GridBoxIndex;
@@ -66,6 +69,7 @@ void SceneEndPoint()
     r.EndIndex_Camera = idx->CameraIndex;
     r.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
     r.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
+    r.EndIndex_SpriteBox = idx->SpriteBoxIndex;
     r.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
     r.EndIndex_GridBox = idx->GridBoxIndex;
     r.EndIndex_GridPolygon = idx->GridPolygonIndex;
@@ -273,7 +277,34 @@ void DrawScene()
         }
     }
     //SpriteBox
-    
+    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteBox >= 0 &&
+        SceneRanges[CurrentSceneIndex].EndIndex_SpriteBox <= (int)pool->SpriteBoxPos.size)
+    {
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteBox;
+            i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteBox; ++i)
+        {
+            if (i < 0 || i >= (int)pool->SpriteBoxPos.size) continue;
+            Vec4 v4Pos = Vec4_Get(&pool->SpriteBoxPos, i);
+            Vec4 v4Size = Vec4_Get(&pool->SpriteBoxSize, i);
+            Vec4 v4Color = Vec4_Get(&pool->SpriteBoxColor, i);
+            Vec4 v4Angle = Vec4_Get(&pool->SpriteBoxAngle, i);
+
+            GetObjectClass()->GetComponent<SpriteBox>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetObjectClass()->GetComponent<SpriteBox>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
+            GetObjectClass()->GetComponent<SpriteBox>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+            GetObjectClass()->GetComponent<SpriteBox>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
+
+            //カメラ行列を渡す
+            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+                GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+                GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+            }
+            else
+            {
+                MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
+            }
+        }
+    }
     //SpriteCylinder
     if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteCylinder >= 0 &&
         SceneRanges[CurrentSceneIndex].EndIndex_SpriteCylinder <= (int)pool->SpriteCylinderPos.size)
