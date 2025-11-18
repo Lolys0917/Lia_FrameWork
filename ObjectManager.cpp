@@ -10,6 +10,7 @@
 #include "ComponentCamera.h"
 #include "ComponentSpriteWorld.h"
 #include "ComponentSpriteScreen.h"
+#include "ComponentSpriteBox.h"
 #include "ComponentSpriteCylinder.h"
 #include <string>
 
@@ -33,6 +34,7 @@ static int CameraIndex = 0, CameraOldIdx = 0;
 static int UIIndex = 0, UIOldIndex = 0;
 static int SpriteWorldIndex = 0, SpriteWorldOldIndex = 0;
 static int SpriteScreenIndex = 0, SpriteScreenOldIndex = 0;
+static int SpriteBoxIndex = 0, SpriteBoxOldIndex = 0;
 static int SpriteCylinderIndex = 0, SpriteCylinderOldIndex = 0;
 static int ModelIndex = 0, ModelOldIndex = 0;
 static int BoxColliderIndex = 0, BoxColliderOldIndex = 0;
@@ -191,6 +193,94 @@ void SetSpriteScreenColor(const char* name, float r, float g, float b, float a)
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteScreenMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteScreenColor : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteScreenColor, idx, { r, g, b, a });
+}
+//-----------------------------------------
+// SpriteBox
+//-----------------------------------------
+void AddSpriteBox(const char* name, const char* pathName)
+{
+    Vec4_PushBack(&g_ObjectPool.SpriteBoxPos, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.SpriteBoxSize, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.SpriteBoxAngle, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.SpriteBoxColor, { 0,0,0,0 });
+    KeyMap_Add(&g_ObjectPool.SpriteBoxMap, name);
+    KeyMap_Add(&g_ObjectPool.SpriteBoxTopTexturePathMap,    pathName);
+    KeyMap_Add(&g_ObjectPool.SpriteBoxBottomTexturePathMap, pathName);
+    KeyMap_Add(&g_ObjectPool.SpriteBoxFrontTexturePathMap,  pathName);
+    KeyMap_Add(&g_ObjectPool.SpriteBoxRearTexturePathMap,   pathName);
+    KeyMap_Add(&g_ObjectPool.SpriteBoxLeftTexturePathMap,   pathName);
+    KeyMap_Add(&g_ObjectPool.SpriteBoxRightTexturePathMap,  pathName);
+    SpriteBoxIndex++;
+    ObjectIdx.SpriteBoxIndex = SpriteBoxIndex;
+}
+void SetSpriteBoxPos(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if(idx < 0){ return; }
+    Vec4_Set(&g_ObjectPool.SpriteBoxPos, idx, { x,y,z,0 });
+}
+void SetSpriteBoxSize(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if (idx < 0) { return; }
+    Vec4_Set(&g_ObjectPool.SpriteBoxSize, idx, { x,y,z,0 });
+}
+void SetSpriteBoxAngle(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if (idx < 0) { return; }
+    Vec4_Set(&g_ObjectPool.SpriteBoxAngle, idx, { x,y,z,0 });
+}
+void SetSpriteBoxColor(const char* name, float r, float g, float b, float a)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if (idx < 0) { return; }
+    Vec4_Set(&g_ObjectPool.SpriteBoxColor, idx, { r,g,b,a });
+}
+void SetSpriteBoxTextureTop(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if (idx < 0) { return; }
+    KeyMap_SetKey(&g_ObjectPool.SpriteBoxTopTexturePathMap, idx, pathName);
+}
+void SetSpriteBoxTextureBottom(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if (idx < 0) { return; }
+    KeyMap_SetKey(&g_ObjectPool.SpriteBoxBottomTexturePathMap, idx, pathName);
+}
+void SetSpriteBoxTextureFront(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if (idx < 0) { return; }
+    KeyMap_SetKey(&g_ObjectPool.SpriteBoxFrontTexturePathMap, idx, pathName);
+}
+void SetSpriteBoxTextureRear(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if (idx < 0) { return; }
+    KeyMap_SetKey(&g_ObjectPool.SpriteBoxRearTexturePathMap, idx, pathName);
+}
+void SetSpriteBoxTextureLeft(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if (idx < 0) { return; }
+    KeyMap_SetKey(&g_ObjectPool.SpriteBoxLeftTexturePathMap, idx, pathName);
+}
+void SetSpriteBoxTextureRight(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
+    if (idx < 0) { return; }
+    KeyMap_SetKey(&g_ObjectPool.SpriteBoxRightTexturePathMap, idx, pathName);
+}
+void SetSpriteBoxTexture(const char* name, const char* pathName)
+{
+    SetSpriteBoxTextureTop(name, pathName);
+    SetSpriteBoxTextureBottom(name, pathName);
+    SetSpriteBoxTextureFront(name, pathName);
+    SetSpriteBoxTextureRear(name, pathName);
+    SetSpriteBoxTextureLeft(name, pathName);
+    SetSpriteBoxTextureRight(name, pathName);
 }
 
 //-----------------------------------------
@@ -356,6 +446,24 @@ void CreateObject()
 
         object->AddComponent<SpriteScreen>()->SetTexture(texPath);
         SpriteScreenOldIndex++;
+    }
+    while (SpriteBoxOldIndex < SpriteBoxIndex)
+    {
+        const char* topTexPath    = KeyMap_GetKey(&g_ObjectPool.SpriteBoxTopTexturePathMap, SpriteBoxOldIndex);
+        const char* bottomTexPath = KeyMap_GetKey(&g_ObjectPool.SpriteBoxBottomTexturePathMap, SpriteBoxOldIndex);
+        const char* frontTexPath  = KeyMap_GetKey(&g_ObjectPool.SpriteBoxFrontTexturePathMap, SpriteBoxOldIndex);
+        const char* rearTexPath   = KeyMap_GetKey(&g_ObjectPool.SpriteBoxRearTexturePathMap, SpriteBoxOldIndex);
+        const char* leftTexPath   = KeyMap_GetKey(&g_ObjectPool.SpriteBoxLeftTexturePathMap, SpriteBoxOldIndex);
+        const char* rightTexPath  = KeyMap_GetKey(&g_ObjectPool.SpriteBoxRightTexturePathMap, SpriteBoxOldIndex);
+
+        object->AddComponent<SpriteBox>()->SetTextureTop(topTexPath);
+        object->GetComponent<SpriteBox>(SpriteBoxOldIndex)->SetTextureBottom(bottomTexPath);
+        object->GetComponent<SpriteBox>(SpriteBoxOldIndex)->SetTextureFront(frontTexPath);
+        object->GetComponent<SpriteBox>(SpriteBoxOldIndex)->SetTextureRear(rearTexPath);
+        object->GetComponent<SpriteBox>(SpriteBoxOldIndex)->SetTextureLeft(leftTexPath);
+        object->GetComponent<SpriteBox>(SpriteBoxOldIndex)->SetTextureRight(rightTexPath);
+
+        SpriteBoxOldIndex++;
     }
     while (SpriteCylinderOldIndex < SpriteCylinderIndex)
     {

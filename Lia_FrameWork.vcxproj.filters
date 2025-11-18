@@ -75,6 +75,9 @@
     <ClCompile Include="AssetLoad.cpp">
       <Filter>ソース ファイル\Manager\Loader</Filter>
     </ClCompile>
+    <ClCompile Include="ComponentSpriteBox.cpp">
+      <Filter>ソース ファイル\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ComponentCamera.h">
@@ -109,6 +112,9 @@
     </ClInclude>
     <ClInclude Include="AssetLoad.h">
       <Filter>ソース ファイル\Manager\Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentSpriteBox.h">
+      <Filter>ソース ファイル\Component</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

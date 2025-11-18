@@ -116,7 +116,6 @@ void SpriteCylinder::SetProj(const XMMATRIX& proj) { ProjSet = proj; }
 
 void SpriteCylinder::Draw()
 {
-    // Safety
     if (!m_vs || !m_ps) return;
 
     SetSegment(m_seg);

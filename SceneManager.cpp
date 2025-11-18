@@ -272,6 +272,8 @@ void DrawScene()
 
         }
     }
+    //SpriteBox
+    
     //SpriteCylinder
     if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteCylinder >= 0 &&
         SceneRanges[CurrentSceneIndex].EndIndex_SpriteCylinder <= (int)pool->SpriteCylinderPos.size)

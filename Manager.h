@@ -34,6 +34,7 @@ typedef struct {
 	int CameraIndex;        //Camera_________
     int SpriteWorldIndex;	//Sprite_________
     int SpriteScreenIndex;
+    int SpriteBoxIndex;
     int SpriteCylinderIndex;
 	int ModelIndex;			//Model__________
 	int BoxColliderIndex;	//Collider_______
@@ -97,6 +98,11 @@ struct ObjectDataPool {
     Vec4Vector SpriteScreenSize;
     Vec4Vector SpriteScreenColor;
     IntVector  SpriteScreenAngle;
+    //SpriteBox
+    Vec4Vector SpriteBoxPos;
+    Vec4Vector SpriteBoxSize;
+    Vec4Vector SpriteBoxAngle;
+    Vec4Vector SpriteBoxColor;
     //SpriteCylinder
     Vec4Vector SpriteCylinderPos;
     Vec4Vector SpriteCylinderSize;
@@ -133,6 +139,7 @@ struct ObjectDataPool {
     KeyMap TextureMap;
     KeyMap SpriteWorldMap;
     KeyMap SpriteScreenMap;
+    KeyMap SpriteBoxMap;
     KeyMap SpriteCylinderMap;
     KeyMap UIMap;
     KeyMap BoxColliderMap;
@@ -140,6 +147,12 @@ struct ObjectDataPool {
     KeyMap GridPolygonMap;
     KeyMap SpriteWorldTexturePathMap;
     KeyMap SpriteScreenTexturePathMap;
+    KeyMap SpriteBoxTopTexturePathMap;
+    KeyMap SpriteBoxBottomTexturePathMap;
+    KeyMap SpriteBoxFrontTexturePathMap;
+    KeyMap SpriteBoxRearTexturePathMap;
+    KeyMap SpriteBoxLeftTexturePathMap;
+    KeyMap SpriteBoxRightTexturePathMap;
     KeyMap SpriteCylinderTopTexturePathMap;
     KeyMap SpriteCylinderBottomTexturePathMap;
     KeyMap SpriteCylinderSideTexturePathMap;
@@ -177,6 +190,19 @@ void SetSpriteScreenPos(const char* name, float x, float y);
 void SetSpriteScreenSize(const char* name, float x, float y);
 void SetSpriteScreenAngle(const char* name, float angle);
 void SetSpriteScreenColor(const char* name, float r, float g, float b, float a);
+//|| SpriteBox ||____________________
+void AddSpriteBox(const char* name, const char* pathName);
+void SetSpriteBoxPos(const char* name, float x, float y, float z);
+void SetSpriteBoxSize(const char* name, float x, float y, float z);
+void SetSpriteBoxAngle(const char* name, float x, float y, float z);
+void SetSpriteBoxColor(const char* name, float r, float g, float b, float a);
+void SetSpriteBoxTextureTop(const char* name, const char* pathName);
+void SetSpriteBoxTextureBottom(const char* name, const char* pathName);
+void SetSpriteBoxTextureFront(const char* name, const char* pathName);
+void SetSpriteBoxTextureRear(const char* name, const char* pathName);
+void SetSpriteBoxTextureLeft(const char* name, const char* pathName);
+void SetSpriteBoxTextureRight(const char* name, const char* pathName);
+void SetSpriteBoxTexture(const char* name, const char* pathName);
 //|| SpriteCylinder ||_______________
 void AddSpriteCylinder(const char* name, const char* pathName);
 void SetSpriteCylinderPos(const char* name, float x, float y, float z);

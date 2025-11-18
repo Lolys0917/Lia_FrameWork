@@ -58,7 +58,7 @@ public:
 
         static_assert(std::is_base_of<Component, T>::value, "T must inherit Component");
 
-        if (m_lpComp.size() < 6) m_lpComp.resize(6);
+        if (m_lpComp.size() < 7) m_lpComp.resize(7);
 
         int type = -1;
 
@@ -67,7 +67,8 @@ public:
         else if constexpr (std::is_same_v<T, class Model>) type = 2;
         else if constexpr (std::is_same_v<T, class SpriteWorld>) type = 3;
         else if constexpr (std::is_same_v<T, class SpriteScreen>) type = 4;
-        else if constexpr (std::is_same_v<T, class SpriteCylinder>) type = 5;
+        else if constexpr (std::is_same_v<T, class SpriteBox>) type = 5;
+        else if constexpr (std::is_same_v<T, class SpriteCylinder>) type = 6;
         else type = -1;
 
 
@@ -88,7 +89,8 @@ public:
         else if constexpr (std::is_same_v<T, class Model>) type = 2;
         else if constexpr (std::is_same_v<T, class SpriteWorld>) type = 3;
         else if constexpr (std::is_same_v<T, class SpriteScreen>) type = 4;
-        else if constexpr (std::is_same_v<T, class SpriteCylinder>) type = 5;
+        else if constexpr (std::is_same_v<T, class SpriteBox>) type = 5;
+        else if constexpr (std::is_same_v<T, class SpriteCylinder>) type = 6;
         else type = -1;
 
 
@@ -109,7 +111,8 @@ public:
         else if constexpr (std::is_same_v<T, class Model>) type = 2;
         else if constexpr (std::is_same_v<T, class SpriteWorld>) type = 3;
         else if constexpr (std::is_same_v<T, class SpriteScreen>) type = 4;
-        else if constexpr (std::is_same_v<T, class SpriteCylinder>) type = 5;
+        else if constexpr (std::is_same_v<T, class SpriteBox>) type = 5;
+        else if constexpr (std::is_same_v<T, class SpriteCylinder>) type = 6;
         else type = -1;
 
 

@@ -75,9 +75,9 @@ void CoreStartUp()
     SetSpriteScreenColor("TestUI01", 1, 1, 1, 1);
 
     AddSpriteCylinder("Cylinder01", "asset/DiscUR_Reel1.png");
-    SetSpriteCylinderTextureSide("Cylinder01", "asset/DiscUR_Reel1.png");   // š’Ç‰Á
-    SetSpriteCylinderTextureTop("Cylinder01", "asset/hamu.png");    // š’Ç‰Á
-    SetSpriteCylinderTextureBottom("Cylinder01", "asset/hamu.png"); // š’Ç‰Á
+    SetSpriteCylinderTextureSide("Cylinder01", "asset/DiscUR_Reel1.png"); 
+    SetSpriteCylinderTextureTop("Cylinder01", "asset/hamu.png");   
+    SetSpriteCylinderTextureBottom("Cylinder01", "asset/hamu.png");
     SetSpriteCylinderSize("Cylinder01", 1, 2, 1);
     SetSpriteCylinderSegment("Cylinder01", 32);
     SetSpriteCylinderPos("Cylinder01", 0, 0, 0);
