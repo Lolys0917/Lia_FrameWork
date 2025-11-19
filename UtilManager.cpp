@@ -132,6 +132,15 @@ Char2 Char2_Get(Char2Vector* vec, size_t index)
     }
     return vec->data[index];
 }
+int Char2_GetIndex(Char2Vector* vec, const char* FirstName)
+{
+    for (size_t i = 0; i < vec->size; i++) {
+        if (strcmp(vec->data[i].First, FirstName) == 0) {
+            return (int)i; // Œ©‚Â‚©‚Á‚½
+        }
+    }
+    return -1; // Œ©‚Â‚©‚ç‚È‚©‚Á‚½
+}
 void Char2_Free(Char2Vector* vec)
 {
     free(vec->data);

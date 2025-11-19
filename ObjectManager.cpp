@@ -644,3 +644,21 @@ void OutObjectIndex(ObjectIndex* out)
 {
     *out = ObjectIdx;
 }
+
+void SetDefaultShaderVS3D(const char* ShaderName)
+{
+
+}
+void SetDefaultShaderPS3D(const char* ShaderName)
+{
+
+}
+
+void SetDefaultShaderVS2D(const char* ShaderName)
+{
+
+}
+void SetDefaultShaderPS2D(const char* ShaderName)
+{
+
+}

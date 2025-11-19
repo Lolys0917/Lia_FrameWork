@@ -173,6 +173,8 @@ void InitDo();
 void UpdateDo();
 void DrawDo();
 void ReleaseDo();
+void SetDefaultShaderVS(const char* ShaderName);
+void SetDefaultShaderPS(const char* ShaderName);
 //|| Camera ||_______________________
 void AddCamera(const char* name);
 void SetCameraPos(const char* name, float x, float y, float z);
@@ -278,6 +280,9 @@ void AddPixelShader(const char* shaderName, const char* shaderCode);
 
 void ShaderManager_Update();
 
+int GetVertexShaderIndex(const char* shaderName);
+int GetPixelShaderIndex(const char* shaderName);
+
 ID3D11VertexShader* GetVertexShader(int index);
 ID3D11PixelShader* GetPixelShader(int index);
 
@@ -300,6 +305,7 @@ void Char2_Init(Char2Vector* vec);
 void Char2_PushBack(Char2Vector* vec, Char2 str);
 void Char2_Set(Char2Vector* vec, size_t index, Char2 str);
 Char2 Char2_Get(Char2Vector* vec, size_t index);
+int Char2_GetIndex(Char2Vector* vec, const char* FirstName);
 void Char2_Free(Char2Vector* vec);
 //|| Char Œn ||_______________________
 void VecC_Init(CharVector* vec);

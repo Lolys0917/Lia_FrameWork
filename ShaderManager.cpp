@@ -102,6 +102,28 @@ void ShaderManager_Update()
     }
 }
 
+int GetVertexShaderIndex(const char* shaderName)
+{
+    for (int i = 0; i < g_ShaderVSIndex; i++)
+    {
+        Char2 d = Char2_Get(&g_VSList, i);
+        if (strcmp(d.First, shaderName) == 0)
+            return i;
+    }
+    return -1;
+}
+
+int GetPixelShaderIndex(const char* shaderName)
+{
+    for (int i = 0; i < g_ShaderPSIndex; i++)
+    {
+        Char2 d = Char2_Get(&g_PSList, i);
+        if (strcmp(d.First, shaderName) == 0)
+            return i;
+    }
+    return -1;
+}
+
 ID3D11VertexShader* GetVertexShader(int index)
 {
     if (index < 0 || index >= g_ShaderVSOldIndex) return nullptr;
