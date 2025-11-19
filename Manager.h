@@ -22,12 +22,15 @@
 // 構造体定義_____________________
 // Vec4構造体
 typedef struct { float X, Y, Z, W; } Vec4;
+// Char2構造体
+typedef struct { const char* First; const char* End; } Char2;
 // ベクター型構造体
-typedef struct { Vec4* data;  size_t size; size_t capacity; } Vec4Vector;
+typedef struct { Vec4*  data; size_t size; size_t capacity; } Vec4Vector;
+typedef struct { Char2* data; size_t size; size_t capacity; } Char2Vector;
 typedef struct { char** data; size_t size; size_t capacity; } CharVector;
-typedef struct { int* data;   size_t size; size_t capacity; } IntVector;
+typedef struct { int*   data; size_t size; size_t capacity; } IntVector;
 typedef struct { float* data; size_t size; size_t capacity; } FloatVector;
-typedef struct { bool* data;  size_t size; size_t capacity; } BoolVector;
+typedef struct { bool*  data; size_t size; size_t capacity; } BoolVector;
 typedef struct { char** keys; size_t size; size_t capacity; } KeyMap;
 // ObjectIndex構造体
 typedef struct {
@@ -267,6 +270,17 @@ bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t s
 bool IN_LoadFBX_Memory(const char* name, const unsigned char* data, size_t size);
 bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t size);
 
+  ///////////////////
+ // ShaderManager //
+///////////////////
+void AddVertexShader(const char* shaderName, const char* shaderCode);
+void AddPixelShader(const char* shaderName, const char* shaderCode);
+
+void ShaderManager_Update();
+
+ID3D11VertexShader* GetVertexShader(int index);
+ID3D11PixelShader* GetPixelShader(int index);
+
   //////////////////
  // UtilManager  //
 //////////////////
@@ -281,6 +295,12 @@ void Vec4_PushBack(Vec4Vector* vec, Vec4 value);
 void Vec4_Set(Vec4Vector* vec, size_t index, Vec4 value);
 Vec4 Vec4_Get(Vec4Vector* vec, size_t index);
 void Vec4_Free(Vec4Vector* vec);
+//|| Char2 系 ||______________________
+void Char2_Init(Char2Vector* vec);
+void Char2_PushBack(Char2Vector* vec, Char2 str);
+void Char2_Set(Char2Vector* vec, size_t index, Char2 str);
+Char2 Char2_Get(Char2Vector* vec, size_t index);
+void Char2_Free(Char2Vector* vec);
 //|| Char 系 ||_______________________
 void VecC_Init(CharVector* vec);
 void VecC_PushBack(CharVector* vec, const char* str);

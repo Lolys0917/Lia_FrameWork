@@ -93,6 +93,55 @@ void Vec4_Free(Vec4Vector* vec) {
 }
 
 //===============================
+// Char2 系
+//===============================
+void Char2_Init(Char2Vector* vec)
+{
+    vec->data = NULL;
+    vec->size = 0;
+    vec->capacity = 0;
+}
+void Char2_PushBack(Char2Vector* vec, Char2 str)
+{
+    if (vec->size >= vec->capacity) {
+        size_t new_capacity = (vec->capacity == 0) ? 4 : vec->capacity * 2;
+        Char2* new_data = (Char2*)realloc(vec->data, new_capacity * sizeof(Char2));
+        if (!new_data) {
+            AddMessage("\nerror : char2vector_push_back/メモリの確保に失敗\n");
+            return;
+        }
+        vec->data = new_data;
+        vec->capacity = new_capacity;
+    }
+    vec->data[vec->size] = str;
+    vec->size++;
+}
+void Char2_Set(Char2Vector* vec, size_t index, Char2 str)
+{
+    if (index >= vec->size) {
+        AddMessage("\nerror : char2vector_set/インデックス範囲外\n");
+        return;
+    }
+    vec->data[index] = str;
+}
+Char2 Char2_Get(Char2Vector* vec, size_t index)
+{
+    if (index >= vec->size) {
+        AddMessage("\nerror : char2vector_get/インデックス範囲外\n");
+        return { 0,0 };
+    }
+    return vec->data[index];
+}
+void Char2_Free(Char2Vector* vec)
+{
+    free(vec->data);
+    vec->data = NULL;
+    vec->size = 0;
+    vec->capacity = 0;
+}
+
+
+//===============================
 // Char 系
 //===============================
 void VecC_Init(CharVector* vec) {

@@ -1,10 +1,11 @@
 #pragma once
 
 #include "Component.h"
-#include "ComponentSpriteWorld.h"
-#include "ComponentCamera.h"
 #include "Grid.h"
+#include "ComponentCamera.h"
+#include "ComponentSpriteWorld.h"
 #include "ComponentSpriteScreen.h"
+#include "ComponentSpriteBox.h"
 #include "ComponentSpriteCylinder.h"
 #include "ComponentModel.h"
 #include <vector>

@@ -573,6 +573,7 @@ void InitDo()
 
 void UpdateDo()
 {
+    ShaderManager_Update();
     CreateObject();
     UpdateScene();
     object->Update();

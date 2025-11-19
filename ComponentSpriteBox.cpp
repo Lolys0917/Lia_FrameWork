@@ -168,9 +168,10 @@ void SpriteBox::BuildMesh()
 
 void SpriteBox::Draw()
 {
+
     ID3D11DeviceContext* ctx = GetContext();
     if (!ctx) return;
-
+    BuildMesh();
     // Prepare matrix
     XMMATRIX world =
         XMMatrixRotationRollPitchYaw(m_angle.x, m_angle.y, m_angle.z) *

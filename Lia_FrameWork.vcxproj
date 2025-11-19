@@ -144,9 +144,11 @@
     <ClCompile Include="ComponentSpriteWorld.h" />
     <ClCompile Include="CoreScene.cpp" />
     <ClCompile Include="Grid.cpp" />
+    <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ObjectManager.cpp" />
     <ClCompile Include="SceneManager.cpp" />
+    <ClCompile Include="ShaderManager.cpp" />
     <ClCompile Include="UtilManager.cpp" />
   </ItemGroup>
   <ItemGroup>

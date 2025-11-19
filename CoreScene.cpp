@@ -54,6 +54,16 @@ void CoreStartUp()
     AddGridBox("BoxB");
     SetGridBoxPos("BoxA", -2, 0, 0);
     SetGridBoxPos("BoxB", 2, 0, 0);
+
+    //AddSpriteWorld("TestSprite00", "asset/test.png");
+    //SetSpriteWorldColor("TestSprite00", 1, 1, 1, 1);
+    //SetSpriteWorldSize("TestSprite00", 3, 3, 3);
+    //SetSpriteWorldPos("TestSprite00", 0, 0, 0);
+
+    AddSpriteBox("Box00", "asset/test.png");
+    SetSpriteBoxPos("Box00", 0, 0, -2);
+    SetSpriteBoxSize("Box00", 2, 2, 2);
+
     SceneEndPoint();
 
 
@@ -98,7 +108,7 @@ void CoreStartUp()
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
     // ç≈èâÇÃÉVÅ[Éìê›íË
-    ChangeScene("Scene3");
+    ChangeScene("Scene1");
 
     AddGridBox("BoxC");
     SetGridBoxPos("BoxC", 0, 0, 0);
