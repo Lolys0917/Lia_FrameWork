@@ -12,6 +12,11 @@ static int g_ShaderPSIndex = 0, g_ShaderPSOldIndex;
 static ID3D11VertexShader* g_VSObject[1024];
 static ID3D11PixelShader* g_PSObject[1024];
 
+static ID3D11VertexShader* g_VS3DShader;
+static ID3D11VertexShader* g_VS2DShader;
+static ID3D11PixelShader* g_PS3DShader;
+static ID3D11PixelShader* g_PS2DShader;
+
 //’Ç‰Á
 void AddVertexShader(const char* shaderName, const char* shaderCode)
 {

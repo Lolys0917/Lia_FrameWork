@@ -65,6 +65,12 @@ enum class IndexType {
 	GridCapsule,
 	Effect
 };
+enum LightType
+{
+    PointLight,
+    SpotLight,
+    DirectionalLight,
+};
 //モデル用マトリクスバッファ
 struct MatrixBuffer
 {
@@ -176,61 +182,78 @@ void ReleaseDo();
 void SetDefaultShaderVS(const char* ShaderName);
 void SetDefaultShaderPS(const char* ShaderName);
 //|| Camera ||_______________________
-void AddCamera(const char* name);
-void SetCameraPos(const char* name, float x, float y, float z);
-void SetCameraLook(const char* name, float x, float y, float z);
-void UseCameraSet(const char* name);
-int GetUseCamera();
-void SetUseCamera(int index);
+void AddCamera(const char* name);                                                   //カメラの追加
+void SetCameraPos(const char* name, float x, float y, float z);                     //カメラの座標設定
+void SetCameraLook(const char* name, float x, float y, float z);                    //カメラの注視点設定
+void UseCameraSet(const char* name);                                                //使用するカメラの設定
+int GetUseCamera();                                                                 //使用するカメラのインデックスを取得
+void SetUseCamera(int index);                                                       //使用するカメラをインデックスで指定
 //void SettingCameraOnce();
 //|| SpriteWorld ||__________________
-void AddSpriteWorld(const char* name, const char* pathName);
-void SetSpriteWorldPos(const char* name, float x, float y, float z);
-void SetSpriteWorldSize(const char* name, float x, float y, float z);
-void SetSpriteWorldAngle(const char* name, float x, float y, float z);
-void SetSpriteWorldColor(const char* name, float r, float g, float b, float a);
-//|| SpriteScreen ||_________________
-void AddSpriteScreen(const char* name, const char* pathName);
-void SetSpriteScreenPos(const char* name, float x, float y);
-void SetSpriteScreenSize(const char* name, float x, float y);
-void SetSpriteScreenAngle(const char* name, float angle);
-void SetSpriteScreenColor(const char* name, float r, float g, float b, float a);
-//|| SpriteBox ||____________________
-void AddSpriteBox(const char* name, const char* pathName);
-void SetSpriteBoxPos(const char* name, float x, float y, float z);
-void SetSpriteBoxSize(const char* name, float x, float y, float z);
-void SetSpriteBoxAngle(const char* name, float x, float y, float z);
-void SetSpriteBoxColor(const char* name, float r, float g, float b, float a);
-void SetSpriteBoxTextureTop(const char* name, const char* pathName);
-void SetSpriteBoxTextureBottom(const char* name, const char* pathName);
-void SetSpriteBoxTextureFront(const char* name, const char* pathName);
-void SetSpriteBoxTextureRear(const char* name, const char* pathName);
-void SetSpriteBoxTextureLeft(const char* name, const char* pathName);
-void SetSpriteBoxTextureRight(const char* name, const char* pathName);
-void SetSpriteBoxTexture(const char* name, const char* pathName);
-//|| SpriteCylinder ||_______________
-void AddSpriteCylinder(const char* name, const char* pathName);
-void SetSpriteCylinderPos(const char* name, float x, float y, float z);
-void SetSpriteCylinderSize(const char* name, float x, float y, float z);
-void SetSpriteCylinderAngle(const char* name, float x, float y, float z);
-void SetSpriteCylinderColor(const char* name, float r, float g, float b, float a);
-void SetSpriteCylinderSegment(const char* name, int sengment);
-void SetSpriteCylinderTextureTop(const char* name, const char* pathName);
-void SetSpriteCylinderTextureBottom(const char* name, const char* pathName);
-void SetSpriteCylinderTextureSide(const char* name, const char* pathName);
-//|| Grid   ||_______________________
-// Grid Line
-
-// Grid Box
-void AddGridBox(const char* name);
-void SetGridBoxPos(const char* name, float x, float y, float z);
-void SetGridBoxSize(const char* name, float x, float y, float z);
-void SetGridBoxColor(const char* name, float R, float G, float B, float A);
-// Grid Polygon
-void AddGridPolygon(const char* name);
-void SetGridPolygonPos(const char* name, float x, float y, float z);
-void SetGridPolygonColor(const char* name, float R, float G, float B, float A);
-void SetGridPolygonSides(const char* name, int sides);
+void AddSpriteWorld(const char* name, const char* pathName);                        //板ポリ追加テクスチャ指定
+void SetSpriteWorldPos(const char* name, float x, float y, float z);                //板ポリ座標設定
+void SetSpriteWorldSize(const char* name, float x, float y, float z);               //板ポリサイズ設定
+void SetSpriteWorldAngle(const char* name, float x, float y, float z);              //板ポリ角度設定
+void SetSpriteWorldColor(const char* name, float r, float g, float b, float a);     //板ポリ乗算色設定
+//|| SpriteScreen ||_________________                                               //
+void AddSpriteScreen(const char* name, const char* pathName);                       //UIの追加テクスチャ指定
+void SetSpriteScreenPos(const char* name, float x, float y);                        //UI座標設定
+void SetSpriteScreenSize(const char* name, float x, float y);                       //UIサイズ設定
+void SetSpriteScreenAngle(const char* name, float angle);                           //UI角度設定
+void SetSpriteScreenColor(const char* name, float r, float g, float b, float a);    //UI色設定
+//|| SpriteBox ||____________________                                               //
+void AddSpriteBox(const char* name, const char* pathName);                          //箱形の追加テクスチャ指定※全体
+void SetSpriteBoxPos(const char* name, float x, float y, float z);                  //箱形の座標設定
+void SetSpriteBoxSize(const char* name, float x, float y, float z);                 //箱形のサイズ設定
+void SetSpriteBoxAngle(const char* name, float x, float y, float z);                //箱形の角度設定
+void SetSpriteBoxColor(const char* name, float r, float g, float b, float a);       //箱形の色設定※乗算
+void SetSpriteBoxTextureTop(const char* name, const char* pathName);                //箱形のテクスチャ設定上面
+void SetSpriteBoxTextureBottom(const char* name, const char* pathName);             //箱形のテクスチャ設定底面
+void SetSpriteBoxTextureFront(const char* name, const char* pathName);              //箱形のテクスチャ設定前面
+void SetSpriteBoxTextureRear(const char* name, const char* pathName);               //箱形のテクスチャ設定後面
+void SetSpriteBoxTextureLeft(const char* name, const char* pathName);               //箱形のテクスチャ設定左面
+void SetSpriteBoxTextureRight(const char* name, const char* pathName);              //箱形のテクスチャ設定右面
+void SetSpriteBoxTexture(const char* name, const char* pathName);                   //箱形のテクスチャ設定全体
+//|| SpriteCylinder ||_______________                                               //
+void AddSpriteCylinder(const char* name, const char* pathName);                     //円柱の追加テクスチャ指定
+void SetSpriteCylinderPos(const char* name, float x, float y, float z);             //円柱の座標設定
+void SetSpriteCylinderSize(const char* name, float x, float y, float z);            //円柱のサイズ設定
+void SetSpriteCylinderAngle(const char* name, float x, float y, float z);           //円柱の角度設定
+void SetSpriteCylinderColor(const char* name, float r, float g, float b, float a);  //円柱の色設定※乗算
+void SetSpriteCylinderSegment(const char* name, int sengment);                      //円柱の角数設定
+void SetSpriteCylinderTextureTop(const char* name, const char* pathName);           //円柱のテクスチャ設定上面
+void SetSpriteCylinderTextureBottom(const char* name, const char* pathName);        //円柱のテクスチャ設定底面
+void SetSpriteCylinderTextureSide(const char* name, const char* pathName);          //円柱のテクスチャ設定周面
+//|| Grid   ||_______________________                                               //
+// Grid Line                                                                        //
+void AddGridLine(const char* name);                                                 //グリッドの追加
+void SetGridLinePos(const char* name, float Start, float End);                      //グリッドの描画範囲指定
+void SetGridLineColor(const char* name, float r, float g, float b, float a);        //グリッドの色設定
+// Grid Box                                                                         //
+void AddGridBox(const char* name);                                                  //箱形グリッドの追加
+void SetGridBoxPos(const char* name, float x, float y, float z);                    //箱形グリッドの座標設定
+void SetGridBoxSize(const char* name, float x, float y, float z);                   //箱形グリッドのサイズ設定
+void SetGridBoxColor(const char* name, float R, float G, float B, float A);         //箱形グリッドの色設定
+// Grid Polygon                                                                     //
+void AddGridPolygon(const char* name);                                              //多角グリッドの追加
+void SetGridPolygonPos(const char* name, float x, float y, float z);                //多角グリッドの座標設定
+void SetGridPolygonSize(const char* name, float x, float y, float z);               //多角グリッドのサイズ設定
+void SetGridPolygonAngle(const char* name, float x, float y, float z);              //多角グリッドの角度設定
+void SetGridPolygonColor(const char* name, float R, float G, float B, float A);     //多角グリッドの色設定
+void SetGridPolygonSides(const char* name, int sides);                              //多角グリッドの角数設定
+//|| Speaker ||_______________________                                              //
+void AddSpeaker(const char* name, const char* pathName, bool Stereo);               //スピーカーの追加音源指定モノステ設定
+void SetSpeakerPos(const char* name, float x, float y, float z);                    //スピーカーの座標設定
+void SetSpeakerSound(const char* name, const char* pathName);                       //スピーカーの音源設定
+void SetSpeakerPan(const char* name, float pan);                                    //スピーカーのパン設定
+//|| Light ||_________________________                                              //
+void AddLight(const char* name, LightType LT);                                      //ライトの追加ライトタイプ指定
+void SetLightPos(const char* name, float x, float y, float z);                      //ライトの座標設定
+void SetLightAngle(const char* name, float x, float y, float z);                    //ライトの角度設定
+void SetLightRange(const char* name, float range);                                  //ライトの範囲設定
+void SetLightLength(const char* name, float length);                                //ライトの長さ設定※ライトが届く距離
+void SetLightColor(const char* name, float r, float g, float b, float a);           //ライトの色設定
+void SetLightAttenuation(const char* name, float attenuation);                      //ライトの減衰度設定
 
 ///////////////////////////////////
 
