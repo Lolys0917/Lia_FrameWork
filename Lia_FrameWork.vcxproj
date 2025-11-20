@@ -136,8 +136,9 @@
     <ClCompile Include="AssetLoad.cpp" />
     <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="ComponentCamera.cpp" />
+    <ClCompile Include="ComponentLight.cpp" />
     <ClCompile Include="ComponentModel.cpp" />
-    <ClCompile Include="ComponentSpeaker.cpp" />
+    <ClCompile Include="ComponentSound.cpp" />
     <ClCompile Include="ComponentSpriteBox.cpp" />
     <ClCompile Include="ComponentSpriteCylinder.cpp" />
     <ClCompile Include="ComponentSpriteScreen.cpp" />
@@ -156,7 +157,8 @@
     <ClInclude Include="AssetLoad.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentCamera.h" />
-    <ClInclude Include="ComponentSpeaker.h" />
+    <ClInclude Include="ComponentLight.h" />
+    <ClInclude Include="ComponentSound.h" />
     <ClInclude Include="ComponentSpriteBox.h" />
     <ClInclude Include="ComponentSpriteCylinder.h" />
     <ClInclude Include="CoreScene.h" />

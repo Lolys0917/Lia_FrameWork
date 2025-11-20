@@ -71,6 +71,14 @@ enum LightType
     SpotLight,
     DirectionalLight,
 };
+enum SoundEffect
+{
+    Delay,
+    Reverb,
+    Compressor,
+    Limiter,
+    Gate,
+};
 //モデル用マトリクスバッファ
 struct MatrixBuffer
 {
@@ -241,11 +249,20 @@ void SetGridPolygonSize(const char* name, float x, float y, float z);           
 void SetGridPolygonAngle(const char* name, float x, float y, float z);              //多角グリッドの角度設定
 void SetGridPolygonColor(const char* name, float R, float G, float B, float A);     //多角グリッドの色設定
 void SetGridPolygonSides(const char* name, int sides);                              //多角グリッドの角数設定
-//|| Speaker ||_______________________                                              //
-void AddSpeaker(const char* name, const char* pathName, bool Stereo);               //スピーカーの追加音源指定モノステ設定
+//|| Sound ||_______________________ 
+//World
+void AddSpeaker(const char* name, const char* pathName);                            //スピーカーの追加音源指定
 void SetSpeakerPos(const char* name, float x, float y, float z);                    //スピーカーの座標設定
 void SetSpeakerSound(const char* name, const char* pathName);                       //スピーカーの音源設定
-void SetSpeakerPan(const char* name, float pan);                                    //スピーカーのパン設定
+//Sound
+void AddSound(const char* name, const char* pathName);                              //サウンドの追加音源指定
+void SetSoundPan(const char* name, float pan);                                      //サウンドのパン設定
+//SoundEffect
+void SetSFxDelay(const char* name, int ms, int attenuation);                        //サウンドディレイ
+void SetSFxReverb(const char* name, int ms, int attenuation, int Range);            //サウンドリバーブ
+void SetSFxCompressor(const char* name, int Retio);                                 //サウンドコンプレッサー
+void SetSFxLimiter(const char* name, int Max);                                      //サウンドリミッター
+void SetSFxGate(const char* name, int min);                                         //サウンドゲート
 //|| Light ||_________________________                                              //
 void AddLight(const char* name, LightType LT);                                      //ライトの追加ライトタイプ指定
 void SetLightPos(const char* name, float x, float y, float z);                      //ライトの座標設定
@@ -254,6 +271,12 @@ void SetLightRange(const char* name, float range);                              
 void SetLightLength(const char* name, float length);                                //ライトの長さ設定※ライトが届く距離
 void SetLightColor(const char* name, float r, float g, float b, float a);           //ライトの色設定
 void SetLightAttenuation(const char* name, float attenuation);                      //ライトの減衰度設定
+//|| Model ||_________________________
+void AddModel(const char* name, const char* pathName);                              //モデルの追加
+void SetModelPos(const char* name, float x, float y, float z);                      //モデルの座標設定
+void SetModelSize(const char* name, float x, float y, float z);                     //モデルのサイズ設定
+void SetModelAngle(const char* name, float x, float y, float z);                    //モデルの角度設定
+void SetModelMotion(const char* name, const char* pathName, int Attack);            //モデルのモーション設定移行速度設定
 
 ///////////////////////////////////
 
