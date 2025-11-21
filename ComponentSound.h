@@ -3,36 +3,41 @@
 #include "Component.h"
 #include <xaudio2.h>
 #include <x3daudio.h>
+#include <memory>
+#include <DirectXMath.h>
 
 using namespace DirectX;
 
 class Sound : public Component
 {
 public:
-	using Component::Component;
+    using Component::Component;
 
-	void Init()override;
-	void Update()override;
-	void Draw()override;
-	void Release()override;
+    void Init() override;
+    void Update() override;
+    void Draw() override;
+    void Release() override;
 
-	void SetMono(bool mono);
-	void SetPos(float x, float y, float z);
-	void SetPan(float pan);
-	void SetCameraPos(float x, float y,  float z);
-	void SetCameraAngle(float x, float y,  float z);
+    void SetMono(bool mono);
+    void SetPos(float x, float y, float z);
+    void SetPan(float pan);
+    void SetCameraPos(float x, float y, float z);
+    void SetCameraAngle(float x, float y, float z);
+
+    // 反響（エコー）設定
+    void SetEcho(bool enable, float strength, float delaySec);
+
 private:
-	bool Mono;
-	XMFLOAT3 pos;
-	XMFLOAT3 camPos;
-	XMFLOAT3 camAng;
-	float pan;
+    bool Mono = true;
+    XMFLOAT3 pos{ 0,0,0 };
+    XMFLOAT3 camPos{ 0,0,0 };
+    XMFLOAT3 camAng{ 0,0,0 };
+    float pan = 0.0f;
 
-	IXAudio2SourceVoice* sourceVoice = nullptr;
+    // XAudio2
+    IXAudio2MasteringVoice* m_masterVoice = nullptr;
+    IXAudio2SourceVoice* m_sourceVoice = nullptr;
 
-	X3DAUDIO_LISTENER listener;
-	X3DAUDIO_EMITTER emitter;
-	X3DAUDIO_DSP_SETTINGS dspSettings;
-
-	float matrixCoefficients[2];
+    // WAV データ保持
+    std::unique_ptr<unsigned char[]> m_wavData;
 };

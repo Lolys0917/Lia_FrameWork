@@ -1,119 +1,141 @@
-#include "ComponentSound.h"
-#include <iostream>
+ï»¿#include "ComponentSound.h"
 #include <algorithm>
+#include <cmath>
 
-// --- ŠO•”iManager ‚È‚Çj‚©‚çæ“¾‚·‚é‘O’ñ‚ÌƒIƒuƒWƒFƒNƒg ---
-extern IXAudio2* g_xaudio;
-extern IXAudio2MasteringVoice* g_master;
-extern X3DAUDIO_HANDLE g_x3dHandle;
+// =========================
+// ãƒ˜ãƒ«ãƒ‘ãƒ¼é–¢æ•°
+// =========================
+static float Clamp(float v, float a, float b)
+{
+    return (v < a) ? a : (v > b) ? b : v;
+}
 
-// ƒXƒs[ƒJ[‚Ì”i—áFƒXƒeƒŒƒIj
-static const UINT32 g_speakerCount = 2;
+// =========================
+// ç°¡æ˜“3Dãƒ™ã‚¯ãƒˆãƒ«è·é›¢
+// =========================
+static float VecDistance(const XMFLOAT3& a, const XMFLOAT3& b)
+{
+    float dx = a.x - b.x;
+    float dy = a.y - b.y;
+    float dz = a.z - b.z;
+    return sqrtf(dx * dx + dy * dy + dz * dz);
+}
 
-// --- ‰Šú‰» ---
+// =========================
+// åéŸ¿ãƒ‡ãƒ¼ã‚¿
+// =========================
+struct EchoState
+{
+    bool Enable = false;
+    float Strength = 0.25f;  // åéŸ¿åº¦
+    float DelaySec = 0.2f;   // é…å»¶æ™‚é–“
+};
+
+static EchoState g_Echo;
+
+// =========================
+// Sound ã‚¯ãƒ©ã‚¹å®Ÿè£…
+// =========================
+
 void Sound::Init()
 {
-    Mono = false;
+    Mono = true;
     pos = { 0,0,0 };
     camPos = { 0,0,0 };
     camAng = { 0,0,0 };
     pan = 0.0f;
 
-    // WAV “Ç‚İ‚İ‚â SourceVoice ¶¬‚È‚Ç‚ÍÈ—ª
-    // sourceVoice ‚È‚Ç‚Ìƒƒ“ƒo‚ª‚ ‚é‘O’ñ
 
-    // Listener ‚Æ Emitter ‚Ì‰Šú‰»
-    ZeroMemory(&listener, sizeof(listener));
-    ZeroMemory(&emitter, sizeof(emitter));
+    // =========================
+    // WAV èª­ã¿è¾¼ã¿ãƒ†ã‚¹ãƒˆ
+    // =========================
+    // XAudio2 åˆæœŸåŒ–
+    static IXAudio2* xaudio = nullptr;
+    if (!xaudio)
+    {
+        XAudio2Create(&xaudio, 0);
+        xaudio->CreateMasteringVoice(&m_masterVoice);
+    }
 
-    listener.OrientFront = XMFLOAT3(0, 0, 1);
-    listener.OrientTop = XMFLOAT3(0, 1, 0);
 
-    emitter.ChannelCount = 1;  // ƒ‚ƒmƒ‰ƒ‹‰¹Œ¹
-    emitter.CurveDistanceScaler = 1.0f;
-    emitter.DopplerScaler = 1.0f;
+    // WAV ãƒ­ãƒ¼ãƒ‰
+    HANDLE hFile = CreateFileA("asset/001.wav", GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return;
 
-    dspSettings.SrcChannelCount = 1;
-    dspSettings.DstChannelCount = g_speakerCount;
-    dspSettings.pMatrixCoefficients = matrixCoefficients;
+
+    DWORD fileSize = GetFileSize(hFile, nullptr);
+    BYTE* data = new BYTE[fileSize];
+    DWORD readBytes;
+    ReadFile(hFile, data, fileSize, &readBytes, nullptr);
+    CloseHandle(hFile);
+
+
+    // WAV ãƒ˜ãƒƒãƒ€è§£æ
+    WAVEFORMATEX* wf = reinterpret_cast<WAVEFORMATEX*>(data + 20);
+
+
+    // æ³¢å½¢ãƒ‡ãƒ¼ã‚¿ä½ç½®ï¼ˆç°¡æ˜“ï¼‰
+    BYTE* audioStart = data + 44;
+    DWORD audioSize = fileSize - 44;
+
+
+    // ã‚½ãƒ¼ã‚¹ãƒœã‚¤ã‚¹ä½œæˆ
+    xaudio->CreateSourceVoice(&m_sourceVoice, wf);
+
+
+    XAUDIO2_BUFFER buf = {};
+    buf.AudioBytes = audioSize;
+    buf.pAudioData = audioStart;
+    buf.Flags = XAUDIO2_END_OF_STREAM;
+
+
+    m_sourceVoice->SubmitSourceBuffer(&buf);
+    m_sourceVoice->Start();
+
+
+    m_wavData.reset(data);
 }
 
-// --- XV ---
 void Sound::Update()
 {
-    // Listener ‚ğXViƒJƒƒ‰j
-    listener.Position = camPos;
-    listener.OrientFront = XMFLOAT3(
-        cosf(camAng.y), 0, sinf(camAng.y)
-    );
-    listener.OrientTop = XMFLOAT3(0, 1, 0);
-
+    // 3Dè¨ˆç®—ï¼ˆç°¡æ˜“ï¼‰
     if (Mono)
     {
-        // ƒJƒƒ‰‚Æ“¯ˆÊ’u‚É‚·‚é ¨ ƒ‚ƒmƒ‰ƒ‹‚É‚È‚é
-        emitter.Position = camPos;
-
-        // --------------------
-        // š ƒpƒ“ˆ— (Mono )
-        // --------------------
-        float left = (pan <= 0) ? 1.0f : 1.0f - pan;
-        float right = (pan >= 0) ? 1.0f : 1.0f + pan;
-
-        matrixCoefficients[0] = left;
-        matrixCoefficients[1] = right;
-
-        sourceVoice->SetOutputMatrix(
-            g_master, 1, g_speakerCount, matrixCoefficients
-        );
+        // ãƒ¢ãƒãƒ©ãƒ«æ™‚ã¯ãƒ‘ãƒ³ã‚’ã‚«ãƒ¡ãƒ©ä¸­å¿ƒï¼ˆ0ï¼‰ã¸å¯„ã›ã‚‹
+        pan = 0.0f;
     }
     else
     {
-        // --------------------
-        // š Stereo 3D ‰¹Œ¹
-        // --------------------
-        emitter.Position = pos;
+        // å·¦å³æ–¹å‘ : ã‚«ãƒ¡ãƒ©â†’éŸ³æºãƒ™ã‚¯ãƒˆãƒ«ã®xæˆåˆ†ã‚’ãƒ‘ãƒ³ã¨ã—ã¦æ‰±ã†
+        float dx = pos.x - camPos.x;
+        float dz = pos.z - camPos.z;
 
-        X3DAudioCalculate(
-            g_x3dHandle,
-            &listener,
-            &emitter,
-            X3DAUDIO_CALCULATE_MATRIX |
-            X3DAUDIO_CALCULATE_DOPPLER |
-            X3DAUDIO_CALCULATE_LPF_DIRECT,
-            &dspSettings
-        );
+        // ã‚«ãƒ¡ãƒ©ã®å‘ã„ã¦ã„ã‚‹æ–¹å‘ã¸å›è»¢è£œæ­£
+        float yaw = camAng.y;
+        float cx = cosf(yaw);
+        float sx = sinf(yaw);
 
-        // ƒpƒ“‚Ì•â³‚ğŠ|‚¯‚éiMono ‚Å‚à Stereo ‚Å‚à“¯‚¶®j
-        float leftPan = (pan <= 0) ? 1.0f : 1.0f - pan;
-        float rightPan = (pan >= 0) ? 1.0f : 1.0f + pan;
+        // ãƒ­ãƒ¼ã‚«ãƒ«åº§æ¨™ã«å¤‰æ›
+        float lx = dx * cx - dz * sx;
+        float lz = dx * sx + dz * cx;
 
-        dspSettings.pMatrixCoefficients[0] *= leftPan;
-        dspSettings.pMatrixCoefficients[1] *= rightPan;
-
-        // ŒvZŒ‹‰Ê‚ğ“K—p
-        sourceVoice->SetFrequencyRatio(dspSettings.DopplerFactor);
-        sourceVoice->SetOutputMatrix(
-            g_master, 1, g_speakerCount, dspSettings.pMatrixCoefficients
-        );
+        // ãƒ‘ãƒ³ã¯ -1ã€œ1 ã«ä¸¸ã‚ã‚‹
+        pan = Clamp(lx * 0.2f, -1.0f, 1.0f);
     }
+
+    // ãƒ‘ãƒ³ã‚„è·é›¢æ¸›è¡°ã‚’å®Ÿã‚µã‚¦ãƒ³ãƒ‰ã¸é©ç”¨ã™ã‚‹å‡¦ç†ã‚’ã“ã“ã«è¿½åŠ 
 }
 
 void Sound::Draw()
 {
-
+    
 }
 
 void Sound::Release()
 {
-    if (sourceVoice)
-    {
-        sourceVoice->Stop();
-        sourceVoice->DestroyVoice();
-        sourceVoice = nullptr;
-    }1
 }
 
-// --- Setter ŒQ ---
 void Sound::SetMono(bool mono)
 {
     Mono = mono;
@@ -126,7 +148,7 @@ void Sound::SetPos(float x, float y, float z)
 
 void Sound::SetPan(float p)
 {
-    pan = std::clamp(p, -1.0f, 1.0f);
+    pan = Clamp(p, -1.0f, 1.0f);
 }
 
 void Sound::SetCameraPos(float x, float y, float z)
@@ -137,4 +159,17 @@ void Sound::SetCameraPos(float x, float y, float z)
 void Sound::SetCameraAngle(float x, float y, float z)
 {
     camAng = { x,y,z };
+}
+
+// =========================
+// åéŸ¿ï¼ˆç°¡æ˜“ã‚¨ã‚³ãƒ¼ï¼‰è¨­å®š
+// =========================
+void Sound::SetEcho(bool enable, float strength, float delaySec)
+{
+    g_Echo.Enable = enable;
+    g_Echo.Strength = strength;
+    g_Echo.DelaySec = delaySec;
+
+    // å®Ÿéš›ã®ã‚¨ãƒ•ã‚§ã‚¯ãƒˆé©ç”¨å‡¦ç†ï¼ˆXAudio2 FX ãªã©ï¼‰ã¯
+    // ã‚ªãƒ¼ãƒ‡ã‚£ã‚ªãƒãƒ£ãƒ³ãƒãƒ«ã”ã¨ã®ç®¡ç†å´ã«è¿½åŠ 
 }

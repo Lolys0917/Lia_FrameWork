@@ -12,6 +12,7 @@
 #include "ComponentSpriteScreen.h"
 #include "ComponentSpriteBox.h"
 #include "ComponentSpriteCylinder.h"
+#include "ComponentSound.h"
 #include <string>
 
 // ======================================================
@@ -569,6 +570,8 @@ void InitDo()
     object->Init();
 
     CreateObject();
+
+    object->AddComponent<Sound>();
 }
 
 void UpdateDo()

@@ -7,6 +7,7 @@
 #include "ComponentSpriteScreen.h"
 #include "ComponentSpriteBox.h"
 #include "ComponentSpriteCylinder.h"
+#include "ComponentSound.h"
 #include "ComponentModel.h"
 #include <vector>
 
@@ -59,7 +60,7 @@ public:
 
         static_assert(std::is_base_of<Component, T>::value, "T must inherit Component");
 
-        if (m_lpComp.size() < 7) m_lpComp.resize(7);
+        if (m_lpComp.size() < 8) m_lpComp.resize(8);
 
         int type = -1;
 
@@ -70,6 +71,7 @@ public:
         else if constexpr (std::is_same_v<T, class SpriteScreen>) type = 4;
         else if constexpr (std::is_same_v<T, class SpriteBox>) type = 5;
         else if constexpr (std::is_same_v<T, class SpriteCylinder>) type = 6;
+        else if constexpr (std::is_same_v<T, class Sound>) type = 7;
         else type = -1;
 
 
