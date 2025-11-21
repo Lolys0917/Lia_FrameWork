@@ -16,6 +16,19 @@
 // Include________________________
 #include "Grid.h"
 #include "Object.h"
+#include "Component.h"
+
+#include <string>
+#include <vector>
+
+#include <d3d11.h>
+#include <DirectXMath.h>
+#include <d3dcompiler.h>
+#include <DirectXMathMatrix.inl>
+#include <wrl.h>
+
+#pragma comment (lib, "d3dcompiler.lib")
+
 
 // Define_________________________
 
@@ -307,16 +320,13 @@ void NotifyAddObject(IndexType type);
   //////////////////
  // AssetManager //
 //////////////////
-std::vector<ModelVertex>* GetModelVertex(const char* modelName);
+const std::vector<ModelVertex>* GetModelVertex(const char* modelName);
 ID3D11ShaderResourceView* GetTextureSRV(const char* textureName);
-
-bool IN_LoadTexture(const char* filename);
-bool IN_LoadModelObj(const char* filename);
-bool IN_LoadFBX(const char* filename);
 
 bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t size);
 bool IN_LoadFBX_Memory(const char* name, const unsigned char* data, size_t size);
 bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t size);
+bool IN_LoadWav_Memory(const char* name, const unsigned char* data, size_t size);
 
   ///////////////////
  // ShaderManager //

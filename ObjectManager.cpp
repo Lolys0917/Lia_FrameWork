@@ -571,7 +571,7 @@ void InitDo()
 
     CreateObject();
 
-    object->AddComponent<Sound>();
+    //object->AddComponent<Sound>();
 }
 
 void UpdateDo()
