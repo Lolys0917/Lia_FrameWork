@@ -37,6 +37,8 @@ static ID3D11VertexShader* g_VS2DShader;
 static ID3D11PixelShader* g_PS3DShader;
 static ID3D11PixelShader* g_PS2DShader;
 
+static ID3DBlob* g_VSBlobObject[1024];
+
 //追加
 void AddVertexShader(const char* shaderName, const char* shaderCode)
 {
@@ -48,50 +50,27 @@ void AddPixelShader(const char* shaderName, const char* shaderCode)
 	Char2_PushBack(&g_PSList, { shaderName, shaderCode });
 	g_ShaderPSIndex++;
 }
-
 void ShaderManager_Init()
 {
-    // ====== 2D Vertex Shader ======
-    D3DCompileFromFile(
-        L"Shader/2D_VS.hlsl",
-        nullptr, nullptr,
-        "VSMain", "vs_5_0",
-        0, 0,
-        &g_Default2DVSBlob,
-        nullptr
-    );
-    GetDevice()->CreateVertexShader(
-        g_Default2DVSBlob->GetBufferPointer(),
-        g_Default2DVSBlob->GetBufferSize(),
-        nullptr,
-        &g_Default2DVS
-    );
+    Char2_Init(&g_VSList);
+    Char2_Init(&g_PSList);
 
-    // ====== 2D Pixel Shader ======
-    D3DCompileFromFile(
-        L"Shader/2D_PS.hlsl",
-        nullptr, nullptr,
-        "PSMain", "ps_5_0",
-        0, 0,
-        &g_Default2DPSBlob,
-        nullptr
-    );
-    GetDevice()->CreatePixelShader(
-        g_Default2DPSBlob->GetBufferPointer(),
-        g_Default2DPSBlob->GetBufferSize(),
-        nullptr,
-        &g_Default2DPS
-    );
+    g_ShaderVSIndex = g_ShaderPSIndex = 0;
+    g_ShaderVSOldIndex = g_ShaderPSOldIndex = 0;
+
+    // デフォルト 2D シェーダー登録
+    InitShaderDefault();
+
+    // 即コンパイル
+    ShaderManager_Update();
 }
-
-
 //差分追加
 void ShaderManager_Update()
 {
     ID3D11Device* dev = GetDevice();
     if (!dev) return;
 
-    //======== Pixel Shader 生成（差分）========
+    // ---- PS ----
     while (g_ShaderPSOldIndex < g_ShaderPSIndex)
     {
         Char2 d = Char2_Get(&g_PSList, g_ShaderPSOldIndex);
@@ -100,11 +79,9 @@ void ShaderManager_Update()
         ID3DBlob* err = nullptr;
 
         HRESULT hr = D3DCompile(
-            d.End,
-            strlen(d.End),
+            d.End, strlen(d.End),
             NULL, NULL, NULL,
-            "PSMain",
-            "ps_5_0",
+            "PSMain", "ps_5_0",
             0, 0,
             &psBlob, &err);
 
@@ -115,19 +92,20 @@ void ShaderManager_Update()
         }
         else
         {
-            dev->CreatePixelShader(psBlob->GetBufferPointer(),
+            dev->CreatePixelShader(
+                psBlob->GetBufferPointer(),
                 psBlob->GetBufferSize(),
                 nullptr,
                 &g_PSObject[g_ShaderPSOldIndex]);
         }
 
-        if (psBlob) psBlob->Release();
         if (err) err->Release();
+        if (psBlob) psBlob->Release();
 
         g_ShaderPSOldIndex++;
     }
 
-    //======== Vertex Shader 生成（差分）========
+    // ---- VS ----
     while (g_ShaderVSOldIndex < g_ShaderVSIndex)
     {
         Char2 d = Char2_Get(&g_VSList, g_ShaderVSOldIndex);
@@ -136,11 +114,9 @@ void ShaderManager_Update()
         ID3DBlob* err = nullptr;
 
         HRESULT hr = D3DCompile(
-            d.End,
-            strlen(d.End),
+            d.End, strlen(d.End),
             NULL, NULL, NULL,
-            "VSMain",
-            "vs_5_0",
+            "VSMain", "vs_5_0",
             0, 0,
             &vsBlob, &err);
 
@@ -151,14 +127,20 @@ void ShaderManager_Update()
         }
         else
         {
-            dev->CreateVertexShader(vsBlob->GetBufferPointer(),
+            // シェーダー生成
+            dev->CreateVertexShader(
+                vsBlob->GetBufferPointer(),
                 vsBlob->GetBufferSize(),
                 nullptr,
                 &g_VSObject[g_ShaderVSOldIndex]);
+
+            // Blob を保存（Release しない）
+            g_VSBlobObject[g_ShaderVSOldIndex] = vsBlob;
+            vsBlob = nullptr;
         }
 
-        if (vsBlob) vsBlob->Release();
         if (err) err->Release();
+        if (vsBlob) vsBlob->Release();
 
         g_ShaderVSOldIndex++;
     }
@@ -277,4 +259,14 @@ void InitShaderDefault()
         )EOT";
     AddPixelShader("DefaultPixelShader2D", PSDefault2D);
     g_UsePSIndex = 0;
+}
+
+ID3DBlob* GetCurrentVSBlob()
+{
+    int idx = g_UseVSIndex;
+
+    if (idx < 0 || idx >= g_ShaderVSOldIndex)
+        return nullptr;
+
+    return g_VSBlobObject[idx];
 }

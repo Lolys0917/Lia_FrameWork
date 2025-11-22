@@ -11,23 +11,38 @@ using namespace DirectX;
 // -----------------------------------------------------------
 void SpriteScreen::Init()
 {
-    // --- シェーダー読み込み ---
-    //ComPtr<ID3DBlob> vsBlob, psBlob;
-    //D3DCompileFromFile(L"Shader/2D_VS.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vsBlob, nullptr);
-    //D3DCompileFromFile(L"Shader/2D_PS.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &psBlob, nullptr);
-    //
-    //GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vs);
-    //GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_ps);
+    // === エンジンのシェーダー管理から取得 ===
+    m_vs = GetVertexShader2D();
+    m_ps = GetPixelShader2D();
 
-    extern ID3DBlob* g_Default2DVSBlob;
-    // --- 入力レイアウト ---
+    if (!m_vs || !m_ps)
+    {
+        MessageBoxA(0, "SpriteScreen: Default shaders not ready", "ERROR", MB_OK);
+        return;
+    }
+
+    // === 入力レイアウトを作成 ===
+    // ♠ 必要なのは「VS のバイトコード」だが、ShaderManager では g_Default2DVSBlob を保持している
+    
+    ID3DBlob* vsBlob = GetCurrentVSBlob();
+    if (!vsBlob)
+    {
+        MessageBoxA(nullptr, "SpriteScreen: VS Blob is NULL", "ERROR", MB_OK);
+        return;
+    }
+
     D3D11_INPUT_ELEMENT_DESC layout[] = {
-        {"POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,0, D3D11_INPUT_PER_VERTEX_DATA,0},
-        {"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,0,12, D3D11_INPUT_PER_VERTEX_DATA,0},
+        {"POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,0,  D3D11_INPUT_PER_VERTEX_DATA,0},
+        {"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,   0,12, D3D11_INPUT_PER_VERTEX_DATA,0},
     };
-    GetDevice()->CreateInputLayout(layout, 2, 
-        g_Default2DVSBlob->GetBufferPointer(), 
-        g_Default2DVSBlob->GetBufferSize(), &m_layout);
+
+    GetDevice()->CreateInputLayout(
+        layout,
+        2,
+        vsBlob->GetBufferPointer(),
+        vsBlob->GetBufferSize(),
+        &m_layout
+    );
 
     // --- 定数バッファ ---
     D3D11_BUFFER_DESC bd{};
@@ -35,20 +50,14 @@ void SpriteScreen::Init()
     bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     bd.ByteWidth = sizeof(MatrixBuffer);
     GetDevice()->CreateBuffer(&bd, nullptr, &m_matrixBuf);
-   
-    // --- サンプラーステート作成（UI専用） ---
-    D3D11_SAMPLER_DESC sampDesc{};
-    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // UI向けに滑らか補間
-    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sampDesc.MaxAnisotropy = 1;
-    sampDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-    sampDesc.MinLOD = 0;
-    sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
-    GetDevice()->CreateSamplerState(&sampDesc, &m_sampler);
+    // --- サンプラー ---
+    D3D11_SAMPLER_DESC samp{};
+    samp.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    samp.AddressU = samp.AddressV = samp.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    GetDevice()->CreateSamplerState(&samp, &m_sampler);
 }
+
 
 // -----------------------------------------------------------
 // テクスチャ設定

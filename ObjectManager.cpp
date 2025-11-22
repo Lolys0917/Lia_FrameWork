@@ -563,7 +563,6 @@ void InitDo()
     KeyMap_Init(&p->SpriteWorldTexturePathMap);
     KeyMap_Init(&p->SpriteScreenTexturePathMap);
 
-    InitShaderDefault();
     ShaderManager_Init();
 
     // クラス取得
@@ -578,6 +577,7 @@ void InitDo()
 void UpdateDo()
 {
     ShaderManager_Update();
+
     CreateObject();
     UpdateScene();
     object->Update();

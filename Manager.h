@@ -348,6 +348,8 @@ int GetPixelShaderIndex(const char* shaderName);
 ID3D11VertexShader* GetVertexShader2D();
 ID3D11PixelShader* GetPixelShader2D();
 
+ID3DBlob* GetCurrentVSBlob();
+
   //////////////////
  // UtilManager  //
 //////////////////
