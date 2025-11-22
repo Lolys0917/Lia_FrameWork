@@ -1,5 +1,6 @@
-#include "Grid.h"
+ï»¿#include "Grid.h"
 #include "Main.h"
+#include "Manager.h"
 #include <d3dcompiler.h>
 #include <wrl.h>
 #include <vector>
@@ -14,13 +15,13 @@ void Grid::Init()
 {
     DeviceGetter = GetDevice();
 
-    // ’¸“_ƒf[ƒ^ (1–{ü)/ƒfƒtƒHƒ‹ƒg’l
+    // é ‚ç‚¹ãƒ‡ãƒ¼ã‚¿ (1æœ¬ç·š)/ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤
     Vertex line[] = {
         { XMFLOAT3(-10.0f, 0.0f, 0.0f) },
         { XMFLOAT3(10.0f, 0.0f, 0.0f) },
     };
 
-    // ’¸“_ƒoƒbƒtƒ@
+    // é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡
     bd.Usage = D3D11_USAGE_DEFAULT;
     bd.ByteWidth = sizeof(line);
     bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -30,7 +31,7 @@ void Grid::Init()
 
     GetDevice()->CreateBuffer(&bd, &initData, &m_vertexBuffer);
 
-    // ’è”ƒoƒbƒtƒ@
+    // å®šæ•°ãƒãƒƒãƒ•ã‚¡
     bd = {};
     bd.Usage = D3D11_USAGE_DEFAULT;
     bd.ByteWidth = sizeof(ConstantBuffer);
@@ -38,24 +39,32 @@ void Grid::Init()
 
     GetDevice()->CreateBuffer(&bd, nullptr, &m_constantBuffer);
 
-    // ƒVƒF[ƒ_[ƒRƒ“ƒpƒCƒ‹
+    // ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«
 
-    D3DCompileFromFile(L"Shader/grid_vs.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vsBlob, &errorBlob);
-    D3DCompileFromFile(L"Shader/grid_ps.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &psBlob, &errorBlob);
+    // === ã‚¨ãƒ³ã‚¸ãƒ³ã®ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ç®¡ç†ã‹ã‚‰å–å¾— ===
+    m_vs = GetVertexShader3DGrid();
+    m_ps = GetPixelShader3DGrid();
+    if (!m_vs || !m_ps)
+    {
+        MessageBoxA(0, "Grid: Default shaders not ready", "ERROR", MB_OK);
+        return;
+    }
 
-    GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vertexShader);
-    GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_pixelShader);
+    // === å…¥åŠ›ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆã‚’ä½œæˆ ===
+    // â™  å¿…è¦ãªã®ã¯ã€ŒVS ã®ãƒã‚¤ãƒˆã‚³ãƒ¼ãƒ‰ã€ã ãŒã€ShaderManager ã§ã¯ g_Default2DVSBlob ã‚’ä¿æŒã—ã¦ã„ã‚‹
 
-    // “ü—ÍƒŒƒCƒAƒEƒg
+    ID3DBlob* vsBlob = GetCurrent3DGridVSBlob();
+    if (!vsBlob)
+    {
+        MessageBoxA(nullptr, "Grid: VS Blob is NULL", "ERROR", MB_OK);
+        return;
+    }
+    // å…¥åŠ›ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆ
     D3D11_INPUT_ELEMENT_DESC layout[] = {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
 
     GetDevice()->CreateInputLayout(layout, 1, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &m_inputLayout);
-
-    if (vsBlob) vsBlob->Release();
-    if (psBlob) psBlob->Release();
-    if (errorBlob) errorBlob->Release();
 }
 
 void Grid::SetView(const XMMATRIX& View)
@@ -76,36 +85,36 @@ void Grid::SetColor(const XMFLOAT4& color)
 void Grid::Draw()
 {
     ConstantBuffer cb;
-    // ’è”ƒoƒbƒtƒ@XV
+    // å®šæ•°ãƒãƒƒãƒ•ã‚¡æ›´æ–°
     cb.viewProj = XMMatrixTranspose(ViewSet * ProjSet);
     cb.lineColor = ColorSet;
 
     GetContext()->UpdateSubresource(m_constantBuffer, 0, nullptr, &cb, 0, 0);
     
-    // ƒoƒCƒ“ƒh
+    // ãƒã‚¤ãƒ³ãƒ‰
     UINT stride = sizeof(Vertex);
     UINT offset = 0;
     GetContext()->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &offset);
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
     GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
+    GetContext()->VSSetShader(GetVertexShader3DGrid(), nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
+    GetContext()->PSSetShader(GetPixelShader3DGrid(), nullptr, 0);
     GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
 
-    // •`‰æ
+    // æç”»
     GetContext()->Draw(2, 0);
 }
 
 void Grid::SetPos(XMFLOAT3 Start, XMFLOAT3 End)
 {
-    // ’¸“_ƒf[ƒ^ (1–{ü)
+    // é ‚ç‚¹ãƒ‡ãƒ¼ã‚¿ (1æœ¬ç·š)
     Vertex line[] = {
         { Start },
         { End },
     };
 
-    // ’¸“_ƒoƒbƒtƒ@
+    // é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡
     bd.Usage = D3D11_USAGE_DEFAULT;
     bd.ByteWidth = sizeof(line);
     bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -118,7 +127,7 @@ void Grid::SetPos(XMFLOAT3 Start, XMFLOAT3 End)
 
 void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle)
 {
-    // --- 1. 8’¸“_‚ğì¬ ---
+    // --- 1. 8é ‚ç‚¹ã‚’ä½œæˆ ---
     XMFLOAT3 v[8] = {
         {-0.5f, -0.5f, -0.5f},
         { 0.5f, -0.5f, -0.5f},
@@ -130,13 +139,13 @@ void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& An
         {-0.5f,  0.5f,  0.5f},
     };
 
-    // --- 2. ƒ[ƒ‹ƒhs—ñ‚ğì¬ ---
+    // --- 2. ãƒ¯ãƒ¼ãƒ«ãƒ‰è¡Œåˆ—ã‚’ä½œæˆ ---
     XMMATRIX S = XMMatrixScaling(size.x, size.y, size.z);
     XMMATRIX R = XMMatrixRotationRollPitchYaw(Angle.x, Angle.y, Angle.z);
     XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
     XMMATRIX world = S * R * T;
 
-    // --- 3. ’¸“_‚ğ•ÏŠ· ---
+    // --- 3. é ‚ç‚¹ã‚’å¤‰æ› ---
     Vertex verts[8];
     for (int i = 0; i < 8; i++)
     {
@@ -145,14 +154,14 @@ void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& An
         XMStoreFloat3(&verts[i].position, p);
     }
 
-    // --- 4. 12–{‚Ìü•ªƒCƒ“ƒfƒbƒNƒX ---
+    // --- 4. 12æœ¬ã®ç·šåˆ†ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ ---
     UINT indices[] = {
         0,1, 1,2, 2,3, 3,0,
         4,5, 5,6, 6,7, 7,4,
         0,4, 1,5, 2,6, 3,7
     };
 
-    // --- 5. ˆê’¸“_/ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@ì¬ ---
+    // --- 5. ä¸€æ™‚é ‚ç‚¹/ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ä½œæˆ ---
     D3D11_BUFFER_DESC vbd{};
     vbd.Usage = D3D11_USAGE_IMMUTABLE;
     vbd.ByteWidth = sizeof(verts);
@@ -169,13 +178,13 @@ void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& An
     ComPtr<ID3D11Buffer> ib;
     DeviceGetter->CreateBuffer(&ibd, &iinit, &ib);
 
-    // --- 6. ’è”ƒoƒbƒtƒ@XV ---
+    // --- 6. å®šæ•°ãƒãƒƒãƒ•ã‚¡æ›´æ–° ---
     ConstantBuffer cb;
     cb.viewProj = XMMatrixTranspose(ViewSet * ProjSet);
     cb.lineColor = ColorSet;
     GetContext()->UpdateSubresource(m_constantBuffer, 0, nullptr, &cb, 0, 0);
 
-    // --- 7. •`‰æƒZƒbƒgƒAƒbƒv ---
+    // --- 7. æç”»ã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ— ---
     UINT stride = sizeof(Vertex);
     UINT offset = 0;
     GetContext()->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
@@ -183,21 +192,21 @@ void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& An
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
+    GetContext()->VSSetShader(GetVertexShader3DGrid(), nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
+    GetContext()->PSSetShader(GetPixelShader3DGrid(), nullptr, 0);
     GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
 
     // --- 8. Draw ---
     GetContext()->DrawIndexed(24, 0, 0);
 }
 
-//ƒOƒŠƒbƒh•\¦—p===============================
+//ã‚°ãƒªãƒƒãƒ‰è¡¨ç¤ºç”¨===============================
 void Grid::DrawPolygonGrid(const XMFLOAT3& pos, float radius, int sides, const XMFLOAT3& Angle)
 {
     if (sides < 3) sides = 3;
 
-    // --- 1. ³‘½ŠpŒ`‚Ì’¸“_‚ğì¬iXY•½–Ê‚É”z’uj ---
+    // --- 1. æ­£å¤šè§’å½¢ã®é ‚ç‚¹ã‚’ä½œæˆï¼ˆXYå¹³é¢ã«é…ç½®ï¼‰ ---
     std::vector<XMFLOAT3> poly(sides);
     for (int i = 0; i < sides; ++i) {
         float theta = (2.0f * static_cast<float>(M_PI) * i) / sides;
@@ -206,21 +215,21 @@ void Grid::DrawPolygonGrid(const XMFLOAT3& pos, float radius, int sides, const X
         poly[i] = XMFLOAT3{x, y, 0.0f};
     }
 
-    // --- 2. ƒ[ƒ‹ƒhs—ñ‚ğì¬ ---
+    // --- 2. ãƒ¯ãƒ¼ãƒ«ãƒ‰è¡Œåˆ—ã‚’ä½œæˆ ---
     XMMATRIX R = XMMatrixRotationRollPitchYaw(Angle.x, Angle.y, Angle.z);
     XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
-    XMMATRIX world = R * T; // ƒXƒP[ƒ‹‚ÍŠù‚É radius ‚Å”½‰fÏ‚İ
+    XMMATRIX world = R * T; // ã‚¹ã‚±ãƒ¼ãƒ«ã¯æ—¢ã« radius ã§åæ˜ æ¸ˆã¿
 
-    // --- 3. ’¸“_‚ğ•ÏŠ·‚µ‚Ä Vertex ”z—ñ‚ğì¬ ---
+    // --- 3. é ‚ç‚¹ã‚’å¤‰æ›ã—ã¦ Vertex é…åˆ—ã‚’ä½œæˆ ---
     std::vector<Vertex> verts(sides);
     for (int i = 0; i < sides; ++i) {
         XMVECTOR p = XMLoadFloat3(&poly[i]);
         p = XMVector3TransformCoord(p, world);
         XMStoreFloat3(&verts[i].position, p);
-        // •K—v‚È‚ç–@ü‚âUV‚àƒZƒbƒgi¡‰ñ‚Íü•`‰æ‚Ì‚İ‚È‚Ì‚Å position ‚Ì‚İ‚ÅOKj
+        // å¿…è¦ãªã‚‰æ³•ç·šã‚„UVã‚‚ã‚»ãƒƒãƒˆï¼ˆä»Šå›ã¯ç·šæç”»ã®ã¿ãªã®ã§ position ã®ã¿ã§OKï¼‰
     }
 
-    // --- 4. ü•ªƒCƒ“ƒfƒbƒNƒXi•Ó‚ğ‚Â‚È‚®j ---
+    // --- 4. ç·šåˆ†ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ï¼ˆè¾ºã‚’ã¤ãªãï¼‰ ---
     std::vector<UINT> indices;
     indices.reserve(sides * 2);
     for (int i = 0; i < sides; ++i) {
@@ -228,7 +237,7 @@ void Grid::DrawPolygonGrid(const XMFLOAT3& pos, float radius, int sides, const X
         indices.push_back((i + 1) % sides);
     }
 
-    // --- 5. ˆê’¸“_/ƒCƒ“ƒfƒbƒNƒXƒoƒbƒtƒ@ì¬ ---
+    // --- 5. ä¸€æ™‚é ‚ç‚¹/ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ä½œæˆ ---
     D3D11_BUFFER_DESC vbd{};
     vbd.Usage = D3D11_USAGE_IMMUTABLE;
     vbd.ByteWidth = static_cast<UINT>(sizeof(Vertex) * verts.size());
@@ -245,13 +254,13 @@ void Grid::DrawPolygonGrid(const XMFLOAT3& pos, float radius, int sides, const X
     ComPtr<ID3D11Buffer> ib;
     DeviceGetter->CreateBuffer(&ibd, &iinit, &ib);
 
-    // --- 6. ’è”ƒoƒbƒtƒ@XVi‹¤’Êj ---
+    // --- 6. å®šæ•°ãƒãƒƒãƒ•ã‚¡æ›´æ–°ï¼ˆå…±é€šï¼‰ ---
     ConstantBuffer cb;
     cb.viewProj = XMMatrixTranspose(ViewSet * ProjSet);
     cb.lineColor = ColorSet;
     GetContext()->UpdateSubresource(m_constantBuffer, 0, nullptr, &cb, 0, 0);
 
-    // --- 7. •`‰æƒZƒbƒgƒAƒbƒv ---
+    // --- 7. æç”»ã‚»ãƒƒãƒˆã‚¢ãƒƒãƒ— ---
     UINT stride = sizeof(Vertex);
     UINT offset = 0;
     GetContext()->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
@@ -259,19 +268,19 @@ void Grid::DrawPolygonGrid(const XMFLOAT3& pos, float radius, int sides, const X
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
+    GetContext()->VSSetShader(GetVertexShader3DGrid(), nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
+    GetContext()->PSSetShader(GetPixelShader3DGrid(), nullptr, 0);
     GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
 
     // --- 8. Draw ---
     GetContext()->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
 }
 
-// ƒOƒŠƒbƒh‚Æ‚µ‚Ä•¡””z’u‚·‚é
+// ã‚°ãƒªãƒƒãƒ‰ã¨ã—ã¦è¤‡æ•°é…ç½®ã™ã‚‹
 void Grid::DrawGridPolygonGrid(int cols, int rows, float spacing, int sides, float radius, const XMFLOAT3& origin, const XMFLOAT3& Angle)
 {
-    // ’†‰›Šî€‚Å•À‚×‚éi•K—v‚É‡‚í‚¹‚Ä origin ‚ğ•ÏXj
+    // ä¸­å¤®åŸºæº–ã§ä¸¦ã¹ã‚‹ï¼ˆå¿…è¦ã«åˆã‚ã›ã¦ origin ã‚’å¤‰æ›´ï¼‰
     float startX = origin.x - (cols - 1) * 0.5f * spacing;
     float startY = origin.y - (rows - 1) * 0.5f * spacing;
 
@@ -286,7 +295,7 @@ void Grid::DrawGridPolygonGrid(int cols, int rows, float spacing, int sides, flo
     }
 }
 
-//‘½Šp’Œ‚Ì•`‰æ
+//å¤šè§’æŸ±ã®æç”»
 void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle)
 {
     if (sides < 3) sides = 3;
@@ -299,21 +308,21 @@ void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size,
 
     std::vector<XMFLOAT3> localVerts(vertCount);
 
-    // --- 1. ³‘½ŠpŒ`‚Ìã–ÊE‰º–Ê‚ğƒTƒCƒY”½‰f‚µ‚Ä¶¬ ---
+    // --- 1. æ­£å¤šè§’å½¢ã®ä¸Šé¢ãƒ»ä¸‹é¢ã‚’ã‚µã‚¤ã‚ºåæ˜ ã—ã¦ç”Ÿæˆ ---
     for (int i = 0; i < sides; ++i)
     {
         float theta = (2.0f * static_cast<float>(M_PI) * i) / sides;
         float x = cosf(theta) * halfW;
         float y = sinf(theta) * halfD;
 
-        // ã–Ê
+        // ä¸Šé¢
         localVerts[i] = XMFLOAT3{ x, y, +halfH };
-        // ‰º–Ê
+        // ä¸‹é¢
         localVerts[i + sides] = XMFLOAT3{ x, y, -halfH };
     }
 
-    // --- 2. ƒ[ƒ‹ƒh•ÏŠ· ---
-    XMMATRIX S = XMMatrixScaling(1, 1, 1); // ‚±‚±‚Å‚Íg—p‚µ‚È‚¢i‚·‚Å‚É size ”½‰fj
+    // --- 2. ãƒ¯ãƒ¼ãƒ«ãƒ‰å¤‰æ› ---
+    XMMATRIX S = XMMatrixScaling(1, 1, 1); // ã“ã“ã§ã¯ä½¿ç”¨ã—ãªã„ï¼ˆã™ã§ã« size åæ˜ ï¼‰
     XMMATRIX R = XMMatrixRotationRollPitchYaw(Angle.x, Angle.y, Angle.z);
     XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
     XMMATRIX world = S * R * T;
@@ -326,7 +335,7 @@ void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size,
         XMStoreFloat3(&verts[i].position, p);
     }
 
-    // --- 3. ƒCƒ“ƒfƒbƒNƒXì¬iã–ÊE‰º–ÊE‘¤–Êj---
+    // --- 3. ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ä½œæˆï¼ˆä¸Šé¢ãƒ»ä¸‹é¢ãƒ»å´é¢ï¼‰---
     std::vector<UINT> indices;
     indices.reserve(sides * 6);
 
@@ -339,7 +348,7 @@ void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size,
         indices.push_back(i + sides);
     }
 
-    // --- 4. ƒoƒbƒtƒ@¶¬---
+    // --- 4. ãƒãƒƒãƒ•ã‚¡ç”Ÿæˆ---
     D3D11_BUFFER_DESC vbd{};
     vbd.Usage = D3D11_USAGE_IMMUTABLE;
     vbd.ByteWidth = sizeof(Vertex) * verts.size();
@@ -356,7 +365,7 @@ void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size,
     ComPtr<ID3D11Buffer> ib;
     DeviceGetter->CreateBuffer(&ibd, &iinit, &ib);
 
-    // --- 5. ‹¤’Ê•`‰æˆ— ---
+    // --- 5. å…±é€šæç”»å‡¦ç† ---
     ConstantBuffer cb;
     cb.viewProj = XMMatrixTranspose(ViewSet * ProjSet);
     cb.lineColor = ColorSet;
@@ -369,9 +378,9 @@ void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size,
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
+    GetContext()->VSSetShader(GetVertexShader3DGrid(), nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
+    GetContext()->PSSetShader(GetPixelShader3DGrid(), nullptr, 0);
     GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
 
     GetContext()->DrawIndexed((UINT)indices.size(), 0, 0);

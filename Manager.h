@@ -346,9 +346,15 @@ int GetVertexShaderIndex(const char* shaderName);
 int GetPixelShaderIndex(const char* shaderName);
 
 ID3D11VertexShader* GetVertexShader2D();
-ID3D11PixelShader* GetPixelShader2D();
+ID3D11PixelShader*  GetPixelShader2D();
+ID3D11VertexShader* GetVertexShader3D();
+ID3D11PixelShader*  GetPixelShader3D();
+ID3D11VertexShader* GetVertexShader3DGrid();
+ID3D11PixelShader*  GetPixelShader3DGrid();
 
-ID3DBlob* GetCurrentVSBlob();
+ID3DBlob* GetCurrent2DVSBlob();
+ID3DBlob* GetCurrent3DVSBlob();
+ID3DBlob* GetCurrent3DGridVSBlob();
 
   //////////////////
  // UtilManager  //

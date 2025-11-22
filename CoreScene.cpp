@@ -60,9 +60,9 @@ void CoreStartUp()
     //SetSpriteWorldSize("TestSprite00", 3, 3, 3);
     //SetSpriteWorldPos("TestSprite00", 0, 0, 0);
 
-    AddSpriteBox("Box00", "asset/test.png");
+    /*AddSpriteBox("Box00", "asset/test.png");
     SetSpriteBoxPos("Box00", 0, 0, -2);
-    SetSpriteBoxSize("Box00", 2, 2, 2);
+    SetSpriteBoxSize("Box00", 2, 2, 2);*/
 
     SceneEndPoint();
 

@@ -1,17 +1,29 @@
-#include "AssetLoad.h"
+ï»¿#include "AssetLoad.h"
 #include "ComponentSpriteWorld.h"
 #include "Main.h"
 
 void SpriteWorld::Init()
 {
-    // --- ƒVƒF[ƒ_[“Ç‚İ‚İ ---
-    ComPtr<ID3DBlob> vsBlob, psBlob;
-    D3DCompileFromFile(L"Shader/2D_VS.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vsBlob, nullptr);
-    D3DCompileFromFile(L"Shader/2D_PS.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &psBlob, nullptr);
-    GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vs);
-    GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_ps);
+    // === ã‚¨ãƒ³ã‚¸ãƒ³ã®ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ç®¡ç†ã‹ã‚‰å–å¾— ===
+    m_vs = GetVertexShader2D();
+    m_ps = GetPixelShader3D();
+    if (!m_vs || !m_ps)
+    {
+        MessageBoxA(0, "SpriteScreen: Default shaders not ready", "ERROR", MB_OK);
+        return;
+    }
 
-    // --- “ü—ÍƒŒƒCƒAƒEƒg ---
+    // === å…¥åŠ›ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆã‚’ä½œæˆ ===
+    // â™  å¿…è¦ãªã®ã¯ã€ŒVS ã®ãƒã‚¤ãƒˆã‚³ãƒ¼ãƒ‰ã€ã ãŒã€ShaderManager ã§ã¯ g_Default2DVSBlob ã‚’ä¿æŒã—ã¦ã„ã‚‹
+
+    ID3DBlob* vsBlob = GetCurrent2DVSBlob();
+    if (!vsBlob)
+    {
+        MessageBoxA(nullptr, "SpriteScreen: VS Blob is NULL", "ERROR", MB_OK);
+        return;
+    }
+
+    // --- å…¥åŠ›ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆ ---
     D3D11_INPUT_ELEMENT_DESC layout[] = {
         {"POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,0, D3D11_INPUT_PER_VERTEX_DATA,0},
         {"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,0,12, D3D11_INPUT_PER_VERTEX_DATA,0},
@@ -23,7 +35,7 @@ void SpriteWorld::Init()
         return;
     }
 
-    // --- ’è”ƒoƒbƒtƒ@ì¬ ---
+    // --- å®šæ•°ãƒãƒƒãƒ•ã‚¡ä½œæˆ ---
     D3D11_BUFFER_DESC bd{};
     bd.Usage = D3D11_USAGE_DEFAULT;
     bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -38,7 +50,7 @@ void SpriteWorld::Init()
     D3D11_SAMPLER_DESC sampDesc = {};
     sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     sampDesc.AddressU = sampDesc.AddressV = sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    GetDevice()->CreateSamplerState(&sampDesc, &m_samplerState); // m_samplerState ‚Íƒƒ“ƒo‚É’Ç‰Á‚µ‚Ä‚¨‚­
+    GetDevice()->CreateSamplerState(&sampDesc, &m_samplerState); // m_samplerState ã¯ãƒ¡ãƒ³ãƒã«è¿½åŠ ã—ã¦ãŠã
 
     // Blend
     D3D11_BLEND_DESC blendDesc = {};
@@ -52,14 +64,14 @@ void SpriteWorld::Init()
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
     GetDevice()->CreateBlendState(&blendDesc, &m_blendState);
 
-    // Depth stencil: ‘‚«‚İ–³Œø or í‚É¬Œ÷‚Ìİ’è(ƒeƒXƒg—p)
+    // Depth stencil: æ›¸ãè¾¼ã¿ç„¡åŠ¹ or å¸¸ã«æˆåŠŸã®è¨­å®š(ãƒ†ã‚¹ãƒˆç”¨)
     D3D11_DEPTH_STENCIL_DESC dsDesc = {};
     dsDesc.DepthEnable = TRUE;
     dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
     dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
     GetDevice()->CreateDepthStencilState(&dsDesc, &m_depthState);
 
-    dsDesc.DepthEnable = TRUE; // ƒeƒXƒg‚ÌŠÔ‚Í–³Œø‚É‚·‚é
+    dsDesc.DepthEnable = TRUE; // ãƒ†ã‚¹ãƒˆã®é–“ã¯ç„¡åŠ¹ã«ã™ã‚‹
     dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
     dsDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
     GetDevice()->CreateDepthStencilState(&dsDesc, &m_noDepthState);
@@ -67,7 +79,7 @@ void SpriteWorld::Init()
 
 void SpriteWorld::SetTexture(const char* assetPath)
 {
-    // AssetManagerŒo—R‚Åæ“¾
+    // AssetManagerçµŒç”±ã§å–å¾—
     if (!assetPath || strlen(assetPath) == 0) {
         MessageBoxA(nullptr, assetPath, "SpriteWorld::SetTexture: Error Invalid", MB_OK);
         return;
@@ -99,7 +111,7 @@ void SpriteWorld::Draw()
     sprintf_s(buf, "Draw: srv=%p pos=(%f,%f,%f) size=(%f,%f) angle=(%f,%f,%f)",
         m_srv, m_pos.x, m_pos.y, m_pos.z, m_size.x, m_size.y, m_angle.x, m_angle.y, m_angle.z);
 
-    // ’¸“_İ’è
+    // é ‚ç‚¹è¨­å®š
     float hw = m_size.x * 0.5f, hh = m_size.y * 0.5f;
     Vertex verts[4] = {
         {{-hw, hh, 0}, {0,0}},
@@ -108,7 +120,7 @@ void SpriteWorld::Draw()
         {{ hw,-hh, 0}, {1,1}},
     };
 
-    // ’¸“_ƒoƒbƒtƒ@¶¬
+    // é ‚ç‚¹ãƒãƒƒãƒ•ã‚¡ç”Ÿæˆ
     if (m_vb) m_vb.Reset();
     D3D11_BUFFER_DESC bd{};
     bd.Usage = D3D11_USAGE_DYNAMIC;
@@ -119,7 +131,7 @@ void SpriteWorld::Draw()
     init.pSysMem = verts;
     GetDevice()->CreateBuffer(&bd, &init, &m_vb);
 
-    // Billboardˆ—iƒJƒƒ‰Œü‚«j
+    // Billboardå‡¦ç†ï¼ˆã‚«ãƒ¡ãƒ©å‘ãï¼‰
     XMMATRIX world = XMMatrixRotationRollPitchYaw(m_angle.x, m_angle.y, m_angle.z)
         * XMMatrixTranslation(m_pos.x, m_pos.y, m_pos.z);
 
@@ -128,7 +140,7 @@ void SpriteWorld::Draw()
 
     MatrixBuffer mb;
     mb.mvp = XMMatrixTranspose(world * view * proj);
-    mb.diffuseColor = XMFLOAT4(1, 1, 1, 1); // •K—v‚È‚ç•ÏX
+    mb.diffuseColor = XMFLOAT4(1, 1, 1, 1); // å¿…è¦ãªã‚‰å¤‰æ›´
     mb.useTexture = (m_srv != nullptr) ? 1 : 0;
     mb.pad = XMFLOAT3(0, 0, 0);
     GetContext()->UpdateSubresource(m_matrixBuf.Get(), 0, nullptr, &mb, 0, 0);
@@ -136,16 +148,16 @@ void SpriteWorld::Draw()
     ColorBuffer cb{ m_color };
     GetContext()->UpdateSubresource(m_colorBuf.Get(), 0, nullptr, &cb, 0, 0);
 
-    // ƒoƒCƒ“ƒh
+    // ãƒã‚¤ãƒ³ãƒ‰
     UINT stride = sizeof(Vertex), offset = 0;
     GetContext()->IASetVertexBuffers(0, 1, m_vb.GetAddressOf(), &stride, &offset);
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
     GetContext()->IASetInputLayout(m_layout.Get());
 
-    GetContext()->VSSetShader(m_vs.Get(), nullptr, 0);
+    GetContext()->VSSetShader(GetVertexShader2D(), nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, m_matrixBuf.GetAddressOf());
 
-    GetContext()->PSSetShader(m_ps.Get(), nullptr, 0);
+    GetContext()->PSSetShader(GetPixelShader3D(), nullptr, 0);
     GetContext()->PSSetConstantBuffers(1, 1, m_colorBuf.GetAddressOf());
 
     GetContext()->PSSetShaderResources(0, 1, &m_srv);
@@ -173,15 +185,15 @@ void SpriteWorld::Release()
 
 void SpriteWorld::SetView(const XMMATRIX& view)
 {
-    // ƒrƒ…[s—ñ‚ğİ’è
-    // •K—v‚É‰‚¶‚Ä•Û‘¶‚µ‚Ä‚¨‚­
+    // ãƒ“ãƒ¥ãƒ¼è¡Œåˆ—ã‚’è¨­å®š
+    // å¿…è¦ã«å¿œã˜ã¦ä¿å­˜ã—ã¦ãŠã
 
     ViewSet = view;
 }
 void SpriteWorld::SetProj(const XMMATRIX& proj)
 {
-    // Ë‰es—ñ‚ğİ’è
-    // •K—v‚É‰‚¶‚Ä•Û‘¶‚µ‚Ä‚¨‚­
+    // å°„å½±è¡Œåˆ—ã‚’è¨­å®š
+    // å¿…è¦ã«å¿œã˜ã¦ä¿å­˜ã—ã¦ãŠã
 
     ProjSet = proj;
 }

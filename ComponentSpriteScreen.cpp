@@ -24,7 +24,7 @@ void SpriteScreen::Init()
     // === 入力レイアウトを作成 ===
     // ♠ 必要なのは「VS のバイトコード」だが、ShaderManager では g_Default2DVSBlob を保持している
     
-    ID3DBlob* vsBlob = GetCurrentVSBlob();
+    ID3DBlob* vsBlob = GetCurrent2DVSBlob();
     if (!vsBlob)
     {
         MessageBoxA(nullptr, "SpriteScreen: VS Blob is NULL", "ERROR", MB_OK);

@@ -1,4 +1,4 @@
-#include "ComponentSpriteCylinder.h"
+﻿#include "ComponentSpriteCylinder.h"
 #include "Main.h" // GetDevice(), GetContext(), GetTextureSRV(), AddMessage()
 #include <d3dcompiler.h>
 #include <vector>
@@ -11,15 +11,24 @@ static constexpr float TWO_PI = 2.0f * 3.14159265358979323846f;
 
 void SpriteCylinder::Init()
 {
-    // Compile/load shaders (reuse 2D_VS/2D_PS as requested)
-    ComPtr<ID3DBlob> vsBlob, psBlob;
-    HRESULT hr = D3DCompileFromFile(L"Shader/2D_VS.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vsBlob, nullptr);
-    if (FAILED(hr)) { AddMessage("SpriteCylinder: VS compile failed"); return; }
-    hr = D3DCompileFromFile(L"Shader/2D_PS.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &psBlob, nullptr);
-    if (FAILED(hr)) { AddMessage("SpriteCylinder: PS compile failed"); return; }
+    // === エンジンのシェーダー管理から取得 ===
+    m_vs = GetVertexShader2D();
+    m_ps = GetPixelShader3D();
+    if (!m_vs || !m_ps)
+    {
+        MessageBoxA(0, "SpriteScreen: Default shaders not ready", "ERROR", MB_OK);
+        return;
+    }
 
-    GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vs);
-    GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_ps);
+    // === 入力レイアウトを作成 ===
+    // ♠ 必要なのは「VS のバイトコード」だが、ShaderManager では g_Default2DVSBlob を保持している
+
+    ID3DBlob* vsBlob = GetCurrent2DVSBlob();
+    if (!vsBlob)
+    {
+        MessageBoxA(nullptr, "SpriteScreen: VS Blob is NULL", "ERROR", MB_OK);
+        return;
+    }
 
     // Input layout: POSITION(3), TEXCOORD(2)
     D3D11_INPUT_ELEMENT_DESC layoutDesc[] = {
@@ -137,8 +146,8 @@ void SpriteCylinder::Draw()
     ColorBuffer cb{ m_color };
 
     // Common binds
-    ctx->VSSetShader(m_vs.Get(), nullptr, 0);
-    ctx->PSSetShader(m_ps.Get(), nullptr, 0);
+    ctx->VSSetShader(GetVertexShader2D(), nullptr, 0);
+    ctx->PSSetShader(GetPixelShader3D(), nullptr, 0);
     ctx->IASetInputLayout(m_layout.Get());
     ctx->VSSetConstantBuffers(0, 1, m_matrixBuf.GetAddressOf());
     ctx->PSSetConstantBuffers(1, 1, m_colorBuf.GetAddressOf());
@@ -249,12 +258,12 @@ void SpriteCylinder::BuildMesh()
         Vertex top1 = { { p1.x, +halfH, p1.z }, { u1, 0.0f } };
         Vertex bot1 = { { p1.x, -halfH, p1.z }, { u1, 1.0f } };
 
-        // Triangle 1: bot1, bot0, top0   (�t��)
+        // Triangle 1: bot1, bot0, top0   (逆順)
         sideVerts.push_back(bot1);
         sideVerts.push_back(bot0);
         sideVerts.push_back(top0);
 
-        // Triangle 2: top1, bot1, top0   (�t��)
+        // Triangle 2: top1, bot1, top0   (逆順)
         sideVerts.push_back(top1);
         sideVerts.push_back(bot1);
         sideVerts.push_back(top0);
