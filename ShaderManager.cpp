@@ -366,22 +366,22 @@ void InitShaderDefault()
 
     const char* VSDefaultGrid =
         R"EOT(
-        cbuffer ConstantBuffer : register(b1)
+        cbuffer ConstantBuffer : register(b0)
         {
             matrix viewProj;
             float4 lineColor;
         };
-
+        
         struct VS_INPUT
         {
             float3 pos : POSITION;
         };
-
+        
         struct PS_INPUT
         {
             float4 pos : SV_POSITION;
         };
-
+        
         PS_INPUT VSMain(VS_INPUT input)
         {
             PS_INPUT output;
@@ -400,12 +400,12 @@ void InitShaderDefault()
             matrix viewProj;
             float4 lineColor;
         };
-
+        
         struct PS_INPUT
         {
             float4 pos : SV_POSITION;
         };
-
+        
         float4 PSMain(PS_INPUT input) : SV_TARGET
         {
             return lineColor;

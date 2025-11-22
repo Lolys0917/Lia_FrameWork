@@ -1,6 +1,6 @@
 ﻿#include "Grid.h"
-#include "Main.h"
 #include "Manager.h"
+#include "Main.h"
 #include <d3dcompiler.h>
 #include <wrl.h>
 #include <vector>
@@ -41,22 +41,19 @@ void Grid::Init()
 
     // シェーダーコンパイル
 
-    // === エンジンのシェーダー管理から取得 ===
-    m_vs = GetVertexShader3DGrid();
-    m_ps = GetPixelShader3DGrid();
-    if (!m_vs || !m_ps)
-    {
-        MessageBoxA(0, "Grid: Default shaders not ready", "ERROR", MB_OK);
-        return;
-    }
+    //D3DCompileFromFile(L"Shader/grid_vs.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vsBlob, &errorBlob);
+    //D3DCompileFromFile(L"Shader/grid_ps.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &psBlob, &errorBlob);
+    //
+    //GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vertexShader);
+    //GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_pixelShader);
 
-    // === 入力レイアウトを作成 ===
-    // ♠ 必要なのは「VS のバイトコード」だが、ShaderManager では g_Default2DVSBlob を保持している
+    m_vertexShader = GetVertexShader3DGrid();
+    m_pixelShader = GetPixelShader3DGrid();
 
     ID3DBlob* vsBlob = GetCurrent3DGridVSBlob();
     if (!vsBlob)
     {
-        MessageBoxA(nullptr, "Grid: VS Blob is NULL", "ERROR", MB_OK);
+        MessageBoxA(nullptr, "SpriteScreen: VS Blob is NULL", "ERROR", MB_OK);
         return;
     }
     // 入力レイアウト
@@ -65,6 +62,10 @@ void Grid::Init()
     };
 
     GetDevice()->CreateInputLayout(layout, 1, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &m_inputLayout);
+
+    if (vsBlob) vsBlob->Release();
+    if (psBlob) psBlob->Release();
+    if (errorBlob) errorBlob->Release();
 }
 
 void Grid::SetView(const XMMATRIX& View)
@@ -97,9 +98,9 @@ void Grid::Draw()
     GetContext()->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &offset);
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
     GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(GetVertexShader3DGrid(), nullptr, 0);
+    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(GetPixelShader3DGrid(), nullptr, 0);
+    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
     GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
 
     // 描画
@@ -192,9 +193,9 @@ void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& An
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(GetVertexShader3DGrid(), nullptr, 0);
+    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(GetPixelShader3DGrid(), nullptr, 0);
+    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
     GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
 
     // --- 8. Draw ---
@@ -268,9 +269,9 @@ void Grid::DrawPolygonGrid(const XMFLOAT3& pos, float radius, int sides, const X
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(GetVertexShader3DGrid(), nullptr, 0);
+    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(GetPixelShader3DGrid(), nullptr, 0);
+    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
     GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
 
     // --- 8. Draw ---
@@ -378,9 +379,9 @@ void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size,
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(GetVertexShader3DGrid(), nullptr, 0);
+    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(GetPixelShader3DGrid(), nullptr, 0);
+    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
     GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
 
     GetContext()->DrawIndexed((UINT)indices.size(), 0, 0);
