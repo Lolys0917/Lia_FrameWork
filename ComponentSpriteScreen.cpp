@@ -12,19 +12,22 @@ using namespace DirectX;
 void SpriteScreen::Init()
 {
     // --- シェーダー読み込み ---
-    ComPtr<ID3DBlob> vsBlob, psBlob;
-    D3DCompileFromFile(L"Shader/2D_VS.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vsBlob, nullptr);
-    D3DCompileFromFile(L"Shader/2D_PS.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &psBlob, nullptr);
+    //ComPtr<ID3DBlob> vsBlob, psBlob;
+    //D3DCompileFromFile(L"Shader/2D_VS.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vsBlob, nullptr);
+    //D3DCompileFromFile(L"Shader/2D_PS.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &psBlob, nullptr);
+    //
+    //GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vs);
+    //GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_ps);
 
-    GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vs);
-    GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_ps);
-
+    extern ID3DBlob* g_Default2DVSBlob;
     // --- 入力レイアウト ---
     D3D11_INPUT_ELEMENT_DESC layout[] = {
         {"POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,0, D3D11_INPUT_PER_VERTEX_DATA,0},
         {"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,0,12, D3D11_INPUT_PER_VERTEX_DATA,0},
     };
-    GetDevice()->CreateInputLayout(layout, 2, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &m_layout);
+    GetDevice()->CreateInputLayout(layout, 2, 
+        g_Default2DVSBlob->GetBufferPointer(), 
+        g_Default2DVSBlob->GetBufferSize(), &m_layout);
 
     // --- 定数バッファ ---
     D3D11_BUFFER_DESC bd{};
@@ -32,7 +35,7 @@ void SpriteScreen::Init()
     bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     bd.ByteWidth = sizeof(MatrixBuffer);
     GetDevice()->CreateBuffer(&bd, nullptr, &m_matrixBuf);
-
+   
     // --- サンプラーステート作成（UI専用） ---
     D3D11_SAMPLER_DESC sampDesc{};
     sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // UI向けに滑らか補間
@@ -133,10 +136,10 @@ void SpriteScreen::Draw()
     GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     GetContext()->IASetInputLayout(m_layout.Get());
 
-    GetContext()->VSSetShader(m_vs.Get(), nullptr, 0);
+    GetContext()->VSSetShader(GetVertexShader2D(), nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, m_matrixBuf.GetAddressOf());
 
-    GetContext()->PSSetShader(m_ps.Get(), nullptr, 0);
+    GetContext()->PSSetShader(GetPixelShader2D(), nullptr, 0);
     GetContext()->PSSetShaderResources(0, 1, &m_srv);
     GetContext()->PSSetSamplers(0, 1, m_sampler.GetAddressOf()); // ← UI専用サンプラー設定
 

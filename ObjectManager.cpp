@@ -563,13 +563,14 @@ void InitDo()
     KeyMap_Init(&p->SpriteWorldTexturePathMap);
     KeyMap_Init(&p->SpriteScreenTexturePathMap);
 
+    InitShaderDefault();
+    ShaderManager_Init();
+
     // クラス取得
     grid = new Grid();
     grid->Init();
     object = new Object();
     object->Init();
-
-    CreateObject();
 
     //object->AddComponent<Sound>();
 }

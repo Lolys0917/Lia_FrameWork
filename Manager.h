@@ -199,8 +199,6 @@ void InitDo();
 void UpdateDo();
 void DrawDo();
 void ReleaseDo();
-void SetDefaultShaderVS(const char* ShaderName);
-void SetDefaultShaderPS(const char* ShaderName);
 //|| Camera ||_______________________
 void AddCamera(const char* name);                                                   //ÉJÉÅÉâÇÃí«â¡
 void SetCameraPos(const char* name, float x, float y, float z);                     //ÉJÉÅÉâÇÃç¿ïWê›íË
@@ -330,6 +328,15 @@ bool IN_LoadWav_Memory(const char* name, const unsigned char* data, size_t size)
   ///////////////////
  // ShaderManager //
 ///////////////////
+
+void InitShaderDefault();
+void ShaderManager_Init();
+
+void Set2DShaderVS(const char* ShaderName);
+void Set2DShaderPS(const char* ShaderName);
+void Set3DShaderVS(const char* ShaderName);
+void Set3DShaderPS(const char* ShaderName);
+
 void AddVertexShader(const char* shaderName, const char* shaderCode);
 void AddPixelShader(const char* shaderName, const char* shaderCode);
 
@@ -338,8 +345,8 @@ void ShaderManager_Update();
 int GetVertexShaderIndex(const char* shaderName);
 int GetPixelShaderIndex(const char* shaderName);
 
-ID3D11VertexShader* GetVertexShader(int index);
-ID3D11PixelShader* GetPixelShader(int index);
+ID3D11VertexShader* GetVertexShader2D();
+ID3D11PixelShader* GetPixelShader2D();
 
   //////////////////
  // UtilManager  //

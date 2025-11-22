@@ -31,11 +31,11 @@
     <Filter Include="ソース ファイル\Manager\Loader">
       <UniqueIdentifier>{4f7653b7-bfcf-4703-bd50-0c73e5551a4b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\SystemSetUp">
+      <UniqueIdentifier>{21c77c0b-0a62-4431-9298-7a09fd3d90f4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="ComponentSpriteWorld.h">
       <Filter>ソース ファイル\Component</Filter>
     </ClCompile>
@@ -78,17 +78,20 @@
     <ClCompile Include="ComponentSpriteBox.cpp">
       <Filter>ソース ファイル\Component</Filter>
     </ClCompile>
+    <ClCompile Include="ShaderManager.cpp">
+      <Filter>ソース ファイル\Manager</Filter>
+    </ClCompile>
     <ClCompile Include="ComponentLight.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>ソース ファイル\Component</Filter>
     </ClCompile>
     <ClCompile Include="ComponentSound.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>ソース ファイル\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>ソース ファイル\SystemSetUp</Filter>
     </ClCompile>
     <ClCompile Include="InputManager.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="ShaderManager.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>ソース ファイル\Manager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -106,9 +109,6 @@
     </ClInclude>
     <ClInclude Include="Object.h">
       <Filter>ソース ファイル\Manager</Filter>
-    </ClInclude>
-    <ClInclude Include="Main.h">
-      <Filter>ソース ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Grid.h">
       <Filter>ソース ファイル\Debug</Filter>
@@ -129,10 +129,16 @@
       <Filter>ソース ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="ComponentLight.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>ソース ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="ComponentSound.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>ソース ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Main.h">
+      <Filter>ソース ファイル\SystemSetUp</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemAPI.h">
+      <Filter>ソース ファイル\Manager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

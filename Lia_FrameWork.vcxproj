@@ -168,6 +168,7 @@
     <ClInclude Include="Manager.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="ComponentSpriteScreen.h" />
+    <ClInclude Include="SystemAPI.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ObjectMemo.txt" />

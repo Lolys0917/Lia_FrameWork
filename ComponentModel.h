@@ -21,6 +21,8 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
+struct ModelVertex;
+
 enum class ModelType
 {
     FBX,
