@@ -295,7 +295,7 @@ void InitShaderDefault()
         // “§–¾ƒsƒNƒZƒ‹•”•ª‚Ì”jŠü
         if (texColor.a * color.a < 0.5f)
             discard;
-
+        
         return texColor * color;
         }
         )EOT";

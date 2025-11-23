@@ -13,6 +13,9 @@
 
 #pragma once
 
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+
 // Include________________________
 #include "Grid.h"
 #include "Object.h"
@@ -317,7 +320,7 @@ void NotifyAddObject(IndexType type);
   //////////////////
  // AssetManager //
 //////////////////
-const std::vector<ModelVertex>* GetModelVertex(const char* modelName);
+const std::vector<ModelVertex>* GetModelVertices(const char* modelName);
 ID3D11ShaderResourceView* GetTextureSRV(const char* textureName);
 
 bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t size);
@@ -325,6 +328,18 @@ bool IN_LoadFBX_Memory(const char* name, const unsigned char* data, size_t size)
 bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t size);
 bool IN_LoadWav_Memory(const char* name, const unsigned char* data, size_t size);
 
+void AL_Init();
+void AL_Shutdown();
+bool AL_RegisterAssetToBatch(const char* filepath);
+bool AL_SaveAllPackages(const char* outFolder);
+bool AL_LoadPackageIndex(const char* ext, const char* pkgFilePath);
+bool AL_LoadFromPackageByIndex(const char* ext, int index);
+int AL_GetIndexFromPackage(const char* ext, const char* name);
+int AL_GetPackageCount(); // number of distinct extensions/packages
+const char* AL_GetPackageExt(int pkgIdx);
+int AL_GetPackageEntryCount(const char* ext);
+const char* AL_GetPackageEntryName(const char* ext, int index);
+bool AL_LoadFromPackageByName(const char* name);
   ///////////////////
  // ShaderManager //
 ///////////////////

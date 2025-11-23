@@ -17,6 +17,7 @@ void CoreStartUp()
     AL_RegisterAssetToBatch("asset/est.png");
     AL_RegisterAssetToBatch("asset/DiscUR_Reel1.png");
     AL_RegisterAssetToBatch("asset/hamu.png");
+    AL_RegisterAssetToBatch("asset/boy_model4.fbx");
     //AL_RegisterAssetToBatch("asset/model/player.fbx");
     //AL_RegisterAssetToBatch("asset/model/ground.obj");
     
@@ -33,6 +34,7 @@ void CoreStartUp()
     AL_LoadFromPackageByName("asset/est.png");
     AL_LoadFromPackageByName("asset/DiscUR_Reel1.png");
     AL_LoadFromPackageByName("asset/hamu.png");
+    AL_LoadFromPackageByName("asset/boy_model4.fbx");
     //AL_LoadFromPackageByName("asset/model/player.fbx");
 
     // --- ÉJÉÅÉâèâä˙âª ---
@@ -54,6 +56,7 @@ void CoreStartUp()
     AddGridBox("BoxB");
     SetGridBoxPos("BoxA", -2, 0, 0);
     SetGridBoxPos("BoxB", 2, 0, 0);
+    SetGridBoxColor("BoxA", 1, 0, 1, 1);
 
     //AddSpriteWorld("TestSprite00", "asset/test.png");
     //SetSpriteWorldColor("TestSprite00", 1, 1, 1, 1);
@@ -62,7 +65,8 @@ void CoreStartUp()
 
     /*AddSpriteBox("Box00", "asset/test.png");
     SetSpriteBoxPos("Box00", 0, 0, -2);
-    SetSpriteBoxSize("Box00", 2, 2, 2);*/
+    SetSpriteBoxSize("Box00", 2, 2, 2);
+    SetSpriteBoxColor("Box00", 1, 1, 1, 1);*/
 
     SceneEndPoint();
 
@@ -124,7 +128,7 @@ void CoreStartUp()
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
     // ç≈èâÇÃÉVÅ[Éìê›íË
-    ChangeScene("Scene3");
+    ChangeScene("Scene1");
 
     AddGridBox("BoxC");
     SetGridBoxPos("BoxC", 0, 0, 0);

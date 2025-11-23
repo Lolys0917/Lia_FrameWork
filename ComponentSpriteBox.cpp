@@ -1,5 +1,6 @@
 // SpriteBox.cpp
 #include "ComponentSpriteBox.h"
+#include "Manager.h"
 #include "Main.h" // GetDevice(), GetContext(), GetTextureSRV(), AddMessage()
 #include <d3dcompiler.h>
 #include <cmath>
@@ -20,17 +21,24 @@ SpriteBox::~SpriteBox()
 
 void SpriteBox::Init()
 {
-    // compile shaders
-    ComPtr<ID3DBlob> vsBlob, psBlob;
-    HRESULT hr = D3DCompileFromFile(L"Shader/2D_VS.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vsBlob, nullptr);
-    if (FAILED(hr)) { AddMessage("SpriteBox: VS compile failed"); return; }
-    hr = D3DCompileFromFile(L"Shader/2D_PS.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &psBlob, nullptr);
-    if (FAILED(hr)) { AddMessage("SpriteBox: PS compile failed"); return; }
-
     ID3D11Device* dev = GetDevice();
 
-    dev->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vs);
-    dev->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_ps);
+    // === エンジンのシェーダー管理から取得 ===
+    m_vs = GetVertexShader2D();
+    m_ps = GetPixelShader3D();
+    if (!m_vs || !m_ps)
+    {
+        MessageBoxA(0, "SpriteScreen: Default shaders not ready", "ERROR", MB_OK);
+        return;
+    }
+
+    // === 入力レイアウトを作成 ===
+    ID3DBlob* vsBlob = GetCurrent2DVSBlob();
+    if (!vsBlob)
+    {
+        MessageBoxA(nullptr, "SpriteScreen: VS Blob is NULL", "ERROR", MB_OK);
+        return;
+    }
 
     // input layout: position(3), uv(2)
     D3D11_INPUT_ELEMENT_DESC layout[] = {

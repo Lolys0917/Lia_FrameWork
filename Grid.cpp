@@ -1,71 +1,172 @@
-﻿#include "Grid.h"
+﻿// Grid.cpp
+#include "Grid.h"
 #include "Manager.h"
 #include "Main.h"
+
 #include <d3dcompiler.h>
 #include <wrl.h>
 #include <vector>
+#include <cmath>
 
 #define M_PI 3.14159265358979323846
 
 using Microsoft::WRL::ComPtr;
 
-D3D11_BUFFER_DESC bd = {};
-
 void Grid::Init()
 {
     DeviceGetter = GetDevice();
+    Context = GetContext();
+    if (!DeviceGetter || !Context) {
+        AddMessage("Grid::Init - Device/Context null");
+        return;
+    }
 
-    // 頂点データ (1本線)/デフォルト値
-    Vertex line[] = {
-        { XMFLOAT3(-10.0f, 0.0f, 0.0f) },
-        { XMFLOAT3(10.0f, 0.0f, 0.0f) },
-    };
-
-    // 頂点バッファ
-    bd.Usage = D3D11_USAGE_DEFAULT;
-    bd.ByteWidth = sizeof(line);
+    // create a modest dynamic vertex buffer initially (will grow if needed)
+    m_gpuVertexCapacity = 1024; // initial number of Vertex elements
+    D3D11_BUFFER_DESC bd{};
+    bd.Usage = D3D11_USAGE_DYNAMIC;
     bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    bd.ByteWidth = static_cast<UINT>(sizeof(Vertex) * m_gpuVertexCapacity);
+    bd.StructureByteStride = sizeof(Vertex);
 
-    D3D11_SUBRESOURCE_DATA initData = {};
-    initData.pSysMem = line;
+    HRESULT hr = DeviceGetter->CreateBuffer(&bd, nullptr, &m_vertexBuffer);
+    if (FAILED(hr)) {
+        AddMessage("Grid::Init - CreateBuffer vertex failed");
+    }
 
-    GetDevice()->CreateBuffer(&bd, &initData, &m_vertexBuffer);
-
-    // 定数バッファ
+    // constant buffer
     bd = {};
     bd.Usage = D3D11_USAGE_DEFAULT;
-    bd.ByteWidth = sizeof(ConstantBuffer);
     bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    bd.ByteWidth = sizeof(ConstantBuffer);
+    hr = DeviceGetter->CreateBuffer(&bd, nullptr, &m_constantBuffer);
+    if (FAILED(hr)) {
+        AddMessage("Grid::Init - CreateBuffer constant failed");
+    }
 
-    GetDevice()->CreateBuffer(&bd, nullptr, &m_constantBuffer);
-
-    // シェーダーコンパイル
-
-    //D3DCompileFromFile(L"Shader/grid_vs.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", 0, 0, &vsBlob, &errorBlob);
-    //D3DCompileFromFile(L"Shader/grid_ps.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", 0, 0, &psBlob, &errorBlob);
-    //
-    //GetDevice()->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &m_vertexShader);
-    //GetDevice()->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &m_pixelShader);
-
+    // get shaders from ShaderManager (the engine's default grid shaders)
     m_vertexShader = GetVertexShader3DGrid();
     m_pixelShader = GetPixelShader3DGrid();
 
-    ID3DBlob* vsBlob = GetCurrent3DGridVSBlob();
-    if (!vsBlob)
-    {
-        MessageBoxA(nullptr, "SpriteScreen: VS Blob is NULL", "ERROR", MB_OK);
+    if (!m_vertexShader || !m_pixelShader) {
+        MessageBoxA(nullptr, "Grid: Default shaders not ready", "ERROR", MB_OK);
         return;
     }
-    // 入力レイアウト
+
+    // obtain VS blob from ShaderManager to create input layout (must match the VS signature!)
+    ID3DBlob* vsBlob = GetCurrent3DGridVSBlob();
+    if (!vsBlob) {
+        MessageBoxA(nullptr, "Grid: VS Blob is NULL", "ERROR", MB_OK);
+        return;
+    }
+
+    // Input layout must match the vertex shader input. Default grid VS expects POSITION only.
     D3D11_INPUT_ELEMENT_DESC layout[] = {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
+            D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
 
-    GetDevice()->CreateInputLayout(layout, 1, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &m_inputLayout);
+    hr = DeviceGetter->CreateInputLayout(
+        layout, ARRAYSIZE(layout),
+        vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
+        &m_inputLayout
+    );
+    if (FAILED(hr)) {
+        AddMessage("Grid::Init - CreateInputLayout failed");
+        return;
+    }
 
-    if (vsBlob) vsBlob->Release();
-    if (psBlob) psBlob->Release();
-    if (errorBlob) errorBlob->Release();
+    // start with empty pending list
+    m_pendingVertices.clear();
+}
+
+// Ensure dynamic GPU buffer capacity is enough for vertexCount vertices.
+// If not, release and recreate a larger dynamic buffer (grow factor 2x).
+void Grid::EnsureGPUBufferCapacity(UINT vertexCount)
+{
+    if (vertexCount == 0) return;
+    if (vertexCount <= m_gpuVertexCapacity) return;
+
+    // grow capacity (exponential)
+    UINT newCap = m_gpuVertexCapacity ? m_gpuVertexCapacity : 1;
+    while (newCap < vertexCount) newCap *= 2;
+
+    D3D11_BUFFER_DESC bd{};
+    bd.Usage = D3D11_USAGE_DYNAMIC;
+    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    bd.ByteWidth = static_cast<UINT>(sizeof(Vertex) * newCap);
+    bd.StructureByteStride = sizeof(Vertex);
+
+    ComPtr<ID3D11Buffer> newVB;
+    HRESULT hr = DeviceGetter->CreateBuffer(&bd, nullptr, &newVB);
+    if (FAILED(hr)) {
+        AddMessage("Grid::EnsureGPUBufferCapacity - CreateBuffer failed");
+        return;
+    }
+
+    // replace
+    m_vertexBuffer = newVB;
+    m_gpuVertexCapacity = newCap;
+}
+
+// Transfer pending CPU vertices to GPU (via Map/Unmap) and draw them.
+// This draws all pending vertices as a line-list (each pair is one line).
+void Grid::FlushPendingToGPUAndDraw()
+{
+    if (m_pendingVertices.empty()) return;
+    if (!Context || !m_vertexBuffer) return;
+
+    UINT vertexCount = (UINT)m_pendingVertices.size();
+    EnsureGPUBufferCapacity(vertexCount);
+
+    // map and copy
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    HRESULT hr = Context->Map(m_vertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    if (FAILED(hr)) {
+        AddMessage("Grid::Flush - Map failed");
+        return;
+    }
+
+    // copy data
+    memcpy(mapped.pData, m_pendingVertices.data(), vertexCount * sizeof(Vertex));
+    Context->Unmap(m_vertexBuffer.Get(), 0);
+
+    // update constant buffer (viewProj + color)
+    ConstantBuffer cb;
+    cb.viewProj = XMMatrixTranspose(ViewSet * ProjSet);
+    cb.lineColor = ColorSet;
+    Context->UpdateSubresource(m_constantBuffer.Get(), 0, nullptr, &cb, 0, 0);
+
+    // bind and draw
+    UINT stride = sizeof(Vertex);
+    UINT offset = 0;
+    ID3D11Buffer* vb = m_vertexBuffer.Get();
+    Context->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+    Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+    Context->IASetInputLayout(m_inputLayout.Get());
+    Context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
+    Context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+    Context->PSSetShader(m_pixelShader.Get(), nullptr, 0); // NOTE: keep compatibility if using raw pointer; else see below
+    // Wait - we use ComPtr for pixel shader: call Get()
+    // But above line uses m_pixel_shader; replace properly:
+
+    // Correct binding:
+    Context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+    Context->PSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+
+    // Draw: each 2 vertices = one line. So vertexCount must be even.
+    Context->Draw(vertexCount, 0);
+
+    // clear pending
+    m_pendingVertices.clear();
+}
+
+void Grid::Draw()
+{
+    // Flush pending geometries into GPU and draw them
+    FlushPendingToGPUAndDraw();
 }
 
 void Grid::SetView(const XMMATRIX& View)
@@ -83,53 +184,21 @@ void Grid::SetColor(const XMFLOAT4& color)
     ColorSet = color;
 }
 
-void Grid::Draw()
-{
-    ConstantBuffer cb;
-    // 定数バッファ更新
-    cb.viewProj = XMMatrixTranspose(ViewSet * ProjSet);
-    cb.lineColor = ColorSet;
-
-    GetContext()->UpdateSubresource(m_constantBuffer, 0, nullptr, &cb, 0, 0);
-    
-    // バインド
-    UINT stride = sizeof(Vertex);
-    UINT offset = 0;
-    GetContext()->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &offset);
-    GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-    GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
-    GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
-    GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
-
-    // 描画
-    GetContext()->Draw(2, 0);
-}
-
+// SetPos: instead of creating a new VB each call, we push two vertices into pending list.
+// Caller expects SetPos to set the one-line geometry; keep behavior: push that line.
 void Grid::SetPos(XMFLOAT3 Start, XMFLOAT3 End)
 {
-    // 頂点データ (1本線)
-    Vertex line[] = {
-        { Start },
-        { End },
-    };
-
-    // 頂点バッファ
-    bd.Usage = D3D11_USAGE_DEFAULT;
-    bd.ByteWidth = sizeof(line);
-    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-    D3D11_SUBRESOURCE_DATA initData = {};
-    initData.pSysMem = line;
-
-    GetDevice()->CreateBuffer(&bd, &initData, &m_vertexBuffer);
+    Vertex a{ Start };
+    Vertex b{ End };
+    m_pendingVertices.push_back(a);
+    m_pendingVertices.push_back(b);
 }
 
+// DrawBox: push 12 line segments (24 vertices) into pending list
 void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle)
 {
-    // --- 1. 8頂点を作成 ---
-    XMFLOAT3 v[8] = {
+    // create 8 corners in local space
+    XMFLOAT3 vlocal[8] = {
         {-0.5f, -0.5f, -0.5f},
         { 0.5f, -0.5f, -0.5f},
         { 0.5f,  0.5f, -0.5f},
@@ -140,148 +209,40 @@ void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& An
         {-0.5f,  0.5f,  0.5f},
     };
 
-    // --- 2. ワールド行列を作成 ---
     XMMATRIX S = XMMatrixScaling(size.x, size.y, size.z);
     XMMATRIX R = XMMatrixRotationRollPitchYaw(Angle.x, Angle.y, Angle.z);
     XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
     XMMATRIX world = S * R * T;
 
-    // --- 3. 頂点を変換 ---
-    Vertex verts[8];
-    for (int i = 0; i < 8; i++)
-    {
-        XMVECTOR p = XMLoadFloat3(&v[i]);
+    XMFLOAT3 worldPos[8];
+    for (int i = 0; i < 8; ++i) {
+        XMVECTOR p = XMLoadFloat3(&vlocal[i]);
         p = XMVector3TransformCoord(p, world);
-        XMStoreFloat3(&verts[i].position, p);
+        XMStoreFloat3(&worldPos[i], p);
     }
 
-    // --- 4. 12本の線分インデックス ---
-    UINT indices[] = {
+    // 12 edges (pairs)
+    const int edgePairs[24] = {
         0,1, 1,2, 2,3, 3,0,
         4,5, 5,6, 6,7, 7,4,
         0,4, 1,5, 2,6, 3,7
     };
 
-    // --- 5. 一時頂点/インデックスバッファ作成 ---
-    D3D11_BUFFER_DESC vbd{};
-    vbd.Usage = D3D11_USAGE_IMMUTABLE;
-    vbd.ByteWidth = sizeof(verts);
-    vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA vinit{ verts };
-    ComPtr<ID3D11Buffer> vb;
-    DeviceGetter->CreateBuffer(&vbd, &vinit, &vb);
-
-    D3D11_BUFFER_DESC ibd{};
-    ibd.Usage = D3D11_USAGE_IMMUTABLE;
-    ibd.ByteWidth = sizeof(indices);
-    ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA iinit{ indices };
-    ComPtr<ID3D11Buffer> ib;
-    DeviceGetter->CreateBuffer(&ibd, &iinit, &ib);
-
-    // --- 6. 定数バッファ更新 ---
-    ConstantBuffer cb;
-    cb.viewProj = XMMatrixTranspose(ViewSet * ProjSet);
-    cb.lineColor = ColorSet;
-    GetContext()->UpdateSubresource(m_constantBuffer, 0, nullptr, &cb, 0, 0);
-
-    // --- 7. 描画セットアップ ---
-    UINT stride = sizeof(Vertex);
-    UINT offset = 0;
-    GetContext()->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
-    GetContext()->IASetIndexBuffer(ib.Get(), DXGI_FORMAT_R32_UINT, 0);
-    GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-
-    GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
-    GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
-    GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
-
-    // --- 8. Draw ---
-    GetContext()->DrawIndexed(24, 0, 0);
+    for (int i = 0; i < 24; i += 2) {
+        Vertex a{ worldPos[edgePairs[i]] };
+        Vertex b{ worldPos[edgePairs[i + 1]] };
+        m_pendingVertices.push_back(a);
+        m_pendingVertices.push_back(b);
+    }
 }
 
-//グリッド表示用===============================
-void Grid::DrawPolygonGrid(const XMFLOAT3& pos, float radius, int sides, const XMFLOAT3& Angle)
+// DrawPolygonGrid: draw many polygons by calling DrawPolygonGrid per cell
+void Grid::DrawGridPolygonGrid(
+    int cols, int rows,
+    float spacing, int sides,
+    float radius,
+    const XMFLOAT3& origin, const XMFLOAT3& Angle)
 {
-    if (sides < 3) sides = 3;
-
-    // --- 1. 正多角形の頂点を作成（XY平面に配置） ---
-    std::vector<XMFLOAT3> poly(sides);
-    for (int i = 0; i < sides; ++i) {
-        float theta = (2.0f * static_cast<float>(M_PI) * i) / sides;
-        float x = cosf(theta) * radius;
-        float y = sinf(theta) * radius;
-        poly[i] = XMFLOAT3{x, y, 0.0f};
-    }
-
-    // --- 2. ワールド行列を作成 ---
-    XMMATRIX R = XMMatrixRotationRollPitchYaw(Angle.x, Angle.y, Angle.z);
-    XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
-    XMMATRIX world = R * T; // スケールは既に radius で反映済み
-
-    // --- 3. 頂点を変換して Vertex 配列を作成 ---
-    std::vector<Vertex> verts(sides);
-    for (int i = 0; i < sides; ++i) {
-        XMVECTOR p = XMLoadFloat3(&poly[i]);
-        p = XMVector3TransformCoord(p, world);
-        XMStoreFloat3(&verts[i].position, p);
-        // 必要なら法線やUVもセット（今回は線描画のみなので position のみでOK）
-    }
-
-    // --- 4. 線分インデックス（辺をつなぐ） ---
-    std::vector<UINT> indices;
-    indices.reserve(sides * 2);
-    for (int i = 0; i < sides; ++i) {
-        indices.push_back(i);
-        indices.push_back((i + 1) % sides);
-    }
-
-    // --- 5. 一時頂点/インデックスバッファ作成 ---
-    D3D11_BUFFER_DESC vbd{};
-    vbd.Usage = D3D11_USAGE_IMMUTABLE;
-    vbd.ByteWidth = static_cast<UINT>(sizeof(Vertex) * verts.size());
-    vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA vinit{ verts.data() };
-    ComPtr<ID3D11Buffer> vb;
-    DeviceGetter->CreateBuffer(&vbd, &vinit, &vb);
-
-    D3D11_BUFFER_DESC ibd{};
-    ibd.Usage = D3D11_USAGE_IMMUTABLE;
-    ibd.ByteWidth = static_cast<UINT>(sizeof(UINT) * indices.size());
-    ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA iinit{ indices.data() };
-    ComPtr<ID3D11Buffer> ib;
-    DeviceGetter->CreateBuffer(&ibd, &iinit, &ib);
-
-    // --- 6. 定数バッファ更新（共通） ---
-    ConstantBuffer cb;
-    cb.viewProj = XMMatrixTranspose(ViewSet * ProjSet);
-    cb.lineColor = ColorSet;
-    GetContext()->UpdateSubresource(m_constantBuffer, 0, nullptr, &cb, 0, 0);
-
-    // --- 7. 描画セットアップ ---
-    UINT stride = sizeof(Vertex);
-    UINT offset = 0;
-    GetContext()->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
-    GetContext()->IASetIndexBuffer(ib.Get(), DXGI_FORMAT_R32_UINT, 0);
-    GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-
-    GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
-    GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
-    GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
-
-    // --- 8. Draw ---
-    GetContext()->DrawIndexed(static_cast<UINT>(indices.size()), 0, 0);
-}
-
-// グリッドとして複数配置する
-void Grid::DrawGridPolygonGrid(int cols, int rows, float spacing, int sides, float radius, const XMFLOAT3& origin, const XMFLOAT3& Angle)
-{
-    // 中央基準で並べる（必要に合わせて origin を変更）
     float startX = origin.x - (cols - 1) * 0.5f * spacing;
     float startY = origin.y - (rows - 1) * 0.5f * spacing;
 
@@ -296,93 +257,97 @@ void Grid::DrawGridPolygonGrid(int cols, int rows, float spacing, int sides, flo
     }
 }
 
-//多角柱の描画
+// DrawGridPolygon: push line segments for polygon (edges)
 void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle)
 {
     if (sides < 3) sides = 3;
-
-    const int vertCount = sides * 2;
 
     float halfW = size.x * 0.5f;
     float halfD = size.y * 0.5f;
     float halfH = size.z * 0.5f;
 
-    std::vector<XMFLOAT3> localVerts(vertCount);
-
-    // --- 1. 正多角形の上面・下面をサイズ反映して生成 ---
-    for (int i = 0; i < sides; ++i)
-    {
+    // construct top and bottom perimeter
+    std::vector<XMFLOAT3> localVerts(sides * 2);
+    for (int i = 0; i < sides; ++i) {
         float theta = (2.0f * static_cast<float>(M_PI) * i) / sides;
         float x = cosf(theta) * halfW;
         float y = sinf(theta) * halfD;
-
-        // 上面
         localVerts[i] = XMFLOAT3{ x, y, +halfH };
-        // 下面
         localVerts[i + sides] = XMFLOAT3{ x, y, -halfH };
     }
 
-    // --- 2. ワールド変換 ---
-    XMMATRIX S = XMMatrixScaling(1, 1, 1); // ここでは使用しない（すでに size 反映）
     XMMATRIX R = XMMatrixRotationRollPitchYaw(Angle.x, Angle.y, Angle.z);
     XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
-    XMMATRIX world = S * R * T;
+    XMMATRIX world = R * T;
 
-    std::vector<Vertex> verts(vertCount);
-    for (int i = 0; i < vertCount; ++i)
-    {
+    // transform top and bottom to world, then push edges (top perimeter edges + bottom perimeter edges)
+    std::vector<XMFLOAT3> worldVerts(localVerts.size());
+    for (size_t i = 0; i < localVerts.size(); ++i) {
         XMVECTOR p = XMLoadFloat3(&localVerts[i]);
         p = XMVector3TransformCoord(p, world);
-        XMStoreFloat3(&verts[i].position, p);
+        XMStoreFloat3(&worldVerts[i], p);
     }
 
-    // --- 3. インデックス作成（上面・下面・側面）---
-    std::vector<UINT> indices;
-    indices.reserve(sides * 6);
+    // top ring edges
+    for (int i = 0; i < sides; ++i) {
+        int ni = (i + 1) % sides;
+        Vertex a{ worldVerts[i] };
+        Vertex b{ worldVerts[ni] };
+        m_pendingVertices.push_back(a);
+        m_pendingVertices.push_back(b);
+    }
+    // bottom ring edges
+    for (int i = 0; i < sides; ++i) {
+        int ni = (i + 1) % sides;
+        Vertex a{ worldVerts[i + sides] };
+        Vertex b{ worldVerts[ni + sides] };
+        m_pendingVertices.push_back(a);
+        m_pendingVertices.push_back(b);
+    }
+    // side edges
+    for (int i = 0; i < sides; ++i) {
+        Vertex a{ worldVerts[i] };
+        Vertex b{ worldVerts[i + sides] };
+        m_pendingVertices.push_back(a);
+        m_pendingVertices.push_back(b);
+    }
+}
+void Grid::DrawPolygonGrid(const XMFLOAT3& pos, float radius, int sides, const XMFLOAT3& Angle)
+{
+    if (sides < 3) sides = 3;
 
-    for (int i = 0; i < sides; i++) {
-        indices.push_back(i);
-        indices.push_back((i + 1) % sides);
-        indices.push_back(i + sides);
-        indices.push_back(((i + 1) % sides) + sides);
-        indices.push_back(i);
-        indices.push_back(i + sides);
+    // --- 正多角形の頂点生成（ローカル座標） ---
+    std::vector<XMFLOAT3> localVerts(sides);
+    for (int i = 0; i < sides; ++i) {
+        float theta = (2.0f * static_cast<float>(M_PI) * i) / sides;
+        float x = cosf(theta) * radius;
+        float y = sinf(theta) * radius;
+        localVerts[i] = XMFLOAT3{ x, y, 0.0f };
     }
 
-    // --- 4. バッファ生成---
-    D3D11_BUFFER_DESC vbd{};
-    vbd.Usage = D3D11_USAGE_IMMUTABLE;
-    vbd.ByteWidth = sizeof(Vertex) * verts.size();
-    vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA vinit{ verts.data() };
-    ComPtr<ID3D11Buffer> vb;
-    DeviceGetter->CreateBuffer(&vbd, &vinit, &vb);
+    // --- ワールド行列 ---
+    XMMATRIX R = XMMatrixRotationRollPitchYaw(Angle.x, Angle.y, Angle.z);
+    XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
+    XMMATRIX world = R * T;
 
-    D3D11_BUFFER_DESC ibd{};
-    ibd.Usage = D3D11_USAGE_IMMUTABLE;
-    ibd.ByteWidth = sizeof(UINT) * indices.size();
-    ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    D3D11_SUBRESOURCE_DATA iinit{ indices.data() };
-    ComPtr<ID3D11Buffer> ib;
-    DeviceGetter->CreateBuffer(&ibd, &iinit, &ib);
+    // --- 変換して pending に追加 ---
+    for (int i = 0; i < sides; ++i) {
+        int ni = (i + 1) % sides;
 
-    // --- 5. 共通描画処理 ---
-    ConstantBuffer cb;
-    cb.viewProj = XMMatrixTranspose(ViewSet * ProjSet);
-    cb.lineColor = ColorSet;
-    GetContext()->UpdateSubresource(m_constantBuffer, 0, nullptr, &cb, 0, 0);
+        XMFLOAT3 wp0, wp1;
 
-    UINT stride = sizeof(Vertex);
-    UINT offset = 0;
-    GetContext()->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
-    GetContext()->IASetIndexBuffer(ib.Get(), DXGI_FORMAT_R32_UINT, 0);
-    GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+        {
+            XMVECTOR p = XMLoadFloat3(&localVerts[i]);
+            p = XMVector3TransformCoord(p, world);
+            XMStoreFloat3(&wp0, p);
+        }
+        {
+            XMVECTOR p = XMLoadFloat3(&localVerts[ni]);
+            p = XMVector3TransformCoord(p, world);
+            XMStoreFloat3(&wp1, p);
+        }
 
-    GetContext()->IASetInputLayout(m_inputLayout);
-    GetContext()->VSSetShader(m_vertexShader, nullptr, 0);
-    GetContext()->VSSetConstantBuffers(0, 1, &m_constantBuffer);
-    GetContext()->PSSetShader(m_pixelShader, nullptr, 0);
-    GetContext()->PSSetConstantBuffers(0, 1, &m_constantBuffer);
-
-    GetContext()->DrawIndexed((UINT)indices.size(), 0, 0);
+        m_pendingVertices.push_back({ wp0 });
+        m_pendingVertices.push_back({ wp1 });
+    }
 }

@@ -571,6 +571,12 @@ void InitDo()
     object = new Object();
     object->Init();
 
+    object->AddComponent<Model>();
+    object->GetComponent<Model>(0)->SetModelPath("asset/boy_model4.fbx");
+    object->GetComponent<Model>(0)->SetColor(1, 1, 1, 1);
+    object->GetComponent<Model>(0)->SetPos(0, 0, 0);
+    object->GetComponent<Model>(0)->SetSize(1, 1, 1);
+   
     //object->AddComponent<Sound>();
 }
 
@@ -587,6 +593,10 @@ void DrawDo()
 {
     DrawScene();
     object->Draw();
+
+    object->GetComponent<Model>(0)->SetProj(object->GetComponent<Camera>(0)->GetProjection());
+    object->GetComponent<Model>(0)->SetView(object->GetComponent<Camera>(0)->GetView());
+    object->GetComponent<Model>(0)->Draw();
 }
 
 void ReleaseDo()

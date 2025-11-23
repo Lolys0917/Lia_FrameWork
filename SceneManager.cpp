@@ -215,16 +215,17 @@ void DrawScene()
     GetGridClass()->SetColor({ 0,0,1,1 });
     GetGridClass()->SetPos({ 0,0,-5 }, { 0,0,5 }); GetGridClass()->Draw();
 
-    // GridBox
+     //GridBox
     if (SceneRanges[CurrentSceneIndex].StartIndex_GridBox >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_GridBox <= (int)pool->GridBoxPos.size) {
         for (int i = SceneRanges[CurrentSceneIndex].StartIndex_GridBox; i < SceneRanges[CurrentSceneIndex].EndIndex_GridBox; i++) {
             if (i < 0 || i >= (int)pool->GridBoxPos.size) continue;
             Vec4 pos = Vec4_Get(&pool->GridBoxPos, i);
-            Vec4 size = Vec4_Get(&pool->GridBoxSize, i);
+            Vec4 size = Vec4_Get(&pool->GridBoxSize, i); 
             Vec4 ang = Vec4_Get(&pool->GridBoxAngle, i);
             Vec4 col = Vec4_Get(&pool->GridBoxColor, i);
             GetGridClass()->SetColor({ col.X,col.Y,col.Z,col.W });
             GetGridClass()->DrawBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
+            GetGridClass()->Draw();
         }
     }
 
@@ -239,6 +240,7 @@ void DrawScene()
             GetGridClass()->SetColor({ col.X,col.Y,col.Z,col.W });
             GetGridClass()->DrawGridPolygon(VecInt_Get(&pool->GridPolygonSides, i),
                 { pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
+            GetGridClass()->Draw();
         }
     }
 

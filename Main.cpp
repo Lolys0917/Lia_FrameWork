@@ -71,6 +71,9 @@ HRESULT InitD3D(HWND hWnd) {
     scd.SampleDesc.Count = 1;
     scd.Windowed = TRUE;
 
+    UINT createDeviceFlags = 0;
+    createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+
     HRESULT hr = D3D11CreateDeviceAndSwapChain(
         nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0,
         nullptr, 0, D3D11_SDK_VERSION,
@@ -147,6 +150,7 @@ void ReleaseD3D()
 //Main
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) 
 {
+    //_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
     MSG msg{};
 

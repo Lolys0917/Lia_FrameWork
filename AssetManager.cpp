@@ -1,96 +1,90 @@
-﻿// アセットの読込
-// アセットの保存
-// アセットの暗号化
-// アセットの復号化
-// アセットの管理
-// を行うプログラム
-//
-// アセットはソフト出力時に自動でパッケージ化され、暗号化される。
-// ファイルの重複を避けるため、同名ファイルは読み込めないものとする。
-//
-// アセットのパスは相対パスで指定する。
-// アセットのメモリはプログラム終了時に自動で解放される。
-// Manager.h経由でAssetManagerへアクセスし、
-// アセット操作関数を呼び出す。それにより
-// Manager.h経由でObjectManagerへアクセスし、
-// アセットのメモリを取得することが出来る。
-// __________________________________________
-
-#include "Main.h"
-#include "AssetLoad.h"
-#include "Manager.h"
-
+﻿#include "AssetLoad.h"
+#include "Main.h"    // GetDevice(), GetContext(), AddMessage() など既存のユーティリティ
+#include "Manager.h" // KeyMap 関連
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-
-#include <vector>
 #include <wincodec.h> // WIC
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 #include <algorithm>
 
-#define SafeRelease(p) if(p){ (p)->Release(); (p)=nullptr; }
+#pragma comment(lib, "windowscodecs.lib")
 
-//グローバル_____________________
-static std::vector<ID3D11ShaderResourceView*> g_textureSRV;        //テクスチャ保存用SRV
-static std::vector<std::vector<ModelVertex>> g_modelVertex;        //Obj保存用SRV
-static ID3D11SamplerState* g_samplerState;                         //デフォルトサンプラーステート
-//キーマップ
+using namespace DirectX;
+namespace fs = std::filesystem;
+
+#define SafeRelease(p) if(p){ (p)->Release(); (p) = nullptr; }
+
+// ------------------------------
+// 内部データ構造
+// ------------------------------
+struct PackageEntry {
+    std::string name;
+    uint64_t offset = 0;
+    uint64_t size = 0;
+    std::vector<uint8_t> data; // runtime に取り出すまで空でもよい
+};
+
+struct Package {
+    std::string ext; // 小文字拡張子
+    KeyMap keymap;
+    std::vector<PackageEntry> entries;
+    std::string pkgPath;
+    std::ifstream pkgStream;
+};
+
+static std::vector<Package> g_packages;
+
+// グローバルアセット格納（既存コードベースを踏襲）
+static std::vector<ID3D11ShaderResourceView*> g_textureSRV;        // texture SRV per KeyMap index (TextureMap)
+static std::vector<std::vector<ModelVertex>> g_modelVertex;        // models (per ModelMap index)
+static std::vector<std::vector<unsigned int>> g_modelIndices;      // corresponding indices
+static std::vector<ID3D11ShaderResourceView*> g_modelTextureSRV;  // model-level diffuse texture (if any)
+static std::vector<std::vector<std::string>> g_modelMaterialNames; // material texture names for reference
+
+static ID3D11SamplerState* g_samplerState = nullptr;
+
+// キーマップ（名前->index）
 static KeyMap TextureMap;
 static KeyMap ModelMap;
+static KeyMap WavMap;
 
-ID3D11ShaderResourceView* GetTextureSRV(const char* filename)
-{
-    if (!filename) return nullptr;
-    // すでに登録済みならそのSRVを返す
-    int index = KeyMap_GetIndex(&TextureMap, filename);
-    if (index >= 0 && index < (int)g_textureSRV.size()) {
-        return g_textureSRV[index];
-    }
-
-    // pkgから読み込み
-    if (!AL_LoadFromPackageByName(filename)) {
-        MessageBoxA(nullptr, ("Texture not found: " + std::string(filename)).c_str(), "AssetManager", MB_OK);
-        return nullptr;
-    }
-
-    // KeyMapが更新されているはずなので再取得
-    index = KeyMap_GetIndex(&TextureMap, filename);
-    if (index < 0 || index >= (int)g_textureSRV.size()) {
-        MessageBoxA(nullptr, "GetOrLoadTextureSRV: invalid index after load", "Error", MB_OK);
-        return nullptr;
-    }
-
-    return g_textureSRV[index];
+// ------------------------------
+// helpers
+// ------------------------------
+static std::string ToLowerExt(const std::string& s) {
+    std::string e = s;
+    for (auto& c : e) c = (char)tolower(c);
+    return e;
 }
-// ================================================================
-// FBX / OBJ 取得
-// ================================================================
-const std::vector<ModelVertex>* GetModelVertices(const char* name)
-{
-    int index = KeyMap_GetIndex(&ModelMap, name);
-    if (index < 0 || index >= (int)g_modelVertex.size()) return nullptr;
-    return &g_modelVertex[index];
+static Package* FindPackageByExt(const std::string& ext) {
+    for (auto& p : g_packages) {
+        if (p.ext == ext) return &p;
+    }
+    return nullptr;
 }
 
+// find package+index by name among loaded packages
+static bool FindPackageEntryByName(const std::string& name, Package*& outPkg, int& outIndex) {
+    for (auto& p : g_packages) {
+        int idx = KeyMap_GetIndex(&p.keymap, name.c_str());
+        if (idx >= 0) { outPkg = &p; outIndex = idx; return true; }
+    }
+    outPkg = nullptr; outIndex = -1; return false;
+}
 
-// ================================================================
-// Texture メモリロード
-// ================================================================
+// ------------------------------
+// WIC -> SRV loader
+// ------------------------------
 bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t size)
 {
     if (!data || size == 0) return false;
+    if (!GetDevice()) { AddMessage("IN_LoadTexture_Memory: device is null"); return false; }
 
-    if (!GetDevice())
-    {
-        MessageBoxA(nullptr, "Device is NULL in IN_LoadTexture_Memory", "Error", MB_OK);
-        return false;
-    }
-
-    int TextureIndex = KeyMap_Add(&TextureMap, name);
-    if ((int)g_textureSRV.size() <= TextureIndex)
-        g_textureSRV.resize(TextureIndex + 1, nullptr);
+    int texIndex = KeyMap_Add(&TextureMap, name);
+    if ((int)g_textureSRV.size() <= texIndex) g_textureSRV.resize(texIndex + 1, nullptr);
 
     IWICImagingFactory* pWIC = nullptr;
     IWICStream* pStream = nullptr;
@@ -106,32 +100,35 @@ bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t s
         hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pWIC));
         if (FAILED(hr)) {
             if (calledCoInit) CoUninitialize();
+            AddMessage("IN_LoadTexture_Memory: Create WIC factory failed");
             return false;
         }
     }
 
     hr = pWIC->CreateStream(&pStream);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: CreateStream failed"); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
     hr = pStream->InitializeFromMemory((WICInProcPointer)data, (DWORD)size);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: Init stream failed"); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
 
     hr = pWIC->CreateDecoderFromStream(pStream, nullptr, WICDecodeMetadataCacheOnLoad, &pDecoder);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: CreateDecoderFromStream failed"); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
     hr = pDecoder->GetFrame(0, &pFrame);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: GetFrame failed"); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
 
     hr = pWIC->CreateFormatConverter(&pConverter);
-    if (FAILED(hr)) return false;
-    hr = pConverter->Initialize(pFrame, GUID_WICPixelFormat32bppRGBA,
-        WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: CreateFormatConverter failed"); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+    hr = pConverter->Initialize(pFrame, GUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
+    if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: Converter Init failed"); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
 
-    UINT width, height;
+    UINT width = 0, height = 0;
     pConverter->GetSize(&width, &height);
-    std::vector<BYTE> pixels(width * height * 4);
-    pConverter->CopyPixels(nullptr, width * 4, (UINT)pixels.size(), pixels.data());
+    if (width == 0 || height == 0) { AddMessage("IN_LoadTexture_Memory: invalid image size"); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
 
-    D3D11_TEXTURE2D_DESC desc = {};
+    std::vector<BYTE> pixels((size_t)width * (size_t)height * 4);
+    hr = pConverter->CopyPixels(nullptr, width * 4, (UINT)pixels.size(), pixels.data());
+    if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: CopyPixels failed"); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
+    D3D11_TEXTURE2D_DESC desc{};
     desc.Width = width;
     desc.Height = height;
     desc.MipLevels = 1;
@@ -141,21 +138,21 @@ bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t s
     desc.Usage = D3D11_USAGE_DEFAULT;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-    D3D11_SUBRESOURCE_DATA initData = {};
-    initData.pSysMem = pixels.data();
-    initData.SysMemPitch = width * 4;
+    D3D11_SUBRESOURCE_DATA init{};
+    init.pSysMem = pixels.data();
+    init.SysMemPitch = width * 4;
 
-    ID3D11Texture2D* texture = nullptr;
-    hr = GetDevice()->CreateTexture2D(&desc, &initData, &texture);
-    if (FAILED(hr)) return false;
+    ID3D11Texture2D* tex = nullptr;
+    hr = GetDevice()->CreateTexture2D(&desc, &init, &tex);
+    if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: CreateTexture2D failed"); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
 
     ID3D11ShaderResourceView* srv = nullptr;
-    hr = GetDevice()->CreateShaderResourceView(texture, nullptr, &srv);
-    if (FAILED(hr)) { texture->Release(); return false; }
+    hr = GetDevice()->CreateShaderResourceView(tex, nullptr, &srv);
+    if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: CreateSRV failed"); SafeRelease(tex); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
 
-    g_textureSRV[TextureIndex] = srv;
+    g_textureSRV[texIndex] = srv;
 
-    SafeRelease(texture);
+    SafeRelease(tex);
     SafeRelease(pConverter);
     SafeRelease(pFrame);
     SafeRelease(pDecoder);
@@ -166,34 +163,35 @@ bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t s
     return true;
 }
 
-// ================================================================
-// Obj / FBX メモリロード（Assimp利用）
-// ================================================================
+// ------------------------------
+// Assimp-based model loader (memory)
+// - outputs expanded vertex list (triangle list) and indices are sequential 0..N-1
+// - extracts diffuse texture name (if present) and attempts to load it via IN_LoadTexture_Memory
+// ------------------------------
 static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* data, size_t size, bool isFBX)
 {
     if (!data || size == 0) return false;
 
-    // 既にロード済みか？
+    // check already loaded
     int mapSize = KeyMap_GetSize(&ModelMap);
     for (int i = 0; i < mapSize; ++i) {
         const char* key = KeyMap_GetKey(&ModelMap, i);
-        if (strcmp(key, name) == 0) return true;
+        if (strcmp(key, name) == 0) return true; // already loaded
     }
 
-    int ModelIndex = KeyMap_Add(&ModelMap, name);
-    if ((int)g_modelVertex.size() <= ModelIndex)
-        g_modelVertex.resize(ModelIndex + 1);
+    int modelIndex = KeyMap_Add(&ModelMap, name);
+    if ((int)g_modelVertex.size() <= modelIndex) {
+        g_modelVertex.resize(modelIndex + 1);
+        g_modelIndices.resize(modelIndex + 1);
+        g_modelTextureSRV.resize(modelIndex + 1, nullptr);
+        g_modelMaterialNames.resize(modelIndex + 1);
+    }
 
     Assimp::Importer importer;
-
     const aiScene* scene = importer.ReadFileFromMemory(
-        data,
-        size,
-        aiProcess_Triangulate |
-        aiProcess_GenNormals |
-        aiProcess_CalcTangentSpace |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_ConvertToLeftHanded,
+        data, size,
+        aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_CalcTangentSpace |
+        aiProcess_JoinIdenticalVertices | aiProcess_ConvertToLeftHanded,
         isFBX ? "fbx" : "obj"
     );
 
@@ -204,87 +202,82 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
     }
 
     std::vector<ModelVertex> outVerts;
+    std::vector<unsigned int> outIdx;
 
-    for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi)
-    {
+    // We'll expand faces into vertex list and push indices sequentially
+    unsigned int nextIndex = 0;
+    for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi) {
         aiMesh* mesh = scene->mMeshes[mi];
         if (!mesh) continue;
 
         bool hasNormals = mesh->HasNormals();
-        bool hasTexCoords = mesh->HasTextureCoords(0);
+        bool hasTex = mesh->HasTextureCoords(0);
 
-        for (unsigned int f = 0; f < mesh->mNumFaces; ++f)
-        {
-            aiFace& face = mesh->mFaces[f];
+        for (unsigned int fi = 0; fi < mesh->mNumFaces; ++fi) {
+            aiFace& face = mesh->mFaces[fi];
             if (face.mNumIndices < 3) continue;
-            for (unsigned int j = 0; j < face.mNumIndices; ++j)
-            {
+            for (unsigned int j = 0; j < face.mNumIndices; ++j) {
                 unsigned int vi = face.mIndices[j];
-                ModelVertex v;
-                v.pos = DirectX::XMFLOAT3(mesh->mVertices[vi].x, mesh->mVertices[vi].y, mesh->mVertices[vi].z);
-                v.normal = hasNormals ? DirectX::XMFLOAT3(mesh->mNormals[vi].x, mesh->mNormals[vi].y, mesh->mNormals[vi].z)
-                    : DirectX::XMFLOAT3(0, 0, 0);
-                if (hasTexCoords)
-                    v.uv = DirectX::XMFLOAT2(mesh->mTextureCoords[0][vi].x, mesh->mTextureCoords[0][vi].y);
-                else
-                    v.uv = DirectX::XMFLOAT2(0, 0);
+                ModelVertex v{};
+                v.pos = XMFLOAT3(mesh->mVertices[vi].x, mesh->mVertices[vi].y, mesh->mVertices[vi].z);
+                v.normal = hasNormals ? XMFLOAT3(mesh->mNormals[vi].x, mesh->mNormals[vi].y, mesh->mNormals[vi].z) : XMFLOAT3(0, 1, 0);
+                if (hasTex) v.uv = XMFLOAT2(mesh->mTextureCoords[0][vi].x, mesh->mTextureCoords[0][vi].y);
+                else v.uv = XMFLOAT2(0, 0);
+
                 outVerts.push_back(v);
+                outIdx.push_back(nextIndex++);
             }
         }
     }
 
-    g_modelVertex[ModelIndex] = std::move(outVerts);
+    g_modelVertex[modelIndex] = std::move(outVerts);
+    g_modelIndices[modelIndex] = std::move(outIdx);
+
+    // Try extract diffuse textures from materials (take first found).
+    // Note: texture paths in FBX/OBJ may be relative — we just record filename and expect package to contain it.
+    for (unsigned int mi = 0; mi < scene->mNumMaterials; ++mi) {
+        aiMaterial* mat = scene->mMaterials[mi];
+        if (!mat) continue;
+        aiString texPath;
+        if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+            if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
+                std::string s = texPath.C_Str();
+                // normalize path to just filename (common in exported models), but keep existing as-is too
+                std::string filename = fs::path(s).filename().string();
+                g_modelMaterialNames[modelIndex].push_back(filename);
+                // If package already contains it, try to load it (AL_LoadFromPackageByName will route to IN_LoadTexture_Memory)
+                // We'll not force-load here; the model consumer can call GetModelTexture which will attempt to find/AL_Load it.
+            }
+        }
+    }
+
     return true;
 }
 
-// ================================================================
-// FBX / OBJ wrapper
-// ================================================================
-bool IN_LoadFBX_Memory(const char* name, const unsigned char* data, size_t size)
-{
-    return LoadModel_Assimp_FromMemory(name, data, size, true);
-}
+bool IN_LoadFBX_Memory(const char* name, const unsigned char* data, size_t size) { return LoadModel_Assimp_FromMemory(name, data, size, true); }
+bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t size) { return LoadModel_Assimp_FromMemory(name, data, size, false); }
 
-bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t size)
-{
-    return LoadModel_Assimp_FromMemory(name, data, size, false);
-}
-
-// ================================================================
-// WAV メモリロード
-// ================================================================
+// ------------------------------
+// WAV loader (kept as original idea)
+// ------------------------------
 struct WavData {
     std::vector<BYTE> buffer;
     WAVEFORMATEX format = {};
 };
-
 static std::vector<WavData> g_wavData;
-static KeyMap WavMap;
 
-const WavData* GetWavData(const char* name)
-{
-    int index = KeyMap_GetIndex(&WavMap, name);
-    if (index < 0 || index >= (int)g_wavData.size()) return nullptr;
-    return &g_wavData[index];
+const WavData* GetWavData(const char* name) {
+    int idx = KeyMap_GetIndex(&WavMap, name);
+    if (idx < 0 || idx >= (int)g_wavData.size()) return nullptr;
+    return &g_wavData[idx];
 }
-
-bool IN_LoadWav_Memory(const char* name, const unsigned char* data, size_t size)
-{
+bool IN_LoadWav_Memory(const char* name, const unsigned char* data, size_t size) {
     if (!data || size == 0) return false;
-
     int WavIndex = KeyMap_Add(&WavMap, name);
-    if ((int)g_wavData.size() <= WavIndex)
-        g_wavData.resize(WavIndex + 1);
-
+    if ((int)g_wavData.size() <= WavIndex) g_wavData.resize(WavIndex + 1);
     const BYTE* ptr = data;
-    // RIFFチャンク確認
-    if (size < 44 || strncmp((const char*)ptr, "RIFF", 4) != 0 || strncmp((const char*)(ptr + 8), "WAVE", 4) != 0)
-        return false;
-
-    const BYTE* fmtChunk = nullptr;
-    const BYTE* dataChunk = nullptr;
-    size_t dataSize = 0;
-
+    if (size < 44 || strncmp((const char*)ptr, "RIFF", 4) != 0 || strncmp((const char*)(ptr + 8), "WAVE", 4) != 0) return false;
+    const BYTE* fmtChunk = nullptr; const BYTE* dataChunk = nullptr; size_t dataSize = 0;
     size_t pos = 12;
     while (pos + 8 < size) {
         const char* chunkId = (const char*)(ptr + pos);
@@ -293,9 +286,7 @@ bool IN_LoadWav_Memory(const char* name, const unsigned char* data, size_t size)
         if (strncmp(chunkId, "data", 4) == 0) { dataChunk = ptr + pos + 8; dataSize = chunkSize; }
         pos += 8 + chunkSize;
     }
-
     if (!fmtChunk || !dataChunk) return false;
-
     WAVEFORMATEX fmt = {};
     fmt.wFormatTag = *(uint16_t*)(fmtChunk + 0);
     fmt.nChannels = *(uint16_t*)(fmtChunk + 2);
@@ -303,9 +294,323 @@ bool IN_LoadWav_Memory(const char* name, const unsigned char* data, size_t size)
     fmt.nAvgBytesPerSec = *(uint32_t*)(fmtChunk + 8);
     fmt.nBlockAlign = *(uint16_t*)(fmtChunk + 12);
     fmt.wBitsPerSample = *(uint16_t*)(fmtChunk + 14);
-
     g_wavData[WavIndex].buffer.assign(dataChunk, dataChunk + dataSize);
     g_wavData[WavIndex].format = fmt;
-
     return true;
+}
+
+// ------------------------------
+// Public Getters used by Model code
+// ------------------------------
+const std::vector<ModelVertex>* GetModelVertices(const char* modelName) {
+    if (!modelName) return nullptr;
+    int idx = KeyMap_GetIndex(&ModelMap, modelName);
+    if (idx < 0 || idx >= (int)g_modelVertex.size()) return nullptr;
+    return &g_modelVertex[idx];
+}
+const std::vector<unsigned int>* GetModelIndices(const char* modelName) {
+    if (!modelName) return nullptr;
+    int idx = KeyMap_GetIndex(&ModelMap, modelName);
+    if (idx < 0 || idx >= (int)g_modelIndices.size()) return nullptr;
+    return &g_modelIndices[idx];
+}
+ID3D11ShaderResourceView* GetModelTexture(const char* modelName) {
+    if (!modelName) return nullptr;
+    int idx = KeyMap_GetIndex(&ModelMap, modelName);
+    if (idx < 0 || idx >= (int)g_modelTextureSRV.size()) {
+        // attempt to locate material names and load first candidate from packages if available
+        int mIdx = KeyMap_GetIndex(&ModelMap, modelName);
+        if (mIdx < 0 || mIdx >= (int)g_modelMaterialNames.size()) return nullptr;
+        auto& mats = g_modelMaterialNames[mIdx];
+        for (auto& candidate : mats) {
+            // if texture already loaded in TextureMap, return it
+            int tIdx = KeyMap_GetIndex(&TextureMap, candidate.c_str());
+            if (tIdx >= 0 && tIdx < (int)g_textureSRV.size() && g_textureSRV[tIdx]) {
+                // ensure g_modelTextureSRV sized
+                if ((int)g_modelTextureSRV.size() <= mIdx) g_modelTextureSRV.resize(mIdx + 1, nullptr);
+                g_modelTextureSRV[mIdx] = g_textureSRV[tIdx];
+                return g_modelTextureSRV[mIdx];
+            }
+            // otherwise try to AL_LoadFromPackageByName for the candidate (package contains it)
+            if (AL_LoadFromPackageByName(candidate.c_str())) {
+                int newIdx = KeyMap_GetIndex(&TextureMap, candidate.c_str());
+                if (newIdx >= 0 && newIdx < (int)g_textureSRV.size() && g_textureSRV[newIdx]) {
+                    if ((int)g_modelTextureSRV.size() <= mIdx) g_modelTextureSRV.resize(mIdx + 1, nullptr);
+                    g_modelTextureSRV[mIdx] = g_textureSRV[newIdx];
+                    return g_modelTextureSRV[mIdx];
+                }
+            }
+        }
+        return nullptr;
+    }
+    return g_modelTextureSRV[idx];
+}
+
+ID3D11ShaderResourceView* GetTextureSRV(const char* filename) {
+    if (!filename) return nullptr;
+    int index = KeyMap_GetIndex(&TextureMap, filename);
+    if (index >= 0 && index < (int)g_textureSRV.size()) {
+        return g_textureSRV[index];
+    }
+    // not registered: try load from package
+    if (!AL_LoadFromPackageByName(filename)) {
+        // report missing
+        AddMessage(("Texture not found: " + std::string(filename)).c_str());
+        return nullptr;
+    }
+    index = KeyMap_GetIndex(&TextureMap, filename);
+    if (index < 0 || index >= (int)g_textureSRV.size()) {
+        AddMessage("GetTextureSRV: invalid index after load");
+        return nullptr;
+    }
+    return g_textureSRV[index];
+}
+
+// ------------------------------
+// Package creation / management (batch time)
+// ------------------------------
+static std::string sanitizeExt(const std::string& ext) {
+    std::string e = ext;
+    if (!e.empty() && e[0] == '.') e.erase(0, 1);
+    for (auto& c : e) c = (char)tolower(c);
+    return e;
+}
+
+void AL_Init() {
+    g_packages.clear();
+    KeyMap_Init(&TextureMap);
+    KeyMap_Init(&ModelMap);
+    KeyMap_Init(&WavMap);
+    // reserve minimal vectors to avoid frequent reallocation
+    g_textureSRV.clear();
+    g_modelVertex.clear();
+    g_modelIndices.clear();
+    g_modelTextureSRV.clear();
+    g_modelMaterialNames.clear();
+}
+
+void AL_Shutdown() {
+    // release SRVs
+    for (auto srv : g_textureSRV) if (srv) srv->Release();
+    g_textureSRV.clear();
+    for (auto srv : g_modelTextureSRV) if (srv) srv->Release();
+    g_modelTextureSRV.clear();
+    g_modelVertex.clear();
+    g_modelIndices.clear();
+    g_modelMaterialNames.clear();
+
+    // close package streams & free keymaps
+    for (auto& p : g_packages) {
+        if (p.pkgStream.is_open()) p.pkgStream.close();
+        KeyMap_Free(&p.keymap);
+    }
+    g_packages.clear();
+    KeyMap_Free(&TextureMap);
+    KeyMap_Free(&ModelMap);
+    KeyMap_Free(&WavMap);
+
+    // sampler etc - if created in future, release it here
+    if (g_samplerState) { g_samplerState->Release(); g_samplerState = nullptr; }
+}
+
+bool AL_RegisterAssetToBatch(const char* filepath) {
+    if (!filepath) return false;
+    std::string path = filepath;
+    std::string ext = fs::path(path).extension().string();
+    ext = sanitizeExt(ext);
+    if (ext.empty()) return false;
+
+    Package* pkg = FindPackageByExt(ext);
+    if (!pkg) {
+        Package np;
+        np.ext = ext;
+        KeyMap_Init(&np.keymap);
+        g_packages.push_back(std::move(np));
+        pkg = &g_packages.back();
+    }
+
+    int existing = KeyMap_GetIndex(&pkg->keymap, path.c_str());
+    if (existing != -1) return true; // already registered
+
+    std::ifstream in(path, std::ios::binary | std::ios::ate);
+    if (!in.is_open()) return false;
+    std::streamsize size = in.tellg();
+    in.seekg(0);
+    PackageEntry e;
+    e.name = path;
+    if (size > 0) {
+        e.size = (uint64_t)size;
+        e.data.resize((size_t)size);
+        in.read((char*)e.data.data(), size);
+    }
+    else e.size = 0;
+    in.close();
+
+    KeyMap_Add(&pkg->keymap, e.name.c_str());
+    pkg->entries.push_back(std::move(e));
+    return true;
+}
+
+bool AL_SaveAllPackages(const char* outFolder) {
+    if (!outFolder) return false;
+    fs::create_directories(outFolder);
+    for (auto& pkg : g_packages) {
+        std::string outPath = std::string(outFolder) + "/Asset" + pkg.ext + ".pkg";
+        std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
+        if (!out.is_open()) return false;
+
+        const char magic[8] = "LIA_PKG";
+        uint32_t count = (uint32_t)pkg.entries.size();
+        uint64_t tableOffset = 0;
+        out.write(magic, 8);
+        out.write((char*)&count, sizeof(uint32_t));
+        tableOffset = 8 + 4 + 8;
+        out.write((char*)&tableOffset, sizeof(uint64_t));
+
+        std::streampos tablePos = out.tellp();
+        size_t tableSize = 0;
+        for (auto& e : pkg.entries) {
+            tableSize += sizeof(uint16_t) + e.name.size() + sizeof(uint64_t) * 2;
+        }
+        out.seekp(tablePos + (std::streamoff)tableSize);
+
+        for (auto& e : pkg.entries) {
+            std::streampos dataPos = out.tellp();
+            e.offset = (uint64_t)dataPos;
+            if (!e.data.empty()) out.write((char*)e.data.data(), e.data.size());
+        }
+
+        out.seekp(tablePos);
+        for (auto& e : pkg.entries) {
+            uint16_t len = (uint16_t)e.name.size();
+            out.write((char*)&len, sizeof(uint16_t));
+            out.write(e.name.data(), len);
+            out.write((char*)&e.offset, sizeof(uint64_t));
+            out.write((char*)&e.size, sizeof(uint64_t));
+        }
+
+        out.close();
+    }
+    return true;
+}
+
+bool AL_LoadPackageIndex(const char* ext, const char* pkgFilePath) {
+    if (!ext || !pkgFilePath) return false;
+    std::string sExt = ToLowerExt(ext);
+    Package* pkg = FindPackageByExt(sExt);
+    if (!pkg) {
+        Package np;
+        np.ext = sExt;
+        KeyMap_Init(&np.keymap);
+        g_packages.push_back(std::move(np));
+        pkg = &g_packages.back();
+    }
+    else {
+        if (pkg->pkgStream.is_open()) pkg->pkgStream.close();
+        pkg->entries.clear();
+        KeyMap_Free(&pkg->keymap);
+        KeyMap_Init(&pkg->keymap);
+    }
+
+    pkg->pkgPath = pkgFilePath;
+    pkg->pkgStream.open(pkgFilePath, std::ios::binary);
+    if (!pkg->pkgStream.is_open()) return false;
+
+    char magic[8] = {};
+    pkg->pkgStream.read(magic, 8);
+    uint32_t count = 0;
+    uint64_t tableOffset = 0;
+    pkg->pkgStream.read((char*)&count, sizeof(uint32_t));
+    pkg->pkgStream.read((char*)&tableOffset, sizeof(uint64_t));
+    pkg->pkgStream.seekg(tableOffset);
+    for (uint32_t i = 0; i < count; ++i) {
+        uint16_t nameLen = 0;
+        pkg->pkgStream.read((char*)&nameLen, sizeof(uint16_t));
+        std::string name(nameLen, '\0');
+        pkg->pkgStream.read(name.data(), nameLen);
+        uint64_t offset = 0, size = 0;
+        pkg->pkgStream.read((char*)&offset, sizeof(uint64_t));
+        pkg->pkgStream.read((char*)&size, sizeof(uint64_t));
+        PackageEntry e;
+        e.name = name;
+        e.offset = offset;
+        e.size = size;
+        KeyMap_Add(&pkg->keymap, e.name.c_str());
+        pkg->entries.push_back(std::move(e));
+    }
+    return true;
+}
+
+// WriteTempAndCallLoader - we don't write temp file; instead read data into memory and dispatch
+static bool WriteTempAndCallLoader(PackageEntry& e, Package& pkg) {
+    // if e.data empty, read from stream
+    if (e.data.empty()) {
+        if (!pkg.pkgStream.is_open()) {
+            pkg.pkgStream.open(pkg.pkgPath, std::ios::binary);
+            if (!pkg.pkgStream.is_open()) return false;
+        }
+        pkg.pkgStream.seekg(e.offset);
+        e.data.resize((size_t)e.size);
+        pkg.pkgStream.read((char*)e.data.data(), (std::streamsize)e.size);
+    }
+
+    // determine ext
+    std::string ext = fs::path(e.name).extension().string();
+    if (!ext.empty() && ext[0] == '.') ext.erase(0, 1);
+    ext = ToLowerExt(ext);
+
+    if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp")
+        return IN_LoadTexture_Memory(e.name.c_str(), e.data.data(), e.data.size());
+    else if (ext == "obj")
+        return IN_LoadModelObj_Memory(e.name.c_str(), e.data.data(), e.data.size());
+    else if (ext == "fbx")
+        return IN_LoadFBX_Memory(e.name.c_str(), e.data.data(), e.data.size());
+    else if (ext == "wav")
+        return IN_LoadWav_Memory(e.name.c_str(), e.data.data(), e.data.size());
+    else
+        return false;
+}
+
+bool AL_LoadFromPackageByName(const char* name) {
+    if (!name) return false;
+    Package* pkg = nullptr;
+    int idx = -1;
+    if (!FindPackageEntryByName(name, pkg, idx)) return false;
+    if (!pkg) return false;
+    if (idx < 0 || idx >= (int)pkg->entries.size()) return false;
+    PackageEntry& e = pkg->entries[idx];
+    return WriteTempAndCallLoader(e, *pkg);
+}
+
+bool AL_LoadFromPackageByIndex(const char* ext, int index) {
+    if (!ext) return false;
+    Package* pkg = FindPackageByExt(ToLowerExt(ext));
+    if (!pkg) return false;
+    if (index < 0 || index >= (int)pkg->entries.size()) return false;
+    PackageEntry& e = pkg->entries[index];
+    return WriteTempAndCallLoader(e, *pkg);
+}
+
+int AL_GetIndexFromPackage(const char* ext, const char* name) {
+    if (!ext || !name) return -1;
+    Package* pkg = FindPackageByExt(ToLowerExt(ext));
+    if (!pkg) return -1;
+    return KeyMap_GetIndex(&pkg->keymap, name);
+}
+
+int AL_GetPackageCount() { return (int)g_packages.size(); }
+const char* AL_GetPackageExt(int pkgIdx) {
+    if (pkgIdx < 0 || pkgIdx >= (int)g_packages.size()) return nullptr;
+    return g_packages[pkgIdx].ext.c_str();
+}
+int AL_GetPackageEntryCount(const char* ext) {
+    Package* pkg = FindPackageByExt(ToLowerExt(ext));
+    if (!pkg) return 0;
+    return (int)pkg->entries.size();
+}
+const char* AL_GetPackageEntryName(const char* ext, int index) {
+    Package* pkg = FindPackageByExt(ToLowerExt(ext));
+    if (!pkg) return nullptr;
+    if (index < 0 || index >= (int)pkg->entries.size()) return nullptr;
+    return pkg->entries[index].name.c_str();
 }
