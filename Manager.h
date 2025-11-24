@@ -106,8 +106,16 @@ struct MatrixBuffer
 struct ModelVertex
 {
     XMFLOAT3 pos;
-    XMFLOAT2 uv;
     XMFLOAT3 normal;
+    XMFLOAT2 uv;
+};
+//モデル用サブメッシュ情報
+struct ModelSubmeshInfo {
+    std::vector<ModelVertex> verts;
+    std::vector<unsigned int> idx;
+    int materialIndex = -1;
+    std::string diffuseTexName; // filename (candidate)
+    XMFLOAT4 materialDiffuse = { 1,1,1,1 };
 };
 
 //-----------------------------------------
@@ -340,6 +348,13 @@ const char* AL_GetPackageExt(int pkgIdx);
 int AL_GetPackageEntryCount(const char* ext);
 const char* AL_GetPackageEntryName(const char* ext, int index);
 bool AL_LoadFromPackageByName(const char* name);
+int AL_GetModelMeshCount(const char* modelName);
+const std::vector<ModelVertex>* AL_GetModelMeshVertices(const char* modelName, int meshIdx);
+const std::vector<unsigned int>* AL_GetModelMeshIndices(const char* modelName, int meshIdx);
+XMFLOAT4 AL_GetModelMeshMaterialDiffuse(const char* modelName, int meshIdx);
+const char* AL_GetModelMeshTextureName(const char* modelName, int meshIdx);
+
+
   ///////////////////
  // ShaderManager //
 ///////////////////

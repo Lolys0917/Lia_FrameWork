@@ -306,32 +306,32 @@ void InitShaderDefault()
         R"EOT(
         cbuffer ConstantBuffer : register(b0)
         {
-            matrix mvp; // 64バイト
-            float4 diffuseColor; // 16バイト
-            int useTexture; // 4バイト
-            float3 pad; // 12バイト（アライメント調整）
+            matrix mvp;
+            float4 diffuseColor;
+            int useTexture;
+            float3 pad;
         };
         
         struct VS_INPUT
         {
             float3 pos : POSITION;
-            float2 uv : TEXCOORD0;
-            //float3 nor : NORMAL;
+            float3 nor : NORMAL;
+            float2 uv  : TEXCOORD0;
         };
         
         struct PS_INPUT
         {
             float4 pos : SV_POSITION;
-            float2 uv : TEXCOORD0;
-            //float3 nor : NORMAL;
+            float3 nor : NORMAL;
+            float2 uv  : TEXCOORD0;
         };
         
         PS_INPUT VSMain(VS_INPUT input)
         {
             PS_INPUT output;
             output.pos = mul(float4(input.pos, 1.0f), mvp);
-            output.uv = input.uv;
-            //output.nor = input.nor;
+            output.uv  = input.uv;
+            output.nor = input.nor;
             return output;
         }
         )EOT";
@@ -340,25 +340,35 @@ void InitShaderDefault()
 
     const char* PSDefault3D =
         R"EOT(
-        cbuffer ColorBuffer : register(b1)
+        Texture2D tex : register(t0);
+        SamplerState samp : register(s0);
+        
+        cbuffer MatrixBuffer : register(b0)
         {
-            float4 color;       // diffuseColor と同じ扱い
-        }
+            float4x4 mvp;
+            float4 diffuseColor;
+            int useTexture;
+            float3 pad;
+        };
         
-        Texture2D tex0 : register(t0);
-        SamplerState samp0 : register(s0);
-        
-        float4 PSMain(float4 pos : SV_POSITION, float2 uv : TEXCOORD0) : SV_TARGET
+        struct PS_INPUT
         {
-            // テクスチャ有無
-            float4 texColor = tex0.Sample(samp0, uv);
+            float4 pos : SV_POSITION;
+            float3 normal : NORMAL;
+            float2 uv : TEXCOORD;
+        };
         
-            // αが弱いピクセルは捨てる
-            if (texColor.a * color.a < 0.5f)
-                discard;
-        
-            // 最終色 = テクスチャ × カラー
-            return texColor * color;
+        float4 PSMain(PS_INPUT input) : SV_TARGET
+        {
+            if (useTexture == 1)
+            {
+                return tex.Sample(samp, input.uv) * diffuseColor;
+            }
+            else
+            {
+                return diffuseColor;
+            }
+            return diffuseColor;
         }
         )EOT";
     AddPixelShader("DefaultPixelShader3D", PSDefault3D);

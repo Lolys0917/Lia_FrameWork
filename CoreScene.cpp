@@ -18,6 +18,7 @@ void CoreStartUp()
     AL_RegisterAssetToBatch("asset/DiscUR_Reel1.png");
     AL_RegisterAssetToBatch("asset/hamu.png");
     AL_RegisterAssetToBatch("asset/boy_model4.fbx");
+    AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
     //AL_RegisterAssetToBatch("asset/model/player.fbx");
     //AL_RegisterAssetToBatch("asset/model/ground.obj");
     
@@ -35,12 +36,13 @@ void CoreStartUp()
     AL_LoadFromPackageByName("asset/DiscUR_Reel1.png");
     AL_LoadFromPackageByName("asset/hamu.png");
     AL_LoadFromPackageByName("asset/boy_model4.fbx");
+    AL_LoadFromPackageByName("asset/Alicia_solid_Unity.FBX");
     //AL_LoadFromPackageByName("asset/model/player.fbx");
 
     // --- ÉJÉÅÉâèâä˙âª ---
     AddCamera("MainCamera");
-    SetCameraPos("MainCamera", 1.0f, 3.0f, -10.0f);
-    SetCameraLook("MainCamera", 1.0f, 0.0f, 0.0f);
+    SetCameraPos("MainCamera", 0.0f, 3.0f, -7.0f);
+    SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
 
     AddCamera("SubCamera");
     SetCameraPos("SubCamera", 3.0f, 5.0f, -5.0f);

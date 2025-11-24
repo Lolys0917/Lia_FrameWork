@@ -23,6 +23,7 @@ using Microsoft::WRL::ComPtr;
 
 struct ModelVertex;
 struct MatrixBuffer;
+struct ModelSubmeshInfo;
 
 enum class ModelType
 {
@@ -38,7 +39,7 @@ public:
     ~Model()override;
 
     void SetModelPath(const char* filename);
-    void SetTexture(ID3D11ShaderResourceView* srv);
+    void SetTexture(const char* texName);
 
     void Init() override;
     void Update()override;
@@ -57,12 +58,31 @@ public:
     void SetMotionBlend(const char* filename, int changeFrame);//ÉÇÅ[ÉVÉáÉìïœâª
 
 private:
+    struct SubMesh {
+        ComPtr<ID3D11Buffer> vertexBuffer;
+        ComPtr<ID3D11Buffer> indexBuffer;
+        UINT indexCount = 0;
+
+        bool hasTexture = false;
+        ComPtr<ID3D11ShaderResourceView> textureSRV; // per-submesh override or asset SRV
+
+        bool hasMaterialColor = false;
+        XMFLOAT4 materialDiffuse = { 1,1,1,1 };
+
+        // user override color per-submesh (if you want in future)
+        bool userColorSet = false;
+        XMFLOAT4 userColor = { 1,1,1,1 };
+    };
+
     struct ColorBuffer {
         XMFLOAT4 color;
     };
     
     std::string modelPath;
+    std::string texturePath;
     ModelType modelType = ModelType::OBJ;
+
+    std::vector<SubMesh> subMeshes;
 
     // assimpì«Ç›çûÇ›åãâ 
     std::vector<ModelVertex> vertices;

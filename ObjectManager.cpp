@@ -570,32 +570,42 @@ void InitDo()
     grid->Init();
     object = new Object();
     object->Init();
-
-    object->AddComponent<Model>();
-    object->GetComponent<Model>(0)->SetModelPath("asset/boy_model4.fbx");
-    object->GetComponent<Model>(0)->SetColor(1, 1, 1, 1);
-    object->GetComponent<Model>(0)->SetPos(0, 0, 0);
-    object->GetComponent<Model>(0)->SetSize(1, 1, 1);
    
     //object->AddComponent<Sound>();
 }
 
 void UpdateDo()
 {
+	static bool testOnce = false;
+    if (!testOnce)
+    {
+        object->AddComponent<Model>();
+        object->GetComponent<Model>(0)->SetModelPath("asset/Alicia_solid_Unity.FBX");
+        object->GetComponent<Model>(0)->SetTexture("asset/test.png");
+        object->GetComponent<Model>(0)->SetColor(1, 1, 1, 1);
+        object->GetComponent<Model>(0)->SetPos(0, 0, 0);
+        object->GetComponent<Model>(0)->SetSize(0.02f, 0.02f, 0.02f);
+        object->GetComponent<Model>(0)->SetAngle(0, 0, 0);
+
+        testOnce = true;
+    }
+
     ShaderManager_Update();
 
     CreateObject();
     UpdateScene();
     object->Update();
+
+	int camIdx = KeyMap_GetIndex(&g_ObjectPool.CameraMap, "MainCamera");
+    object->GetComponent<Model>(0)->SetProj(object->GetComponent<Camera>(camIdx)->GetProjection());
+    object->GetComponent<Model>(0)->SetView(object->GetComponent<Camera>(camIdx)->GetView());
+	object->GetComponent<Model>(0)->Update();
 }
 
 void DrawDo()
 {
     DrawScene();
     object->Draw();
-
-    object->GetComponent<Model>(0)->SetProj(object->GetComponent<Camera>(KeyMap_GetIndex(&g_ObjectPool.CameraMap, "MainCamera"))->GetProjection());
-    object->GetComponent<Model>(0)->SetView(object->GetComponent<Camera>(0)->GetView());
     object->GetComponent<Model>(0)->Draw();
 }
 

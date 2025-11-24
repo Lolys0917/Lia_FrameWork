@@ -12,6 +12,7 @@ Model::~Model()
 // --------------------------------------------
 void Model::SetModelPath(const char* filename)
 {
+
     modelPath = filename;
 
     std::string s = filename;
@@ -40,12 +41,66 @@ void Model::SetModelPath(const char* filename)
     }
 
     vertices = *vtx;
+    
+    if (modelType == ModelType::OBJ)
+    {
+        // OBJ は Y-UP、右手 → 左手へ Z反転 でほぼ一致
+        for (auto& v : vertices)
+        {
+            v.pos.z = -v.pos.z;
+            v.normal.z = -v.normal.z;
+        }
+    }
+    else if (modelType == ModelType::FBX)
+    {
+        // FBXはツールによりZ-UPの場合があるので補正
+        for (auto& v : vertices)
+        {
+            // FBX Z-UP → Y-UP → DirectX 左手系補正
+            XMFLOAT3 p = v.pos;
+            XMFLOAT3 n = v.normal;
+
+            float y = p.y;
+            p.y = p.z;
+            p.z = y;
+
+            float ny = n.y;
+            n.y = n.z;
+            n.z = -ny;
+
+            v.pos = p;
+            v.normal = n;
+        }
+    }
 
     // ========= テクスチャが存在していれば設定 =========
     // 注意: ここは「モデルファイル名 == テクスチャ名」の場合にのみ有効。
     // 実運用では SetTexture() を呼んで明示的にテクスチャを設定するほうが確実です。
-    textureSRV = GetTextureSRV(modelPath.c_str());
-    useTexture = (textureSRV != nullptr);
+    //textureSRV = GetTextureSRV("asset/hamu.png");
+    //useTexture = (textureSRV != nullptr);
+
+    //ID3D11ShaderResourceView* tmp = GetTextureSRV("asset/hamu.png");
+    //if (!tmp) {
+    //    MessageBoxA(nullptr, "GetTextureSRV returned NULL for asset/test.png, attempting package load...", "SetModelPath", MB_OK);
+    //    // 試しにパッケージからロードを試みる（存在すれば true を返すはず）
+    //    if (AL_LoadFromPackageByName("asset/hamu.png")) {
+    //        tmp = GetTextureSRV("asset/hamu.png");
+    //    }
+    //}
+
+    // 最終状態を MessageBox で報告（デバッグ）
+    //if (tmp) {
+        //MessageBoxA(nullptr, "Texture found and will be assigned to m_textureSRV", "SetModelPath", MB_OK);
+    //    m_textureSRV = tmp;         // ComPtr に代入（重要）
+    //    textureSRV = tmp;          // 既存の生ポインタも合わせておく（任意）
+    //    useTexture = true;
+    //}
+    //else {
+    //    //MessageBoxA(nullptr, "Texture not found (NULL). useTexture will be disabled.", "SetModelPath", MB_OK);
+    //    m_textureSRV.Reset();
+    //    textureSRV = nullptr;
+    //    useTexture = false;
+    //}
 
     // ========= 頂点バッファ =========
     D3D11_BUFFER_DESC vbd{};
@@ -152,18 +207,61 @@ void Model::Init()
 // --------------------------------------------
 void Model::Update()
 {
+
     world = MatSize * MatAngle * MatPos;
 }
 
 // --------------------------------------------
 void Model::Draw()
 {
-    if (!vertexBuffer || !indexBuffer || !constantBuffer) return;
+    //デバッグ群
+    if (!vertexBuffer) {
+        MessageBoxA(nullptr, "vertexBuffer is NULL", "Model::Draw", MB_OK);
+        return;
+    }
+    if (!indexBuffer) {
+        MessageBoxA(nullptr, "indexBuffer is NULL", "Model::Draw", MB_OK);
+        return;
+    }
+    if (!constantBuffer) {
+        MessageBoxA(nullptr, "constantBuffer is NULL", "Model::Draw", MB_OK);
+        return;
+    }
+    /*MessageBoxA(nullptr,
+        ("Model vertices: " + std::to_string(vertices.size())).c_str(),
+        "SetModelPath()", MB_OK);
+
+    MessageBoxA(nullptr,
+        (std::string("TextureSRV: ") + (m_textureSRV ? "OK" : "NULL")).c_str(),
+        "Draw Debug", MB_OK);*/
+
+    /*if (XMMatrixIsIdentity(world)) {
+        MessageBoxA(nullptr, "World matrix unchanged!", "Model::Draw", MB_OK);
+    }
+
+    if (XMMatrixIsIdentity(ViewSet)) {
+        MessageBoxA(nullptr, "View matrix not set!", "Model::Draw", MB_OK);
+    }
+
+    if (XMMatrixIsIdentity(ProjSet)) {
+        MessageBoxA(nullptr, "Proj matrix not set!", "Model::Draw", MB_OK);
+    }*/
 
     ID3D11VertexShader* vs = GetVertexShader3D();
     ID3D11PixelShader* ps = GetPixelShader3D();
+    if (!vs) {
+        MessageBoxA(nullptr, "Vertex Shader is NULL", "Model::Draw", MB_OK);
+        return;
+    }
+    if (!ps) {
+        MessageBoxA(nullptr, "Pixel Shader is NULL", "Model::Draw", MB_OK);
+        return;
+    }
 
-    if (!vs || !ps) return;
+    // テクスチャ確認
+    if (useTexture && !m_textureSRV) {
+        MessageBoxA(nullptr, "m_textureSRV is NULL (Texture not set!)", "Model::Draw", MB_OK);
+    }
 
     // ===== InputLayout =====
     GetContext()->IASetInputLayout(inputLayout.Get());
@@ -203,16 +301,11 @@ void Model::Draw()
     GetContext()->PSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
 
     // ===== Texture =====
-    if (useTexture && textureSRV)
-    {
-        ID3D11ShaderResourceView* srv = m_textureSRV.Get(); // raw ptr
-        GetContext()->PSSetShaderResources(0, 1, &srv);
-    }
-    else
-    {
-        ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
-        GetContext()->PSSetShaderResources(0, 1, nullSRV);
-    }
+    
+	//m_textureSRV = nullptr; // デバッグ用: 強制的にNULLにしてみる
+
+    ID3D11ShaderResourceView* srv = m_textureSRV.Get();
+    GetContext()->PSSetShaderResources(0, 1, &srv);
 
     ID3D11SamplerState* samp = sampler.Get();
     GetContext()->PSSetSamplers(0, 1, &samp);
@@ -259,4 +352,22 @@ void Model::SetView(const XMMATRIX& v)
 void Model::SetProj(const XMMATRIX& p)
 {
     ProjSet = p;
+}
+void Model::SetTexture(const char* texName)
+{
+	//テクスチャを設定することで使用フラグを立てる
+	//true:テクスチャ使用 / false:テクスチャ未使用
+	//false時はdiffuseColorもしくはマテリアルカラーが使用される
+    texturePath = texName;
+    ID3D11ShaderResourceView* tmp = GetTextureSRV(texName);
+    if (tmp)
+    {
+        m_textureSRV = tmp;
+		textureSRV = tmp;
+        useTexture = true;
+    }
+    else
+    {
+        useTexture = false;
+    }
 }

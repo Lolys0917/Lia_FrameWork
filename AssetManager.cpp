@@ -43,6 +43,7 @@ static std::vector<std::vector<ModelVertex>> g_modelVertex;        // models (pe
 static std::vector<std::vector<unsigned int>> g_modelIndices;      // corresponding indices
 static std::vector<ID3D11ShaderResourceView*> g_modelTextureSRV;  // model-level diffuse texture (if any)
 static std::vector<std::vector<std::string>> g_modelMaterialNames; // material texture names for reference
+static std::vector<std::vector<ModelSubmeshInfo>> g_modelSubmeshes; // per model index
 
 static ID3D11SamplerState* g_samplerState = nullptr;
 
@@ -180,6 +181,10 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
     }
 
     int modelIndex = KeyMap_Add(&ModelMap, name);
+    if ((int)g_modelSubmeshes.size() <= modelIndex) {
+        g_modelSubmeshes.resize(modelIndex + 1);
+    }
+    // ensure other containers are at least consistent for compatibility
     if ((int)g_modelVertex.size() <= modelIndex) {
         g_modelVertex.resize(modelIndex + 1);
         g_modelIndices.resize(modelIndex + 1);
@@ -201,17 +206,23 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
         return false;
     }
 
-    std::vector<ModelVertex> outVerts;
-    std::vector<unsigned int> outIdx;
+    // Clear any placeholder
+    g_modelSubmeshes[modelIndex].clear();
 
-    // We'll expand faces into vertex list and push indices sequentially
-    unsigned int nextIndex = 0;
+    // Iterate meshes and create submeshes
     for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi) {
         aiMesh* mesh = scene->mMeshes[mi];
         if (!mesh) continue;
 
+        ModelSubmeshInfo sm;
+
         bool hasNormals = mesh->HasNormals();
         bool hasTex = mesh->HasTextureCoords(0);
+
+        // Collect vertices and indices for this mesh (expand faces to triangle list)
+        unsigned int nextLocalIndex = 0;
+        std::vector<ModelVertex>& verts = sm.verts;
+        std::vector<unsigned int>& idxs = sm.idx;
 
         for (unsigned int fi = 0; fi < mesh->mNumFaces; ++fi) {
             aiFace& face = mesh->mFaces[fi];
@@ -224,30 +235,66 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
                 if (hasTex) v.uv = XMFLOAT2(mesh->mTextureCoords[0][vi].x, mesh->mTextureCoords[0][vi].y);
                 else v.uv = XMFLOAT2(0, 0);
 
-                outVerts.push_back(v);
-                outIdx.push_back(nextIndex++);
+                verts.push_back(v);
+                idxs.push_back(nextLocalIndex++);
             }
         }
+
+        // material index
+        sm.materialIndex = (mesh->mMaterialIndex >= 0) ? mesh->mMaterialIndex : -1;
+
+        // try get material diffuse color and texture name (if material exists)
+        if (scene->HasMaterials() && sm.materialIndex >= 0 && sm.materialIndex < (int)scene->mNumMaterials) {
+            aiMaterial* mat = scene->mMaterials[sm.materialIndex];
+            if (mat) {
+                // Diffuse color
+                aiColor4D col(1.0f, 1.0f, 1.0f, 1.0f);
+                if (AI_SUCCESS == mat->Get(AI_MATKEY_COLOR_DIFFUSE, col)) {
+                    sm.materialDiffuse = XMFLOAT4(col.r, col.g, col.b, col.a);
+                }
+                // Texture path (diffuse)
+                if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+                    aiString texPath;
+                    if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
+                        std::string s = texPath.C_Str();
+                        // normalize to filename
+                        std::string filename = fs::path(s).filename().string();
+                        sm.diffuseTexName = filename;
+                        // Add to model-level material names list for compatibility
+                        g_modelMaterialNames[modelIndex].push_back(filename);
+                    }
+                }
+            }
+        }
+
+        // push this submesh
+        g_modelSubmeshes[modelIndex].push_back(std::move(sm));
     }
 
-    g_modelVertex[modelIndex] = std::move(outVerts);
-    g_modelIndices[modelIndex] = std::move(outIdx);
+    // For backward compatibility, optionally flatten into g_modelVertex/g_modelIndices
+    // (some existing code may still call GetModelVertices). We'll create a single concatenated buffer.
+    {
+        std::vector<ModelVertex> flatVerts;
+        std::vector<unsigned int> flatIdx;
+        unsigned int base = 0;
+        for (auto& sm : g_modelSubmeshes[modelIndex]) {
+            for (auto& v : sm.verts) flatVerts.push_back(v);
+            for (auto id : sm.idx) flatIdx.push_back(base + id);
+            base = (unsigned int)flatVerts.size();
+        }
+        g_modelVertex[modelIndex] = std::move(flatVerts);
+        g_modelIndices[modelIndex] = std::move(flatIdx);
+    }
 
-    // Try extract diffuse textures from materials (take first found).
-    // Note: texture paths in FBX/OBJ may be relative — we just record filename and expect package to contain it.
-    for (unsigned int mi = 0; mi < scene->mNumMaterials; ++mi) {
-        aiMaterial* mat = scene->mMaterials[mi];
-        if (!mat) continue;
-        aiString texPath;
-        if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-            if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
-                std::string s = texPath.C_Str();
-                // normalize path to just filename (common in exported models), but keep existing as-is too
-                std::string filename = fs::path(s).filename().string();
-                g_modelMaterialNames[modelIndex].push_back(filename);
-                // If package already contains it, try to load it (AL_LoadFromPackageByName will route to IN_LoadTexture_Memory)
-                // We'll not force-load here; the model consumer can call GetModelTexture which will attempt to find/AL_Load it.
+    // Try to pre-load textures found in materials (if they exist in packages)
+    for (auto& sm : g_modelSubmeshes[modelIndex]) {
+        if (!sm.diffuseTexName.empty()) {
+            int tIdx = KeyMap_GetIndex(&TextureMap, sm.diffuseTexName.c_str());
+            if (tIdx < 0) {
+                // try to load from package
+                AL_LoadFromPackageByName(sm.diffuseTexName.c_str());
             }
+            // If loaded, AddModel previously will find via GetTextureSRV later
         }
     }
 
@@ -575,8 +622,14 @@ bool AL_LoadFromPackageByName(const char* name) {
     if (!name) return false;
     Package* pkg = nullptr;
     int idx = -1;
-    if (!FindPackageEntryByName(name, pkg, idx)) return false;
-    if (!pkg) return false;
+    if (!FindPackageEntryByName(name, pkg, idx)) 
+    {
+        return false; MessageBoxA(NULL, name, "ErrorByName", S_OK);
+    }
+    if (!pkg)
+    {
+        return false; MessageBoxA(NULL, name, "ErrorByName", S_OK);
+    }
     if (idx < 0 || idx >= (int)pkg->entries.size()) return false;
     PackageEntry& e = pkg->entries[idx];
     return WriteTempAndCallLoader(e, *pkg);
@@ -613,4 +666,45 @@ const char* AL_GetPackageEntryName(const char* ext, int index) {
     if (!pkg) return nullptr;
     if (index < 0 || index >= (int)pkg->entries.size()) return nullptr;
     return pkg->entries[index].name.c_str();
+}
+
+//モデル用Getter
+int AL_GetModelMeshCount(const char* modelName) {
+    if (!modelName) return 0;
+    int idx = KeyMap_GetIndex(&ModelMap, modelName);
+    if (idx < 0 || idx >= (int)g_modelSubmeshes.size()) return 0;
+    return (int)g_modelSubmeshes[idx].size();
+}
+
+const std::vector<ModelVertex>* AL_GetModelMeshVertices(const char* modelName, int meshIdx) {
+    if (!modelName) return nullptr;
+    int idx = KeyMap_GetIndex(&ModelMap, modelName);
+    if (idx < 0 || idx >= (int)g_modelSubmeshes.size()) return nullptr;
+    if (meshIdx < 0 || meshIdx >= (int)g_modelSubmeshes[idx].size()) return nullptr;
+    return &g_modelSubmeshes[idx][meshIdx].verts;
+}
+
+const std::vector<unsigned int>* AL_GetModelMeshIndices(const char* modelName, int meshIdx) {
+    if (!modelName) return nullptr;
+    int idx = KeyMap_GetIndex(&ModelMap, modelName);
+    if (idx < 0 || idx >= (int)g_modelSubmeshes.size()) return nullptr;
+    if (meshIdx < 0 || meshIdx >= (int)g_modelSubmeshes[idx].size()) return nullptr;
+    return &g_modelSubmeshes[idx][meshIdx].idx;
+}
+
+XMFLOAT4 AL_GetModelMeshMaterialDiffuse(const char* modelName, int meshIdx) {
+    XMFLOAT4 fallback = { 1,1,1,1 };
+    if (!modelName) return fallback;
+    int idx = KeyMap_GetIndex(&ModelMap, modelName);
+    if (idx < 0 || idx >= (int)g_modelSubmeshes.size()) return fallback;
+    if (meshIdx < 0 || meshIdx >= (int)g_modelSubmeshes[idx].size()) return fallback;
+    return g_modelSubmeshes[idx][meshIdx].materialDiffuse;
+}
+
+const char* AL_GetModelMeshTextureName(const char* modelName, int meshIdx) {
+    if (!modelName) return nullptr;
+    int idx = KeyMap_GetIndex(&ModelMap, modelName);
+    if (idx < 0 || idx >= (int)g_modelSubmeshes.size()) return nullptr;
+    if (meshIdx < 0 || meshIdx >= (int)g_modelSubmeshes[idx].size()) return nullptr;
+    return g_modelSubmeshes[idx][meshIdx].diffuseTexName.empty() ? nullptr : g_modelSubmeshes[idx][meshIdx].diffuseTexName.c_str();
 }
