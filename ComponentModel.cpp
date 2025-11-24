@@ -12,7 +12,7 @@ Model::~Model()
 // --------------------------------------------
 void Model::SetModelPath(const char* filename)
 {
-    modelPath = "asset/girl_model.fbx";
+    modelPath = filename;
 
     std::string s = filename;
     auto dot = s.find_last_of('.');
@@ -26,20 +26,11 @@ void Model::SetModelPath(const char* filename)
     }
     else modelType = ModelType::OBJ;
 
-    Init();
-}
-
-// --------------------------------------------
-// Init：モデルデータ取得とバッファ生成
-// --------------------------------------------
-void Model::Init()
-{
     if (modelPath.empty())
     {
         MessageBoxA(nullptr, "Model path is empty!", modelPath.c_str(), MB_OK);
         return;
     }
-    m_textureSRV = GetTextureSRV("asset/hamu.png");
     // ========= モデル頂点を取得 =========
     const std::vector<ModelVertex>* vtx = GetModelVertices(modelPath.c_str());
     if (!vtx || vtx->empty())
@@ -149,6 +140,13 @@ void Model::Init()
         AddMessage("Model::Init - CreateSamplerState failed");
         return;
     }
+}
+
+// --------------------------------------------
+// Init：モデルデータ取得とバッファ生成
+// --------------------------------------------
+void Model::Init()
+{
 }
 
 // --------------------------------------------

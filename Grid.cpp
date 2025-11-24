@@ -212,7 +212,7 @@ void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& An
     XMMATRIX S = XMMatrixScaling(size.x, size.y, size.z);
     XMMATRIX R = XMMatrixRotationRollPitchYaw(Angle.x, Angle.y, Angle.z);
     XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
-    XMMATRIX world = S * R * T;
+    XMMATRIX world = S * T * R;
 
     XMFLOAT3 worldPos[8];
     for (int i = 0; i < 8; ++i) {

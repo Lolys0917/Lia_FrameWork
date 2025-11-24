@@ -594,7 +594,7 @@ void DrawDo()
     DrawScene();
     object->Draw();
 
-    object->GetComponent<Model>(0)->SetProj(object->GetComponent<Camera>(0)->GetProjection());
+    object->GetComponent<Model>(0)->SetProj(object->GetComponent<Camera>(KeyMap_GetIndex(&g_ObjectPool.CameraMap, "MainCamera"))->GetProjection());
     object->GetComponent<Model>(0)->SetView(object->GetComponent<Camera>(0)->GetView());
     object->GetComponent<Model>(0)->Draw();
 }
