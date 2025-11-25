@@ -581,8 +581,8 @@ void UpdateDo()
     {
         object->AddComponent<Model>();
         object->GetComponent<Model>(0)->SetModelPath("asset/Alicia_solid_Unity.FBX");
-        object->GetComponent<Model>(0)->SetTexture("asset/test.png");
-        object->GetComponent<Model>(0)->SetColor(1, 1, 1, 1);
+        //object->GetComponent<Model>(0)->SetTexture("asset/test.png");
+        //object->GetComponent<Model>(0)->SetColor(1, 1, 1, 1);
         object->GetComponent<Model>(0)->SetPos(0, 0, 0);
         object->GetComponent<Model>(0)->SetSize(0.02f, 0.02f, 0.02f);
         object->GetComponent<Model>(0)->SetAngle(0, 0, 0);

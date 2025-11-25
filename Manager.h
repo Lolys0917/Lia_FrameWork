@@ -99,8 +99,7 @@ struct MatrixBuffer
 {
     XMMATRIX mvp;
     XMFLOAT4 diffuseColor;
-    int useTexture;
-    XMFLOAT3 pad;
+    XMFLOAT4 useTexture;
 };
 //ÉÇÉfÉãópí∏ì_èÓïÒ
 struct ModelVertex
@@ -353,7 +352,8 @@ const std::vector<ModelVertex>* AL_GetModelMeshVertices(const char* modelName, i
 const std::vector<unsigned int>* AL_GetModelMeshIndices(const char* modelName, int meshIdx);
 XMFLOAT4 AL_GetModelMeshMaterialDiffuse(const char* modelName, int meshIdx);
 const char* AL_GetModelMeshTextureName(const char* modelName, int meshIdx);
-
+static bool RegisterAndLoadFileToPackage(const std::string& filepath);
+static ID3D11ShaderResourceView* TryResolveAndLoadTextureSRV(const std::string& rawTex, const std::string& modelPath);
 
   ///////////////////
  // ShaderManager //

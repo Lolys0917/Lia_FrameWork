@@ -347,28 +347,23 @@ void InitShaderDefault()
         {
             float4x4 mvp;
             float4 diffuseColor;
-            int useTexture;
-            float3 pad;
+            float4 useTexture;
         };
         
-        struct PS_INPUT
-        {
+        struct PS_INPUT {
             float4 pos : SV_POSITION;
-            float3 normal : NORMAL;
             float2 uv : TEXCOORD;
+            float3 normal : NORMAL;
         };
         
         float4 PSMain(PS_INPUT input) : SV_TARGET
         {
-            if (useTexture == 1)
-            {
-                return tex.Sample(samp, input.uv) * diffuseColor;
-            }
-            else
-            {
+            if (useTexture.x == 1) {
+                float4 t = tex.Sample(samp, input.uv);
+                return t * diffuseColor; // テクスチャ色 * diffuseColor(ユーザー色 or マテリアル合成済み)
+            } else {
                 return diffuseColor;
             }
-            return diffuseColor;
         }
         )EOT";
     AddPixelShader("DefaultPixelShader3D", PSDefault3D);
