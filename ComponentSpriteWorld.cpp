@@ -6,7 +6,7 @@ void SpriteWorld::Init()
 {
     // === エンジンのシェーダー管理から取得 ===
     m_vs = GetVertexShader2D();
-    m_ps = GetPixelShader3D();
+    m_ps = GetPixelShader2D();
     if (!m_vs || !m_ps)
     {
         MessageBoxA(0, "SpriteScreen: Default shaders not ready", "ERROR", MB_OK);
@@ -141,8 +141,7 @@ void SpriteWorld::Draw()
     MatrixBuffer mb;
     mb.mvp = XMMatrixTranspose(world * view * proj);
     mb.diffuseColor = XMFLOAT4(1, 1, 1, 1); // 必要なら変更
-    mb.useTexture = (m_srv != nullptr) ? 1 : 0;
-    mb.pad = XMFLOAT3(0, 0, 0);
+    mb.useTexture = XMFLOAT4(1, 1, 1, 1);
     GetContext()->UpdateSubresource(m_matrixBuf.Get(), 0, nullptr, &mb, 0, 0);
 
     ColorBuffer cb{ m_color };
@@ -157,7 +156,7 @@ void SpriteWorld::Draw()
     GetContext()->VSSetShader(GetVertexShader2D(), nullptr, 0);
     GetContext()->VSSetConstantBuffers(0, 1, m_matrixBuf.GetAddressOf());
 
-    GetContext()->PSSetShader(GetPixelShader3D(), nullptr, 0);
+    GetContext()->PSSetShader(GetPixelShader2D(), nullptr, 0);
     GetContext()->PSSetConstantBuffers(1, 1, m_colorBuf.GetAddressOf());
 
     GetContext()->PSSetShaderResources(0, 1, &m_srv);

@@ -9,6 +9,8 @@ using Microsoft::WRL::ComPtr;
 
 using namespace DirectX;
 
+struct MatrixBuffer;
+
 class SpriteWorld : public Component
 {
 public:
@@ -31,12 +33,6 @@ private:
     struct Vertex {
         XMFLOAT3 pos;
         XMFLOAT2 uv;
-    };
-    struct MatrixBuffer {
-        XMMATRIX mvp;           // 64 bytes
-        XMFLOAT4 diffuseColor;  // 16 bytes
-        int useTexture;         // 4 bytes
-        XMFLOAT3 pad;           // 12 bytes -> çáåv 96 (=16*6)
     };
     struct ColorBuffer {
         XMFLOAT4 color;

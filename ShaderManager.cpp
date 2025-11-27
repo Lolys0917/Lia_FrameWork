@@ -242,6 +242,7 @@ ID3D11PixelShader* GetPixelShader3DGrid()
 
 void InitShaderDefault()
 {
+    //Sptite系統に適応
     const char* VSDefault2D =
         R"EOT(
         cbuffer ConstantBuffer : register(b0)
@@ -302,6 +303,7 @@ void InitShaderDefault()
     AddPixelShader("DefaultPixelShader2D", PSDefault2D);
     g_Use2DPSIndex = 0;
 
+    //モデル系統に適応
     const char* VSDefault3D =
         R"EOT(
         cbuffer ConstantBuffer : register(b0)
@@ -369,6 +371,7 @@ void InitShaderDefault()
     AddPixelShader("DefaultPixelShader3D", PSDefault3D);
     g_Use3DPSIndex = 1;
 
+    //グリッド描画に適応
     const char* VSDefaultGrid =
         R"EOT(
         cbuffer ConstantBuffer : register(b0)
