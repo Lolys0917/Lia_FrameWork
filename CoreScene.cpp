@@ -19,6 +19,7 @@ void CoreStartUp()
     AL_RegisterAssetToBatch("asset/hamu.png");
     AL_RegisterAssetToBatch("asset/boy_model4.fbx");
     AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
+
     //AL_RegisterAssetToBatch("asset/model/player.fbx");
     //AL_RegisterAssetToBatch("asset/model/ground.obj");
     
