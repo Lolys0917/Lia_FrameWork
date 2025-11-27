@@ -115,6 +115,10 @@ void CoreStartUp()
     SetSpriteCylinderPos("Cylinder03", 2.4f, 0, 0);
     SetSpriteCylinderAngle("Cylinder03", 0, 1.57f, 0);
 
+    AddModel("Model01", "asset/Alicia_solid_Unity.FBX");
+    SetModelPos("Model01", 4.0f, 0, 2);
+    SetModelSize("Model01", 0.02f, 0.02f, 0.02f);
+
 	SceneEndPoint();
 
     // --- Scene2 ---
@@ -131,7 +135,6 @@ void CoreStartUp()
     SetSceneCamera("Scene2", "SideCamera");
     // ç≈èâÇÃÉVÅ[Éìê›íË
     ChangeScene("Scene3");
-    ChangeScene("Scene3");
 
     AddGridBox("BoxC");
     SetGridBoxPos("BoxC", 0, 0, 0);
@@ -142,6 +145,7 @@ void CoreStartUp()
 }
 void CoreSceneUpdate()
 {
+
     static float pos = -3.0f;
 	pos += 0.01f;
     SetGridBoxPos("BoxC", pos, 0, 0);
