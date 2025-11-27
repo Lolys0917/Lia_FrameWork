@@ -163,7 +163,7 @@ void Model::SetModelPath(const char* filename)
         const char* textureName = AL_GetModelMeshTextureName(modelPath.c_str(), mi);
         std::string log = "SubMesh[" + std::to_string(mi) + "] Texture = ";
         log += (texName ? texName : "NULL");
-        MessageBoxA(nullptr, log.c_str(), "Model::SetModelPath", MB_OK);
+        //MessageBoxA(nullptr, log.c_str(), "Model::SetModelPath", MB_OK);
     }
 
     // Apply coordinate corrections (preserve your previous logic)

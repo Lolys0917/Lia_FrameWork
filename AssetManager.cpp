@@ -258,11 +258,11 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
                     char msg[256];
                     sprintf_s(msg, "LoadModel: mesh=%d materialDiffuse=(%.3f,%.3f,%.3f,%.3f)", mi, col.r, col.g, col.b, col.a);
                     AddMessage(msg);
-					MessageBoxA(nullptr, msg, "Debug", MB_OK);
+					//MessageBoxA(nullptr, msg, "Debug", MB_OK);
                 }
                 else {
                     AddMessage("LoadModel: materialDiffuse not found (defaults to 1)");
-					MessageBoxA(nullptr, "LoadModel: materialDiffuse not found (defaults to 1)", "Debug", MB_OK);
+					//MessageBoxA(nullptr, "LoadModel: materialDiffuse not found (defaults to 1)", "Debug", MB_OK);
                 }
 
                 // Diffuse texture path (if any)
@@ -279,7 +279,7 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
                         char msg2[256];
                         sprintf_s(msg2, "LoadModel: mesh=%d diffuseTexRaw=%s", mi, s.c_str());
                         AddMessage(msg2);
-						MessageBoxA(nullptr, msg2, "Debug", MB_OK);
+						//MessageBoxA(nullptr, msg2, "Debug", MB_OK);
                     }
                 }
             }

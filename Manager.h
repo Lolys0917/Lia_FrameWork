@@ -152,6 +152,7 @@ struct ObjectDataPool {
     Vec4Vector ModelPos;
     Vec4Vector ModelSize;
     Vec4Vector ModelAngle;
+    BoolVector ModelUseTexture;
     // BoxCollider
     Vec4Vector BoxColliderPos;
     Vec4Vector BoxColliderSize;
@@ -175,6 +176,8 @@ struct ObjectDataPool {
     // KeyMaps
     KeyMap CameraMap;
     KeyMap ModelMap;
+    KeyMap ModelFileMap;
+    KeyMap ModelTextureMap;
     KeyMap TextureMap;
     KeyMap SpriteWorldMap;
     KeyMap SpriteScreenMap;
@@ -297,6 +300,7 @@ void SetModelPos(const char* name, float x, float y, float z);                  
 void SetModelSize(const char* name, float x, float y, float z);                     //モデルのサイズ設定
 void SetModelAngle(const char* name, float x, float y, float z);                    //モデルの角度設定
 void SetModelMotion(const char* name, const char* pathName, int Attack);            //モデルのモーション設定移行速度設定
+void ModelTexture(const char* name, const char* pathName);
 
 ///////////////////////////////////
 
