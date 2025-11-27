@@ -15,6 +15,7 @@ typedef struct {
     int StartIndex_SpriteScreen, EndIndex_SpriteScreen;
     int StartIndex_SpriteBox, EndIndex_SpriteBox;
     int StartIndex_SpriteCylinder, EndIndex_SpriteCylinder;
+    int StartIndex_Model, EndIndex_Model;
     int UseCameraIndex;
     bool Finalized;
 } SceneRange;
@@ -54,6 +55,8 @@ void AddScene(const char* name)
     range.EndIndex_GridPolygon = idx->GridPolygonIndex;
     range.StartIndex_Grid = idx->GridLineIndex;
     range.EndIndex_Grid = idx->GridLineIndex;
+    range.StartIndex_Model = idx->ModelIndex;
+    range.EndIndex_Model = idx->ModelIndex;
     range.UseCameraIndex = -1;
     range.Finalized = false;
 
@@ -74,6 +77,7 @@ void SceneEndPoint()
     r.EndIndex_GridBox = idx->GridBoxIndex;
     r.EndIndex_GridPolygon = idx->GridPolygonIndex;
     r.EndIndex_Grid = idx->GridLineIndex;
+    r.EndIndex_Model = idx->ModelIndex;
     r.Finalized = true;
 
     ActiveSceneIndex = -1;
@@ -352,6 +356,32 @@ void DrawScene()
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPos(v4Pos.X, v4Pos.Y);
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize(v4Size.X, v4Size.Y);
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
+        }
+    }
+    if (SceneRanges[CurrentSceneIndex].StartIndex_Model >= 0 &&
+        SceneRanges[CurrentSceneIndex].EndIndex_Model <= (int)pool->ModelPos.size)
+    {
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_Model;
+            i < SceneRanges[CurrentSceneIndex].EndIndex_Model; ++i)
+        {
+            if (i < 0 || i >= (int)pool->ModelPos.size) continue;
+            Vec4 v4Pos = Vec4_Get(&pool->ModelPos, i);
+            Vec4 v4Size = Vec4_Get(&pool->ModelSize, i);
+            Vec4 v4Angle = Vec4_Get(&pool->ModelAngle, i);
+
+            GetObjectClass()->GetComponent<Model>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetObjectClass()->GetComponent<Model>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
+            GetObjectClass()->GetComponent<Model>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+
+            //カメラ行列を渡す
+            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+                GetObjectClass()->GetComponent<Model>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+                GetObjectClass()->GetComponent<Model>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+            }
+            else
+            {
+                MessageBoxA(nullptr, "CameraNotFound", "Model", MB_OK);
+            }
         }
     }
 }
