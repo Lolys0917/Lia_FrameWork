@@ -611,6 +611,8 @@ void InitDo()
     KeyMap_Init(&p->SpriteScreenTexturePathMap);
 
     ShaderManager_Init();
+    InitInput();
+
 
     // クラス取得
     grid = new Grid();
@@ -638,6 +640,7 @@ void UpdateDo()
     }
 
     ShaderManager_Update();
+    UpdateInput();
 
     CreateObject();
     UpdateScene();
