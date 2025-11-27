@@ -13,7 +13,7 @@ void SpriteCylinder::Init()
 {
     // === エンジンのシェーダー管理から取得 ===
     m_vs = GetVertexShader2D();
-    m_ps = GetPixelShader3D();
+    m_ps = GetPixelShader2D();
     if (!m_vs || !m_ps)
     {
         MessageBoxA(0, "SpriteScreen: Default shaders not ready", "ERROR", MB_OK);
@@ -145,7 +145,7 @@ void SpriteCylinder::Draw()
 
     // Common binds
     ctx->VSSetShader(GetVertexShader2D(), nullptr, 0);
-    ctx->PSSetShader(GetPixelShader3D(), nullptr, 0);
+    ctx->PSSetShader(GetPixelShader2D(), nullptr, 0);
     ctx->IASetInputLayout(m_layout.Get());
     ctx->VSSetConstantBuffers(0, 1, m_matrixBuf.GetAddressOf());
     ctx->PSSetConstantBuffers(1, 1, m_colorBuf.GetAddressOf());

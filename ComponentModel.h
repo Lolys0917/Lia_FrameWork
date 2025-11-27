@@ -23,7 +23,6 @@ using Microsoft::WRL::ComPtr;
 
 struct ModelVertex;
 struct MatrixBuffer;
-struct ModelSubmeshInfo;
 
 enum class ModelType
 {
@@ -39,7 +38,8 @@ public:
     ~Model()override;
 
     void SetModelPath(const char* filename);
-    void SetTexture(const char* texName);
+    void SetTexture(const char* texName); // override model-level texture (applies to all submeshes if used)
+    void SetSubmeshTexture(int submeshIndex, const char* texName); // override specific submesh
 
     void Init() override;
     void Update()override;
@@ -74,38 +74,27 @@ private:
         XMFLOAT4 userColor = { 1,1,1,1 };
     };
 
-    struct ColorBuffer {
-        XMFLOAT4 color;
-    };
-    
     std::string modelPath;
-    std::string texturePath;
+    std::string texturePath; // model-level override
     ModelType modelType = ModelType::OBJ;
 
+    // per-submesh data
     std::vector<SubMesh> subMeshes;
 
-    // assimpì«Ç›çûÇ›åãâ 
-    std::vector<ModelVertex> vertices;
-    std::vector<unsigned int> indices;
-    // DirectX11 buffer
+    // DirectX11 common state
     ComPtr<ID3D11InputLayout> inputLayout;
-    ComPtr<ID3D11Buffer> m_colorBuf;
-    ComPtr<ID3D11Buffer> m_matrixBuf;
     ComPtr<ID3D11Buffer> constantBuffer;
-    ComPtr<ID3D11Buffer> vertexBuffer;
-    ComPtr<ID3D11Buffer> indexBuffer;
-    ComPtr<ID3D11VertexShader> m_vs;
-    ComPtr<ID3D11PixelShader> m_ps;
     ComPtr<ID3D11SamplerState> sampler;
-    ComPtr<ID3D11ShaderResourceView> m_textureSRV;
-    UINT indexCount = 0;
-    XMFLOAT4 color;
 
+    UINT totalIndexCount = 0;
+
+    // fallback / user color
     XMFLOAT4 diffuseColor = { 1,1,1,1 };
-    bool useTexture = false;
-    ID3D11ShaderResourceView* textureSRV = nullptr;
+    bool userColorSet = false;
 
-    //çsóÒ
+    bool useTexture = false; // legacy overall flag (not used per-submesh logic)
+
+    // transformation
     XMMATRIX MatPos = XMMatrixIdentity();
     XMMATRIX MatSize = XMMatrixIdentity();
     XMMATRIX MatAngle = XMMatrixIdentity();

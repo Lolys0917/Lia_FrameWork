@@ -130,7 +130,8 @@ void CoreStartUp()
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
     // Å‰‚ÌƒV[ƒ“İ’è
-    ChangeScene("Scene1");
+    ChangeScene("Scene3");
+    ChangeScene("Scene3");
 
     AddGridBox("BoxC");
     SetGridBoxPos("BoxC", 0, 0, 0);

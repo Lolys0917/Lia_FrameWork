@@ -99,8 +99,7 @@ struct MatrixBuffer
 {
     XMMATRIX mvp;
     XMFLOAT4 diffuseColor;
-    int useTexture;
-    XMFLOAT3 pad;
+    XMFLOAT4 useTexture;
 };
 //モデル用頂点情報
 struct ModelVertex
@@ -153,6 +152,7 @@ struct ObjectDataPool {
     Vec4Vector ModelPos;
     Vec4Vector ModelSize;
     Vec4Vector ModelAngle;
+    BoolVector ModelUseTexture;
     // BoxCollider
     Vec4Vector BoxColliderPos;
     Vec4Vector BoxColliderSize;
@@ -176,6 +176,8 @@ struct ObjectDataPool {
     // KeyMaps
     KeyMap CameraMap;
     KeyMap ModelMap;
+    KeyMap ModelFileMap;
+    KeyMap ModelTextureMap;
     KeyMap TextureMap;
     KeyMap SpriteWorldMap;
     KeyMap SpriteScreenMap;
@@ -298,6 +300,7 @@ void SetModelPos(const char* name, float x, float y, float z);                  
 void SetModelSize(const char* name, float x, float y, float z);                     //モデルのサイズ設定
 void SetModelAngle(const char* name, float x, float y, float z);                    //モデルの角度設定
 void SetModelMotion(const char* name, const char* pathName, int Attack);            //モデルのモーション設定移行速度設定
+void ModelTexture(const char* name, const char* pathName);
 
 ///////////////////////////////////
 
@@ -353,7 +356,8 @@ const std::vector<ModelVertex>* AL_GetModelMeshVertices(const char* modelName, i
 const std::vector<unsigned int>* AL_GetModelMeshIndices(const char* modelName, int meshIdx);
 XMFLOAT4 AL_GetModelMeshMaterialDiffuse(const char* modelName, int meshIdx);
 const char* AL_GetModelMeshTextureName(const char* modelName, int meshIdx);
-
+static bool RegisterAndLoadFileToPackage(const std::string& filepath);
+static ID3D11ShaderResourceView* TryResolveAndLoadTextureSRV(const std::string& rawTex, const std::string& modelPath);
 
   ///////////////////
  // ShaderManager //

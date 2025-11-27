@@ -420,6 +420,42 @@ void SetGridPolygonSides(const char* Name, int sides)
     VecInt_Set(&g_ObjectPool.GridPolygonSides, idx, sides);
 }
 
+//==================================
+// Model
+//==================================
+void AddModel(const char* name, const char* pathName)
+{
+    Vec4_PushBack(&g_ObjectPool.ModelPos, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.ModelSize, { 1,1,1,1 });
+    Vec4_PushBack(&g_ObjectPool.ModelAngle, { 0,0,0,0 });
+    VecBool_PushBack(&g_ObjectPool.ModelUseTexture, false);
+    KeyMap_Add(&g_ObjectPool.ModelMap, name);
+    KeyMap_Add(&g_ObjectPool.ModelFileMap, pathName);
+    KeyMap_Add(&g_ObjectPool.ModelTextureMap, "NoTexture");
+    ModelIndex++;
+    ObjectIdx.ModelIndex = ModelIndex;
+}
+void SetModelPos(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.ModelMap, name);
+    Vec4_Set(&g_ObjectPool.ModelPos, idx, {x,y,z,0});
+}
+void SetModelSize(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.ModelMap, name);
+    Vec4_Set(&g_ObjectPool.ModelSize, idx, { x,y,z,1 });
+}
+void SetModelAngle(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.ModelMap, name);
+    Vec4_Set(&g_ObjectPool.ModelAngle, idx, { x,y,z,0 });
+}
+void SetModelTexture(const char* name, const char* pathName)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.ModelMap, name);
+    KeyMap_SetKey(&g_ObjectPool.ModelTextureMap, idx, pathName);
+    VecBool_Set(&g_ObjectPool.ModelUseTexture, idx, true);
+}
 
 // オブジェクトの作成・管理
 void CreateObject()
@@ -477,6 +513,17 @@ void CreateObject()
         object->GetComponent<SpriteCylinder>(SpriteCylinderOldIndex)->SetSideTexture(sideTexPath);
 
         SpriteCylinderOldIndex++;
+    }
+    while (ModelOldIndex < ModelIndex)
+    {
+        const char* ModelPath = KeyMap_GetKey(&g_ObjectPool.ModelFileMap, ModelOldIndex);
+        const char* TexturePath = KeyMap_GetKey(&g_ObjectPool.ModelTextureMap, ModelOldIndex);
+
+        object->AddComponent<Model>()->SetModelPath(ModelPath);
+        object->GetComponent<Model>(ModelOldIndex)->SetTexture(TexturePath);
+        
+
+        ModelOldIndex++;
     }
 }
 
@@ -581,8 +628,8 @@ void UpdateDo()
     {
         object->AddComponent<Model>();
         object->GetComponent<Model>(0)->SetModelPath("asset/Alicia_solid_Unity.FBX");
-        object->GetComponent<Model>(0)->SetTexture("asset/test.png");
-        object->GetComponent<Model>(0)->SetColor(1, 1, 1, 1);
+        //object->GetComponent<Model>(0)->SetTexture("asset/test.png");
+        //object->GetComponent<Model>(0)->SetColor(1, 1, 1, 1);
         object->GetComponent<Model>(0)->SetPos(0, 0, 0);
         object->GetComponent<Model>(0)->SetSize(0.02f, 0.02f, 0.02f);
         object->GetComponent<Model>(0)->SetAngle(0, 0, 0);

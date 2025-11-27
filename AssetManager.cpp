@@ -209,21 +209,27 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
     // Clear any placeholder
     g_modelSubmeshes[modelIndex].clear();
 
+    // modelPath guess: model stored key -> actual path may be in packages; we will try to find model path in packages
+    // If model was originally loaded from file, 'name' may be full path; use it for modelDir resolution.
+    std::string modelPathStr = name; // caller likely passed path-like name; used for local folder searches
+
     // Iterate meshes and create submeshes
     for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi) {
         aiMesh* mesh = scene->mMeshes[mi];
         if (!mesh) continue;
 
         ModelSubmeshInfo sm;
+        sm.materialIndex = (mesh->mMaterialIndex >= 0) ? mesh->mMaterialIndex : -1;
+        sm.verts.clear();
+        sm.idx.clear();
+        sm.diffuseTexName.clear();
+        sm.materialDiffuse = XMFLOAT4(1, 1, 1, 1);
 
         bool hasNormals = mesh->HasNormals();
         bool hasTex = mesh->HasTextureCoords(0);
 
         // Collect vertices and indices for this mesh (expand faces to triangle list)
         unsigned int nextLocalIndex = 0;
-        std::vector<ModelVertex>& verts = sm.verts;
-        std::vector<unsigned int>& idxs = sm.idx;
-
         for (unsigned int fi = 0; fi < mesh->mNumFaces; ++fi) {
             aiFace& face = mesh->mFaces[fi];
             if (face.mNumIndices < 3) continue;
@@ -235,44 +241,71 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
                 if (hasTex) v.uv = XMFLOAT2(mesh->mTextureCoords[0][vi].x, mesh->mTextureCoords[0][vi].y);
                 else v.uv = XMFLOAT2(0, 0);
 
-                verts.push_back(v);
-                idxs.push_back(nextLocalIndex++);
+                sm.verts.push_back(v);
+                sm.idx.push_back(nextLocalIndex++);
             }
         }
 
-        // material index
-        sm.materialIndex = (mesh->mMaterialIndex >= 0) ? mesh->mMaterialIndex : -1;
-
-        // try get material diffuse color and texture name (if material exists)
+        // Extract material info if any
         if (scene->HasMaterials() && sm.materialIndex >= 0 && sm.materialIndex < (int)scene->mNumMaterials) {
             aiMaterial* mat = scene->mMaterials[sm.materialIndex];
             if (mat) {
                 // Diffuse color
                 aiColor4D col(1.0f, 1.0f, 1.0f, 1.0f);
-                if (AI_SUCCESS == mat->Get(AI_MATKEY_COLOR_DIFFUSE, col)) {
+                if (AI_SUCCESS == aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE, &col)) {
                     sm.materialDiffuse = XMFLOAT4(col.r, col.g, col.b, col.a);
+                    // Debug log
+                    char msg[256];
+                    sprintf_s(msg, "LoadModel: mesh=%d materialDiffuse=(%.3f,%.3f,%.3f,%.3f)", mi, col.r, col.g, col.b, col.a);
+                    AddMessage(msg);
+					//MessageBoxA(nullptr, msg, "Debug", MB_OK);
                 }
-                // Texture path (diffuse)
+                else {
+                    AddMessage("LoadModel: materialDiffuse not found (defaults to 1)");
+					//MessageBoxA(nullptr, "LoadModel: materialDiffuse not found (defaults to 1)", "Debug", MB_OK);
+                }
+
+                // Diffuse texture path (if any)
                 if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
                     aiString texPath;
                     if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
                         std::string s = texPath.C_Str();
-                        // normalize to filename
+                        // store raw name (may be full path, PSD, tga etc.)
+                        sm.diffuseTexName = s;
+                        // Also push basename to model-level list for compatibility
                         std::string filename = fs::path(s).filename().string();
-                        sm.diffuseTexName = filename;
-                        // Add to model-level material names list for compatibility
-                        g_modelMaterialNames[modelIndex].push_back(filename);
+                        if (!filename.empty()) g_modelMaterialNames[modelIndex].push_back(filename);
+                        else g_modelMaterialNames[modelIndex].push_back(s);
+                        char msg2[256];
+                        sprintf_s(msg2, "LoadModel: mesh=%d diffuseTexRaw=%s", mi, s.c_str());
+                        AddMessage(msg2);
+						//MessageBoxA(nullptr, msg2, "Debug", MB_OK);
                     }
                 }
             }
         }
 
-        // push this submesh
+        // Try resolve texture SRV from the collected raw name (if any)
+        ID3D11ShaderResourceView* foundSRV = nullptr;
+        if (!sm.diffuseTexName.empty()) {
+            foundSRV = TryResolveAndLoadTextureSRV(sm.diffuseTexName, modelPathStr);
+        }
+
+        if (foundSRV) {
+            // Found SRV -> mark
+            // Note: we store only the filename key used to register, but store SRV pointer later in Model::SetModelPath when creating submeshes
+            // For compatibility we'll keep diffuseTexName as the candidate key (basename or full local path)
+            sm.diffuseTexName = fs::path(foundSRV ? "" : "").filename().string(); // no-op placeholder; we will actually rely on GetTextureSRV by name later
+            // But better set an indicator: we'll store the key under which GetTextureSRV will find it. Prefer the candidate name we used above.
+            // To be safe, attempt to discover the KeyMap key for this SRV:
+            // Simplify: we won't try to reverse-map SRV to name; leave diffuseTexName as original basename (already pushed to g_modelMaterialNames)
+        }
+
+        // Push the submesh info to model list
         g_modelSubmeshes[modelIndex].push_back(std::move(sm));
     }
 
-    // For backward compatibility, optionally flatten into g_modelVertex/g_modelIndices
-    // (some existing code may still call GetModelVertices). We'll create a single concatenated buffer.
+    // For backward compatibility, flatten into g_modelVertex/g_modelIndices
     {
         std::vector<ModelVertex> flatVerts;
         std::vector<unsigned int> flatIdx;
@@ -286,15 +319,25 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
         g_modelIndices[modelIndex] = std::move(flatIdx);
     }
 
-    // Try to pre-load textures found in materials (if they exist in packages)
-    for (auto& sm : g_modelSubmeshes[modelIndex]) {
-        if (!sm.diffuseTexName.empty()) {
-            int tIdx = KeyMap_GetIndex(&TextureMap, sm.diffuseTexName.c_str());
-            if (tIdx < 0) {
-                // try to load from package
-                AL_LoadFromPackageByName(sm.diffuseTexName.c_str());
+    // Try to pre-load textures found in materials (if they exist in packages or in model folder)
+    // We'll iterate g_modelMaterialNames[modelIndex] which contains basenames discovered earlier
+    for (auto& candidate : g_modelMaterialNames[modelIndex]) {
+        if (candidate.empty()) continue;
+        // 1) already loaded?
+        int tIdx = KeyMap_GetIndex(&TextureMap, candidate.c_str());
+        if (tIdx >= 0 && tIdx < (int)g_textureSRV.size() && g_textureSRV[tIdx]) continue;
+
+        // 2) try load from package by candidate name
+        if (AL_LoadFromPackageByName(candidate.c_str())) continue;
+
+        // 3) try to find in model folder (attempt register & load)
+        fs::path mpath(name);
+        std::string modelDir = mpath.has_parent_path() ? mpath.parent_path().string() : std::string();
+        if (!modelDir.empty()) {
+            fs::path p = fs::path(modelDir) / fs::path(candidate);
+            if (fs::exists(p)) {
+                RegisterAndLoadFileToPackage(p.string());
             }
-            // If loaded, AddModel previously will find via GetTextureSRV later
         }
     }
 
@@ -644,6 +687,119 @@ bool AL_LoadFromPackageByIndex(const char* ext, int index) {
     return WriteTempAndCallLoader(e, *pkg);
 }
 
+static bool RegisterAndLoadFileToPackage(const std::string& filepath)
+{
+    if (filepath.empty()) return false;
+
+    //読込済みかを確認
+
+    if (AL_LoadFromPackageByName(filepath.c_str())) {
+        return true;
+    }
+    if (!AL_RegisterAssetToBatch(filepath.c_str())) {
+        // registration failed (file not found or unreadable)
+        return false;
+    }
+    if (AL_LoadFromPackageByName(filepath.c_str())) {
+        return true;
+    }
+
+    return false;
+}
+static ID3D11ShaderResourceView* TryResolveAndLoadTextureSRV(const std::string& rawTex, const std::string& modelPath)
+{
+    if (rawTex.empty()) return nullptr;
+
+    std::string s = rawTex;
+
+    auto trim = [](std::string& str) {
+        while (!str.empty() && isspace((unsigned char)str.front())) str.erase(str.begin());
+        while (!str.empty() && isspace((unsigned char)str.back())) str.pop_back();
+        if (!str.empty() && (str.front() == '\"' || str.front() == '\'')) str.erase(str.begin());
+        if (!str.empty() && (str.back() == '\"' || str.back() == '\'')) str.pop_back();
+        };
+    trim(s);
+    if (s.empty()) return nullptr;
+
+    fs::path rawPath(s);
+    std::string basename = rawPath.filename().string();
+
+    std::vector<std::string> candidates;
+
+    // push raw as-is
+    candidates.push_back(s);
+
+    // push basename as-is if different
+    if (basename != s) candidates.push_back(basename);
+
+    // push preferred ext replacements (png,tga,jpg,dds)
+    std::string stem = rawPath.stem().string();
+    std::vector<std::string> exts = { ".png", ".tga", ".jpg", ".jpeg", ".dds" };
+    for (auto& e : exts) {
+        candidates.push_back(stem + e);
+    }
+
+    // Also consider raw path with changed ext if raw has extension (e.g. .psd -> .png)
+    if (rawPath.has_extension()) {
+        std::string rawStem = rawPath.stem().string();
+        for (auto& e : exts) {
+            std::string p = rawStem + e;
+            // avoid duplicates
+            if (std::find(candidates.begin(), candidates.end(), p) == candidates.end())
+                candidates.push_back(p);
+        }
+    }
+
+    // Also attempt model directory + each candidate
+    std::string modelDir;
+    if (!modelPath.empty()) {
+        fs::path mp(modelPath);
+        if (mp.has_parent_path()) modelDir = mp.parent_path().string();
+    }
+
+    // Search candidates:
+    for (auto& cand : candidates)
+    {
+        // 1) check if already loaded in TextureMap (global)
+        int tIdx = KeyMap_GetIndex(&TextureMap, cand.c_str());
+        if (tIdx >= 0 && tIdx < (int)g_textureSRV.size() && g_textureSRV[tIdx]) {
+            // found loaded SRV
+            return g_textureSRV[tIdx];
+        }
+
+        // 2) check model directory file existence and try to register & load it into package system
+        if (!modelDir.empty()) {
+            fs::path localPath = fs::path(modelDir) / fs::path(cand);
+            if (fs::exists(localPath)) {
+                std::string localStr = localPath.string();
+                // Register and load into package system (this will call IN_LoadTexture_Memory internally when appropriate)
+                if (RegisterAndLoadFileToPackage(localStr)) {
+                    // after load, retrieve SRV
+                    ID3D11ShaderResourceView* srv = GetTextureSRV(localStr.c_str());
+                    if (srv) return srv;
+                    // Some code registers texture under basename; try basename
+                    ID3D11ShaderResourceView* srv2 = GetTextureSRV(cand.c_str());
+                    if (srv2) return srv2;
+                }
+            }
+        }
+
+        // 3) try to load by candidate name directly from package (maybe already registered under basename)
+        if (AL_LoadFromPackageByName(cand.c_str())) {
+            ID3D11ShaderResourceView* srv = GetTextureSRV(cand.c_str());
+            if (srv) return srv;
+        }
+
+        // 4) direct GetTextureSRV for candidate (in case it was loaded earlier by other means)
+        ID3D11ShaderResourceView* srv = GetTextureSRV(cand.c_str());
+        if (srv) return srv;
+    }
+
+    // nothing found
+    return nullptr;
+}
+
+//Get関数
 int AL_GetIndexFromPackage(const char* ext, const char* name) {
     if (!ext || !name) return -1;
     Package* pkg = FindPackageByExt(ToLowerExt(ext));
