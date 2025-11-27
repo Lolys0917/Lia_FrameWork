@@ -94,6 +94,103 @@ enum SoundEffect
     Limiter,
     Gate,
 };
+enum Input
+{
+    Key_0,
+    Key_1,
+    Key_2,
+    Key_3,
+    Key_4,
+    Key_5,
+    Key_6,
+    Key_7,
+    Key_8,
+    Key_9,
+    Key_A,
+    Key_B,
+    Key_C,
+    Key_D,
+    Key_E,
+    Key_F,
+    Key_G,
+    Key_H,
+    Key_I,
+    Key_J,
+    Key_K,
+    Key_L,
+    Key_M,
+    Key_N,
+    Key_O,
+    Key_P,
+    Key_Q,
+    Key_R,
+    Key_S,
+    Key_T,
+    Key_U,
+    Key_V,
+    Key_W,
+    Key_X,
+    Key_Y,
+    Key_Z,
+    Key_SPACE,
+    Key_TAB,
+    Key_CTRL,
+    Key_SHIFT,
+    Key_ENTER,
+    Key_BACKSPACE,
+    Key_ALT,
+    Key_ESC,
+    Key_PGUP,
+    Key_PGDN,
+    Key_HOME,
+    Key_END,
+    Key_SHIFT_LEFT,
+    Key_SHIFT_RIGHT,
+    Key_CTRL_LEFT,
+    Key_CTRL_RIGHT,
+    Key_F1,
+    Key_F2,
+    Key_F3,
+    Key_F4,
+    Key_F5,
+    Key_F6,
+    Key_F7,
+    Key_F8,
+    Key_F9,
+    Key_F10,
+    Key_F11,
+    Key_F12,
+    Mouse_LEFT,
+    Mouse_RIGHT,
+    Mouse_CENTER,
+    Mouse_M1,
+    Mosue_M2,
+    Mouse_M3,
+    Mouse_M4,
+    Mouse_M5,
+    Pad_A,
+    Pad_B,
+    Pad_X,
+    Pad_Y,
+    Pad_L1,
+    Pad_L2,
+    Pad_L3,
+    Pad_R1,
+    Pad_R2,
+    Pad_R3,
+    Pad_LS_LEFT,
+    Pad_LS_RIGHT,
+    Pad_LS_UP,
+    Pad_LS_DOWN,
+    Pad_RS_LEFT,
+    Pad_RS_RIGHT,
+    Pad_RS_UP,
+    Pad_RS_DOWN,
+    Pad_D_LEFT,
+    Pad_D_RIGHT,
+    Pad_D_UP,
+    Pad_D_DOWN,
+};
 //モデル用マトリクスバッファ
 struct MatrixBuffer
 {
@@ -437,3 +534,17 @@ const char* KeyMap_GetKey(KeyMap* map, int index);
 int KeyMap_GetSize(KeyMap* map);
 void KeyMap_SetKey(KeyMap* map, size_t index, const char* key);
 void KeyMap_Free(KeyMap* map);
+
+  //////////////////
+ // InputManager //
+//////////////////
+void InitInput();
+void UpdateInput();
+void ReleaseInput();
+int GetKeyBoardNum();
+int GetMouseNum();
+int GetControllerNum();
+bool GetInputState(Input input, int index);
+//API用
+bool Input_GetKey(Input input);
+bool Input_GetPad(Input input, int index);

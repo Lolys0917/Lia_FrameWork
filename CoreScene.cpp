@@ -161,6 +161,11 @@ void CoreSceneUpdate()
     if (GetKeyState('A') < 0)
         moveF = false;
 
+    if (GetInputState(Input::Key_1, 0))
+    {
+        moveF = false;
+    }
+
     if (GetKeyState('S') < 0)
         moveF1 = false;
 
