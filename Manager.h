@@ -94,6 +94,12 @@ enum SoundEffect
     Limiter,
     Gate,
 };
+enum CollisionType
+{
+    CollisionBox,
+    CollisionSphere,
+    CollisionCylinder
+};
 enum Input
 {
     Key_0,
@@ -250,10 +256,12 @@ struct ObjectDataPool {
     Vec4Vector ModelSize;
     Vec4Vector ModelAngle;
     BoolVector ModelUseTexture;
-    // BoxCollider
-    Vec4Vector BoxColliderPos;
-    Vec4Vector BoxColliderSize;
-    Vec4Vector BoxColliderAngle;
+    // Collision
+    Vec4Vector CollisionPos;
+    Vec4Vector CollisionSize;
+    Vec4Vector CollisionAngle;
+    CharVector CollisionType;
+    BoolVector CollisionHit;
     // Grid(Box / Polygon)
     Vec4Vector GridBoxPos;
     Vec4Vector GridBoxSize;
@@ -281,7 +289,7 @@ struct ObjectDataPool {
     KeyMap SpriteBoxMap;
     KeyMap SpriteCylinderMap;
     KeyMap UIMap;
-    KeyMap BoxColliderMap;
+    KeyMap CollisionMap;
     KeyMap GridBoxMap;
     KeyMap GridPolygonMap;
     KeyMap SpriteWorldTexturePathMap;

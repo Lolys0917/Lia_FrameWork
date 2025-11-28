@@ -575,9 +575,9 @@ void InitDo()
     Vec4_Init(&p->ModelAngle);
 
     // BoxCollider
-    Vec4_Init(&p->BoxColliderPos);
-    Vec4_Init(&p->BoxColliderSize);
-    Vec4_Init(&p->BoxColliderAngle);
+    Vec4_Init(&p->CollisionPos);
+    Vec4_Init(&p->CollisionSize);
+    Vec4_Init(&p->CollisionAngle);
 
     // Grid Box / Polygon
     Vec4_Init(&p->GridBoxPos);
@@ -604,7 +604,7 @@ void InitDo()
     KeyMap_Init(&p->TextureMap);
     KeyMap_Init(&p->SpriteWorldMap);
     KeyMap_Init(&p->UIMap);
-    KeyMap_Init(&p->BoxColliderMap);
+    KeyMap_Init(&p->CollisionMap);
     KeyMap_Init(&p->GridBoxMap);
     KeyMap_Init(&p->GridPolygonMap);
     KeyMap_Init(&p->SpriteWorldTexturePathMap);
@@ -679,9 +679,9 @@ void ReleaseDo()
     Vec4_Free(&p->ModelSize);
     Vec4_Free(&p->ModelAngle);
 
-    Vec4_Free(&p->BoxColliderPos);
-    Vec4_Free(&p->BoxColliderSize);
-    Vec4_Free(&p->BoxColliderAngle);
+    Vec4_Free(&p->CollisionPos);
+    Vec4_Free(&p->CollisionSize);
+    Vec4_Free(&p->CollisionAngle);
 
     Vec4_Free(&p->GridBoxPos);
     Vec4_Free(&p->GridBoxSize);
@@ -705,7 +705,7 @@ void ReleaseDo()
     KeyMap_Free(&p->TextureMap);
     KeyMap_Free(&p->SpriteWorldMap);
     KeyMap_Free(&p->UIMap);
-    KeyMap_Free(&p->BoxColliderMap);
+    KeyMap_Free(&p->CollisionMap);
     KeyMap_Free(&p->GridBoxMap);
     KeyMap_Free(&p->GridPolygonMap);
 
