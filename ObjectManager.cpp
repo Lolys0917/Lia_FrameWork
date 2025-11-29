@@ -521,7 +521,7 @@ void CreateObject()
         const char* TexturePath = KeyMap_GetKey(&g_ObjectPool.ModelTextureMap, ModelOldIndex);
 
         object->AddComponent<Model>()->SetModelPath(ModelPath);
-        object->GetComponent<Model>(ModelOldIndex)->SetTexture(TexturePath);
+        //object->GetComponent<Model>(ModelOldIndex)->SetTexture("asset/AFK_Snowman.png");
         
 
         ModelOldIndex++;
