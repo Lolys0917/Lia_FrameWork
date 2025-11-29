@@ -310,8 +310,7 @@ void InitShaderDefault()
         {
             matrix mvp;
             float4 diffuseColor;
-            int useTexture;
-            float3 pad;
+            float4 useTexture;
         };
         
         struct VS_INPUT
@@ -344,7 +343,7 @@ void InitShaderDefault()
         R"EOT(
         Texture2D tex : register(t0);
         SamplerState samp : register(s0);
-        
+
         cbuffer MatrixBuffer : register(b0)
         {
             float4x4 mvp;
@@ -360,6 +359,7 @@ void InitShaderDefault()
         
         float4 PSMain(PS_INPUT input) : SV_TARGET
         {
+
             if (useTexture.x == 1) {
                 float4 t = tex.Sample(samp, input.uv);
                 return t * diffuseColor; // テクスチャ色 * diffuseColor(ユーザー色 or マテリアル合成済み)

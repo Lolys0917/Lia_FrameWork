@@ -12,6 +12,7 @@
 #include "ComponentSpriteScreen.h"
 #include "ComponentSpriteBox.h"
 #include "ComponentSpriteCylinder.h"
+#include "ComponentModel.h"
 #include "ComponentSound.h"
 #include <string>
 

@@ -1,6 +1,9 @@
-﻿#include "AssetLoad.h"
+﻿// AssetManager.cpp
+// Re-generated AssetManager with PSD / fallback texture resolution and package system.
+// Keep function signatures intact as declared in Manager.h
+
+#include "Manager.h" // KeyMap 関連、API定義
 #include "Main.h"    // GetDevice(), GetContext(), AddMessage() など既存のユーティリティ
-#include "Manager.h" // KeyMap 関連
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -9,6 +12,9 @@
 #include <sstream>
 #include <filesystem>
 #include <algorithm>
+#include <mutex>
+#include <vector>
+#include <map>
 
 #pragma comment(lib, "windowscodecs.lib")
 
@@ -20,21 +26,10 @@ namespace fs = std::filesystem;
 // ------------------------------
 // 内部データ構造
 // ------------------------------
-struct PackageEntry {
-    std::string name;
-    uint64_t offset = 0;
-    uint64_t size = 0;
-    std::vector<uint8_t> data; // runtime に取り出すまで空でもよい
-};
+struct PackageEntry;
+struct Package;
 
-struct Package {
-    std::string ext; // 小文字拡張子
-    KeyMap keymap;
-    std::vector<PackageEntry> entries;
-    std::string pkgPath;
-    std::ifstream pkgStream;
-};
-
+static std::mutex g_packageMutex;
 static std::vector<Package> g_packages;
 
 // グローバルアセット格納（既存コードベースを踏襲）
@@ -60,6 +55,12 @@ static std::string ToLowerExt(const std::string& s) {
     for (auto& c : e) c = (char)tolower(c);
     return e;
 }
+static std::string sanitizeExt(const std::string& ext) {
+    std::string e = ext;
+    if (!e.empty() && e[0] == '.') e.erase(0, 1);
+    for (auto& c : e) c = (char)tolower(c);
+    return e;
+}
 static Package* FindPackageByExt(const std::string& ext) {
     for (auto& p : g_packages) {
         if (p.ext == ext) return &p;
@@ -69,11 +70,37 @@ static Package* FindPackageByExt(const std::string& ext) {
 
 // find package+index by name among loaded packages
 static bool FindPackageEntryByName(const std::string& name, Package*& outPkg, int& outIndex) {
+    std::lock_guard<std::mutex> lg(g_packageMutex);
     for (auto& p : g_packages) {
         int idx = KeyMap_GetIndex(&p.keymap, name.c_str());
         if (idx >= 0) { outPkg = &p; outIndex = idx; return true; }
     }
     outPkg = nullptr; outIndex = -1; return false;
+}
+
+// create directory if needed
+static bool EnsureDirectoryExists(const std::string& path) {
+    try {
+        fs::path p(path);
+        if (fs::exists(p)) return true;
+        return fs::create_directories(p);
+    }
+    catch (...) {
+        return false;
+    }
+}
+
+// Make a relative key from assetRoot to file (forward slashes)
+static std::string MakeRelativeKey(const fs::path& assetRoot, const fs::path& filePath) {
+    try {
+        fs::path absRoot = fs::weakly_canonical(assetRoot);
+        fs::path absFile = fs::weakly_canonical(filePath);
+        std::string rel = fs::relative(absFile, absRoot).generic_string();
+        return rel;
+    }
+    catch (...) {
+        return filePath.filename().generic_string();
+    }
 }
 
 // ------------------------------
@@ -134,7 +161,8 @@ bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t s
     desc.Height = height;
     desc.MipLevels = 1;
     desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    // sRGB as requested
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_DEFAULT;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -153,6 +181,23 @@ bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t s
 
     g_textureSRV[texIndex] = srv;
 
+    try {
+        std::string keyFull = name ? name : "";
+        fs::path p(keyFull);
+        std::string basename = p.filename().string();
+        if (!basename.empty() && basename != keyFull) {
+            int baseIdx = KeyMap_GetIndex(&TextureMap, basename.c_str());
+            if (baseIdx < 0) {
+                // register alias under basename
+                int aliasIdx = KeyMap_Add(&TextureMap, basename.c_str());
+                if ((int)g_textureSRV.size() <= aliasIdx) g_textureSRV.resize(aliasIdx + 1, nullptr);
+                // ensure same SRV pointer is available under alias index
+                g_textureSRV[aliasIdx] = srv;
+            }
+        }
+    }
+    catch (...) { /* ignore filesystem exceptions */ }
+
     SafeRelease(tex);
     SafeRelease(pConverter);
     SafeRelease(pFrame);
@@ -164,32 +209,138 @@ bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t s
     return true;
 }
 
+bool IN_LoadPSD_Memory(const char* name, const unsigned char* data, size_t size)
+{
+    // Reuse the same logic as IN_LoadTexture_Memory but keep it separate for clarity.
+    if (!data || size == 0) return false;
+    if (!GetDevice()) { AddMessage("IN_LoadPSD_Memory: device is null"); return false; }
+
+    int texIndex = KeyMap_Add(&TextureMap, name);
+    if ((int)g_textureSRV.size() <= texIndex) g_textureSRV.resize(texIndex + 1, nullptr);
+
+    IWICImagingFactory* pWIC = nullptr;
+    IWICStream* pStream = nullptr;
+    IWICBitmapDecoder* pDecoder = nullptr;
+    IWICBitmapFrameDecode* pFrame = nullptr;
+    IWICFormatConverter* pConverter = nullptr;
+    bool calledCoInit = false;
+
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pWIC));
+    if (FAILED(hr)) {
+        HRESULT hrInit = CoInitialize(nullptr);
+        if (SUCCEEDED(hrInit)) calledCoInit = true;
+        hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pWIC));
+        if (FAILED(hr)) {
+            if (calledCoInit) CoUninitialize();
+            AddMessage("IN_LoadPSD_Memory: Create WIC factory failed");
+            return false;
+        }
+    }
+
+    hr = pWIC->CreateStream(&pStream);
+    if (FAILED(hr)) { AddMessage("IN_LoadPSD_Memory: CreateStream failed"); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+    hr = pStream->InitializeFromMemory((WICInProcPointer)data, (DWORD)size);
+    if (FAILED(hr)) { AddMessage("IN_LoadPSD_Memory: Init stream failed"); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
+    hr = pWIC->CreateDecoderFromStream(pStream, nullptr, WICDecodeMetadataCacheOnLoad, &pDecoder);
+    if (FAILED(hr)) { AddMessage("IN_LoadPSD_Memory: CreateDecoderFromStream failed (PSD codec may be missing)"); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+    hr = pDecoder->GetFrame(0, &pFrame);
+    if (FAILED(hr)) { AddMessage("IN_LoadPSD_Memory: GetFrame failed"); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
+    hr = pWIC->CreateFormatConverter(&pConverter);
+    if (FAILED(hr)) { AddMessage("IN_LoadPSD_Memory: CreateFormatConverter failed"); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+    hr = pConverter->Initialize(pFrame, GUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
+    if (FAILED(hr)) { AddMessage("IN_LoadPSD_Memory: Converter Init failed (PSD decode may not be supported)"); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
+    UINT width = 0, height = 0;
+    pConverter->GetSize(&width, &height);
+    if (width == 0 || height == 0) { AddMessage("IN_LoadPSD_Memory: invalid image size"); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
+    std::vector<BYTE> pixels((size_t)width * (size_t)height * 4);
+    hr = pConverter->CopyPixels(nullptr, width * 4, (UINT)pixels.size(), pixels.data());
+    if (FAILED(hr)) { AddMessage("IN_LoadPSD_Memory: CopyPixels failed"); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
+    D3D11_TEXTURE2D_DESC desc{};
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB; // sRGB if wanted
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    D3D11_SUBRESOURCE_DATA init{};
+    init.pSysMem = pixels.data();
+    init.SysMemPitch = width * 4;
+
+    ID3D11Texture2D* tex = nullptr;
+    hr = GetDevice()->CreateTexture2D(&desc, &init, &tex);
+    if (FAILED(hr)) { AddMessage("IN_LoadPSD_Memory: CreateTexture2D failed"); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
+    ID3D11ShaderResourceView* srv = nullptr;
+    hr = GetDevice()->CreateShaderResourceView(tex, nullptr, &srv);
+    if (FAILED(hr)) { AddMessage("IN_LoadPSD_Memory: CreateSRV failed"); SafeRelease(tex); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
+
+    g_textureSRV[texIndex] = srv;
+
+    SafeRelease(tex);
+    SafeRelease(pConverter);
+    SafeRelease(pFrame);
+    SafeRelease(pDecoder);
+    SafeRelease(pStream);
+    SafeRelease(pWIC);
+    if (calledCoInit) CoUninitialize();
+
+    // Register alias under basename as IN_LoadTexture_Memory does (optional)
+    try {
+        fs::path key(name ? name : "");
+        std::string basename = key.filename().string();
+        if (!basename.empty() && basename != (name ? name : "")) {
+            int baseIdx = KeyMap_GetIndex(&TextureMap, basename.c_str());
+            if (baseIdx < 0) {
+                int aliasIdx = KeyMap_Add(&TextureMap, basename.c_str());
+                if ((int)g_textureSRV.size() <= aliasIdx) g_textureSRV.resize(aliasIdx + 1, nullptr);
+                g_textureSRV[aliasIdx] = srv;
+            }
+        }
+    }
+    catch (...) { /* ignore */ }
+
+    return true;
+}
+
 // ------------------------------
 // Assimp-based model loader (memory)
 // - outputs expanded vertex list (triangle list) and indices are sequential 0..N-1
-// - extracts diffuse texture name (if present) and attempts to load it via IN_LoadTexture_Memory
+// - extracts diffuse texture name (if present) and attempts to load it via TryResolveAndLoadTextureSRV / registration
 // ------------------------------
 static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* data, size_t size, bool isFBX)
 {
     if (!data || size == 0) return false;
 
-    // check already loaded
-    int mapSize = KeyMap_GetSize(&ModelMap);
-    for (int i = 0; i < mapSize; ++i) {
-        const char* key = KeyMap_GetKey(&ModelMap, i);
-        if (strcmp(key, name) == 0) return true; // already loaded
+    // check if already loaded (preserve legacy behavior)
+    int modelIndex = KeyMap_GetIndex(&ModelMap, name);
+    if (modelIndex >= 0) {
+        // already loaded
+        return true;
     }
 
-    int modelIndex = KeyMap_Add(&ModelMap, name);
-    if ((int)g_modelSubmeshes.size() <= modelIndex) {
-        g_modelSubmeshes.resize(modelIndex + 1);
-    }
-    // ensure other containers are at least consistent for compatibility
+    modelIndex = KeyMap_Add(&ModelMap, name);
+    if ((int)g_modelSubmeshes.size() <= modelIndex) g_modelSubmeshes.resize(modelIndex + 1);
     if ((int)g_modelVertex.size() <= modelIndex) {
         g_modelVertex.resize(modelIndex + 1);
         g_modelIndices.resize(modelIndex + 1);
         g_modelTextureSRV.resize(modelIndex + 1, nullptr);
         g_modelMaterialNames.resize(modelIndex + 1);
+    }
+    else {
+        // clear previous content (if any)
+        g_modelSubmeshes[modelIndex].clear();
+        g_modelVertex[modelIndex].clear();
+        g_modelIndices[modelIndex].clear();
+        g_modelMaterialNames[modelIndex].clear();
+        g_modelTextureSRV[modelIndex] = nullptr;
     }
 
     Assimp::Importer importer;
@@ -202,18 +353,14 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
 
     if (!scene || !scene->HasMeshes()) {
         std::string err = importer.GetErrorString();
-        MessageBoxA(nullptr, ("Assimp: " + err).c_str(), "LoadModel_Memory Error", MB_OK);
+        AddMessage(("Assimp load failed: " + err).c_str());
         return false;
     }
 
-    // Clear any placeholder
-    g_modelSubmeshes[modelIndex].clear();
+    // guess modelPath for modelDir-based resolution (caller typically provides full or relative path)
+    std::string modelPathStr = name ? name : std::string();
 
-    // modelPath guess: model stored key -> actual path may be in packages; we will try to find model path in packages
-    // If model was originally loaded from file, 'name' may be full path; use it for modelDir resolution.
-    std::string modelPathStr = name; // caller likely passed path-like name; used for local folder searches
-
-    // Iterate meshes and create submeshes
+    // iterate meshes
     for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi) {
         aiMesh* mesh = scene->mMeshes[mi];
         if (!mesh) continue;
@@ -226,10 +373,10 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
         sm.materialDiffuse = XMFLOAT4(1, 1, 1, 1);
 
         bool hasNormals = mesh->HasNormals();
-        bool hasTex = mesh->HasTextureCoords(0);
+        bool hasTexcoords = mesh->HasTextureCoords(0);
 
-        // Collect vertices and indices for this mesh (expand faces to triangle list)
-        unsigned int nextLocalIndex = 0;
+        unsigned int nextLocalIdx = 0;
+        // expand faces -> triangle list (store verts duplicated per face index)
         for (unsigned int fi = 0; fi < mesh->mNumFaces; ++fi) {
             aiFace& face = mesh->mFaces[fi];
             if (face.mNumIndices < 3) continue;
@@ -238,106 +385,76 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
                 ModelVertex v{};
                 v.pos = XMFLOAT3(mesh->mVertices[vi].x, mesh->mVertices[vi].y, mesh->mVertices[vi].z);
                 v.normal = hasNormals ? XMFLOAT3(mesh->mNormals[vi].x, mesh->mNormals[vi].y, mesh->mNormals[vi].z) : XMFLOAT3(0, 1, 0);
-                if (hasTex) v.uv = XMFLOAT2(mesh->mTextureCoords[0][vi].x, mesh->mTextureCoords[0][vi].y);
+                if (hasTexcoords) v.uv = XMFLOAT2(mesh->mTextureCoords[0][vi].x, mesh->mTextureCoords[0][vi].y);
                 else v.uv = XMFLOAT2(0, 0);
 
                 sm.verts.push_back(v);
-                sm.idx.push_back(nextLocalIndex++);
+                sm.idx.push_back(nextLocalIdx++);
             }
         }
 
-        // Extract material info if any
+        // material: diffuse color + diffuse texture path (if any)
         if (scene->HasMaterials() && sm.materialIndex >= 0 && sm.materialIndex < (int)scene->mNumMaterials) {
             aiMaterial* mat = scene->mMaterials[sm.materialIndex];
             if (mat) {
-                // Diffuse color
-                aiColor4D col(1.0f, 1.0f, 1.0f, 1.0f);
+                aiColor4D col(1, 1, 1, 1);
                 if (AI_SUCCESS == aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE, &col)) {
                     sm.materialDiffuse = XMFLOAT4(col.r, col.g, col.b, col.a);
-                    // Debug log
-                    char msg[256];
-                    sprintf_s(msg, "LoadModel: mesh=%d materialDiffuse=(%.3f,%.3f,%.3f,%.3f)", mi, col.r, col.g, col.b, col.a);
-                    AddMessage(msg);
-					//MessageBoxA(nullptr, msg, "Debug", MB_OK);
-                }
-                else {
-                    AddMessage("LoadModel: materialDiffuse not found (defaults to 1)");
-					//MessageBoxA(nullptr, "LoadModel: materialDiffuse not found (defaults to 1)", "Debug", MB_OK);
                 }
 
-                // Diffuse texture path (if any)
                 if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
                     aiString texPath;
                     if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
-                        std::string s = texPath.C_Str();
-                        // store raw name (may be full path, PSD, tga etc.)
-                        sm.diffuseTexName = s;
-                        // Also push basename to model-level list for compatibility
-                        std::string filename = fs::path(s).filename().string();
-                        if (!filename.empty()) g_modelMaterialNames[modelIndex].push_back(filename);
-                        else g_modelMaterialNames[modelIndex].push_back(s);
-                        char msg2[256];
-                        sprintf_s(msg2, "LoadModel: mesh=%d diffuseTexRaw=%s", mi, s.c_str());
-                        AddMessage(msg2);
-						//MessageBoxA(nullptr, msg2, "Debug", MB_OK);
+                        std::string raw = texPath.C_Str();
+                        // try resolve+load (this will register texture in TextureMap if found)
+                        std::string resolvedKey;
+                        ID3D11ShaderResourceView* srv = TryResolveAndLoadTextureSRV(raw, resolvedKey, modelPathStr);
+                        if (srv && !resolvedKey.empty()) {
+                            // store resolved key so Model::SetModelPath can call GetTextureSRV with same name
+                            sm.diffuseTexName = resolvedKey;
+                            // register also in model-level materials list for fallback attempts
+                            g_modelMaterialNames[modelIndex].push_back(resolvedKey);
+                        }
+                        else {
+                            // fallback: push basename so later AL_LoadFromPackageByName attempts basename
+                            std::string base = fs::path(raw).filename().string();
+                            if (!base.empty()) g_modelMaterialNames[modelIndex].push_back(base);
+                        }
                     }
                 }
             }
         }
 
-        // Try resolve texture SRV from the collected raw name (if any)
-        ID3D11ShaderResourceView* foundSRV = nullptr;
-        if (!sm.diffuseTexName.empty()) {
-            foundSRV = TryResolveAndLoadTextureSRV(sm.diffuseTexName, modelPathStr);
-        }
-
-        if (foundSRV) {
-            // Found SRV -> mark
-            // Note: we store only the filename key used to register, but store SRV pointer later in Model::SetModelPath when creating submeshes
-            // For compatibility we'll keep diffuseTexName as the candidate key (basename or full local path)
-            sm.diffuseTexName = fs::path(foundSRV ? "" : "").filename().string(); // no-op placeholder; we will actually rely on GetTextureSRV by name later
-            // But better set an indicator: we'll store the key under which GetTextureSRV will find it. Prefer the candidate name we used above.
-            // To be safe, attempt to discover the KeyMap key for this SRV:
-            // Simplify: we won't try to reverse-map SRV to name; leave diffuseTexName as original basename (already pushed to g_modelMaterialNames)
-        }
-
-        // Push the submesh info to model list
+        // push submesh
         g_modelSubmeshes[modelIndex].push_back(std::move(sm));
     }
 
-    // For backward compatibility, flatten into g_modelVertex/g_modelIndices
+    // flatten to legacy flat arrays for compatibility
     {
-        std::vector<ModelVertex> flatVerts;
-        std::vector<unsigned int> flatIdx;
+        std::vector<ModelVertex> flatV;
+        std::vector<unsigned int> flatI;
         unsigned int base = 0;
         for (auto& sm : g_modelSubmeshes[modelIndex]) {
-            for (auto& v : sm.verts) flatVerts.push_back(v);
-            for (auto id : sm.idx) flatIdx.push_back(base + id);
-            base = (unsigned int)flatVerts.size();
+            for (auto& v : sm.verts) flatV.push_back(v);
+            for (auto id : sm.idx) flatI.push_back(base + id);
+            base = (unsigned int)flatV.size();
         }
-        g_modelVertex[modelIndex] = std::move(flatVerts);
-        g_modelIndices[modelIndex] = std::move(flatIdx);
+        g_modelVertex[modelIndex] = std::move(flatV);
+        g_modelIndices[modelIndex] = std::move(flatI);
     }
 
-    // Try to pre-load textures found in materials (if they exist in packages or in model folder)
-    // We'll iterate g_modelMaterialNames[modelIndex] which contains basenames discovered earlier
+    // try to preload material candidates (in case only basename is available in package)
     for (auto& candidate : g_modelMaterialNames[modelIndex]) {
         if (candidate.empty()) continue;
-        // 1) already loaded?
         int tIdx = KeyMap_GetIndex(&TextureMap, candidate.c_str());
         if (tIdx >= 0 && tIdx < (int)g_textureSRV.size() && g_textureSRV[tIdx]) continue;
-
-        // 2) try load from package by candidate name
-        if (AL_LoadFromPackageByName(candidate.c_str())) continue;
-
-        // 3) try to find in model folder (attempt register & load)
-        fs::path mpath(name);
-        std::string modelDir = mpath.has_parent_path() ? mpath.parent_path().string() : std::string();
-        if (!modelDir.empty()) {
-            fs::path p = fs::path(modelDir) / fs::path(candidate);
-            if (fs::exists(p)) {
-                RegisterAndLoadFileToPackage(p.string());
-            }
+        // try package load
+        AL_LoadFromPackageByName(candidate.c_str());
+        // try model folder registration
+        fs::path mp(name);
+        if (mp.has_parent_path()) {
+            fs::path p = mp.parent_path() / candidate;
+            if (fs::exists(p)) RegisterAndLoadFileToPackage(p.generic_string());
         }
     }
 
@@ -348,7 +465,7 @@ bool IN_LoadFBX_Memory(const char* name, const unsigned char* data, size_t size)
 bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t size) { return LoadModel_Assimp_FromMemory(name, data, size, false); }
 
 // ------------------------------
-// WAV loader (kept as original idea)
+// WAV loader
 // ------------------------------
 struct WavData {
     std::vector<BYTE> buffer;
@@ -459,13 +576,6 @@ ID3D11ShaderResourceView* GetTextureSRV(const char* filename) {
 // ------------------------------
 // Package creation / management (batch time)
 // ------------------------------
-static std::string sanitizeExt(const std::string& ext) {
-    std::string e = ext;
-    if (!e.empty() && e[0] == '.') e.erase(0, 1);
-    for (auto& c : e) c = (char)tolower(c);
-    return e;
-}
-
 void AL_Init() {
     g_packages.clear();
     KeyMap_Init(&TextureMap);
@@ -477,6 +587,7 @@ void AL_Init() {
     g_modelIndices.clear();
     g_modelTextureSRV.clear();
     g_modelMaterialNames.clear();
+    g_modelSubmeshes.clear();
 }
 
 void AL_Shutdown() {
@@ -488,6 +599,7 @@ void AL_Shutdown() {
     g_modelVertex.clear();
     g_modelIndices.clear();
     g_modelMaterialNames.clear();
+    g_modelSubmeshes.clear();
 
     // close package streams & free keymaps
     for (auto& p : g_packages) {
@@ -503,6 +615,7 @@ void AL_Shutdown() {
     if (g_samplerState) { g_samplerState->Release(); g_samplerState = nullptr; }
 }
 
+// Old-style RegisterAssetToBatch kept for compatibility (editor-side incremental)
 bool AL_RegisterAssetToBatch(const char* filepath) {
     if (!filepath) return false;
     std::string path = filepath;
@@ -515,6 +628,7 @@ bool AL_RegisterAssetToBatch(const char* filepath) {
         Package np;
         np.ext = ext;
         KeyMap_Init(&np.keymap);
+        std::lock_guard<std::mutex> lg(g_packageMutex);
         g_packages.push_back(std::move(np));
         pkg = &g_packages.back();
     }
@@ -543,9 +657,15 @@ bool AL_RegisterAssetToBatch(const char* filepath) {
 
 bool AL_SaveAllPackages(const char* outFolder) {
     if (!outFolder) return false;
-    fs::create_directories(outFolder);
+    fs::path outDir(outFolder);
+    try {
+        fs::create_directories(outDir);
+    }
+    catch (...) { return false; }
+
+    std::lock_guard<std::mutex> lg(g_packageMutex);
     for (auto& pkg : g_packages) {
-        std::string outPath = std::string(outFolder) + "/Asset" + pkg.ext + ".pkg";
+        std::string outPath = (outDir / ("Asset" + pkg.ext + ".pkg")).string();
         std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
         if (!out.is_open()) return false;
 
@@ -584,43 +704,48 @@ bool AL_SaveAllPackages(const char* outFolder) {
     return true;
 }
 
+// LoadPackageIndex reads index from a .pkg and stores entries (no data loaded)
 bool AL_LoadPackageIndex(const char* ext, const char* pkgFilePath) {
     if (!ext || !pkgFilePath) return false;
     std::string sExt = ToLowerExt(ext);
-    Package* pkg = FindPackageByExt(sExt);
-    if (!pkg) {
-        Package np;
-        np.ext = sExt;
-        KeyMap_Init(&np.keymap);
-        g_packages.push_back(std::move(np));
-        pkg = &g_packages.back();
-    }
-    else {
-        if (pkg->pkgStream.is_open()) pkg->pkgStream.close();
-        pkg->entries.clear();
-        KeyMap_Free(&pkg->keymap);
-        KeyMap_Init(&pkg->keymap);
+    Package* pkg = nullptr;
+    {
+        std::lock_guard<std::mutex> lg(g_packageMutex);
+        pkg = FindPackageByExt(sExt);
+        if (!pkg) {
+            Package np;
+            np.ext = sExt;
+            KeyMap_Init(&np.keymap);
+            g_packages.push_back(std::move(np));
+            pkg = &g_packages.back();
+        }
+        else {
+            if (pkg->pkgStream.is_open()) pkg->pkgStream.close();
+            pkg->entries.clear();
+            KeyMap_Free(&pkg->keymap);
+            KeyMap_Init(&pkg->keymap);
+        }
     }
 
     pkg->pkgPath = pkgFilePath;
-    pkg->pkgStream.open(pkgFilePath, std::ios::binary);
-    if (!pkg->pkgStream.is_open()) return false;
+    std::ifstream in(pkgFilePath, std::ios::binary);
+    if (!in.is_open()) return false;
 
     char magic[8] = {};
-    pkg->pkgStream.read(magic, 8);
+    in.read(magic, 8);
     uint32_t count = 0;
     uint64_t tableOffset = 0;
-    pkg->pkgStream.read((char*)&count, sizeof(uint32_t));
-    pkg->pkgStream.read((char*)&tableOffset, sizeof(uint64_t));
-    pkg->pkgStream.seekg(tableOffset);
+    in.read((char*)&count, sizeof(uint32_t));
+    in.read((char*)&tableOffset, sizeof(uint64_t));
+    in.seekg(tableOffset);
     for (uint32_t i = 0; i < count; ++i) {
         uint16_t nameLen = 0;
-        pkg->pkgStream.read((char*)&nameLen, sizeof(uint16_t));
+        in.read((char*)&nameLen, sizeof(uint16_t));
         std::string name(nameLen, '\0');
-        pkg->pkgStream.read(name.data(), nameLen);
+        in.read(name.data(), nameLen);
         uint64_t offset = 0, size = 0;
-        pkg->pkgStream.read((char*)&offset, sizeof(uint64_t));
-        pkg->pkgStream.read((char*)&size, sizeof(uint64_t));
+        in.read((char*)&offset, sizeof(uint64_t));
+        in.read((char*)&size, sizeof(uint64_t));
         PackageEntry e;
         e.name = name;
         e.offset = offset;
@@ -628,20 +753,37 @@ bool AL_LoadPackageIndex(const char* ext, const char* pkgFilePath) {
         KeyMap_Add(&pkg->keymap, e.name.c_str());
         pkg->entries.push_back(std::move(e));
     }
+    in.close();
     return true;
 }
 
-// WriteTempAndCallLoader - we don't write temp file; instead read data into memory and dispatch
+// Read specific package entry's raw bytes into memory and call loader
+static bool ReadPackageEntryDataToMemory(PackageEntry& e, Package& pkg, std::vector<uint8_t>& outData)
+{
+    // ensure stream open
+    if (!pkg.pkgStream.is_open()) {
+        pkg.pkgStream.open(pkg.pkgPath, std::ios::binary);
+        if (!pkg.pkgStream.is_open()) return false;
+    }
+
+    try {
+        pkg.pkgStream.seekg((std::streamoff)e.offset);
+        outData.resize((size_t)e.size);
+        pkg.pkgStream.read((char*)outData.data(), (std::streamsize)e.size);
+        return true;
+    }
+    catch (...) {
+        return false;
+    }
+}
+
 static bool WriteTempAndCallLoader(PackageEntry& e, Package& pkg) {
-    // if e.data empty, read from stream
+    std::vector<uint8_t> data;
     if (e.data.empty()) {
-        if (!pkg.pkgStream.is_open()) {
-            pkg.pkgStream.open(pkg.pkgPath, std::ios::binary);
-            if (!pkg.pkgStream.is_open()) return false;
-        }
-        pkg.pkgStream.seekg(e.offset);
-        e.data.resize((size_t)e.size);
-        pkg.pkgStream.read((char*)e.data.data(), (std::streamsize)e.size);
+        if (!ReadPackageEntryDataToMemory(e, pkg, data)) return false;
+    }
+    else {
+        data = e.data;
     }
 
     // determine ext
@@ -650,32 +792,283 @@ static bool WriteTempAndCallLoader(PackageEntry& e, Package& pkg) {
     ext = ToLowerExt(ext);
 
     if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp")
-        return IN_LoadTexture_Memory(e.name.c_str(), e.data.data(), e.data.size());
+        return IN_LoadTexture_Memory(e.name.c_str(), data.data(), data.size());
+    else if (ext == "psd") {
+        // Try PSD direct via WIC wrapper first (may fail if codec missing)
+        if (IN_LoadPSD_Memory(e.name.c_str(), data.data(), data.size())) return true;
+        // If PSD decode fails, try alternatives (png/tga/jpg) inside packages
+        return TryLoadAlternativeImageExtensionsForEntry(e, pkg);
+    }
     else if (ext == "obj")
-        return IN_LoadModelObj_Memory(e.name.c_str(), e.data.data(), e.data.size());
+        return IN_LoadModelObj_Memory(e.name.c_str(), data.data(), data.size());
     else if (ext == "fbx")
-        return IN_LoadFBX_Memory(e.name.c_str(), e.data.data(), e.data.size());
+        return IN_LoadFBX_Memory(e.name.c_str(), data.data(), data.size());
     else if (ext == "wav")
-        return IN_LoadWav_Memory(e.name.c_str(), e.data.data(), e.data.size());
-    else
-        return false;
+        return IN_LoadWav_Memory(e.name.c_str(), data.data(), data.size());
+    else if (ext == "tga") {
+        // If user provides an IN_LoadTGA_Memory implemention, call it.
+        extern bool IN_LoadTGA_Memory(const char* name, const unsigned char* data, size_t size);
+        return IN_LoadTGA_Memory(e.name.c_str(), data.data(), data.size());
+    }
+    else {
+        // unknown ext: try alternative image extensions for same name (basename/stem)
+        return TryLoadAlternativeImageExtensionsForEntry(e, pkg);
+    }
 }
 
+static bool TryLoadAlternativeImageExtensionsForEntry(const PackageEntry& e, Package& pkg)
+{
+    // derive basename / stem / dir
+    fs::path p(e.name);
+    std::string basename = p.filename().string();
+    std::string stem = p.stem().string();
+    std::string dirpart = p.has_parent_path() ? p.parent_path().generic_string() : std::string();
+
+    // prioritized alternatives (png/tga first)
+    std::vector<std::string> altExts = { ".png", ".tga", ".jpg", ".jpeg", ".dds" };
+
+    Package* foundPkg = nullptr;
+    int foundIdx = -1;
+
+    // 1) try same stem in same package if dirpart exists: dir/stem.ext
+    if (!dirpart.empty()) {
+        for (auto& ext : altExts) {
+            std::string cand = (fs::path(dirpart) / (stem + ext)).generic_string();
+            if (FindPackageEntryByName(cand, foundPkg, foundIdx)) {
+                if (foundPkg && foundIdx >= 0) return WriteTempAndCallLoader(foundPkg->entries[foundIdx], *foundPkg);
+            }
+        }
+    }
+
+    // 2) try basename variants (stem.ext) across all packages
+    for (auto& ext : altExts) {
+        std::string cand = stem + ext;
+        if (FindPackageEntryByName(cand, foundPkg, foundIdx)) {
+            if (foundPkg && foundIdx >= 0) return WriteTempAndCallLoader(foundPkg->entries[foundIdx], *foundPkg);
+        }
+    }
+
+    // 3) fallback: linear search by filename across all packages
+    for (auto& pack : g_packages) {
+        for (int i = 0; i < (int)pack.entries.size(); ++i) {
+            fs::path ent(pack.entries[i].name);
+            if (ent.filename() == basename) {
+                return WriteTempAndCallLoader(pack.entries[i], pack);
+            }
+        }
+    }
+
+    return false;
+}
+
+
+
+// AL_LoadFromPackageByName: find entry by key and load on demand
 bool AL_LoadFromPackageByName(const char* name) {
     if (!name) return false;
+    // 正確一致を最初に試す
     Package* pkg = nullptr;
     int idx = -1;
-    if (!FindPackageEntryByName(name, pkg, idx)) 
-    {
-        return false; MessageBoxA(NULL, name, "ErrorByName", S_OK);
+    if (FindPackageEntryByName(name, pkg, idx)) {
+        if (pkg && idx >= 0 && idx < (int)pkg->entries.size()) {
+            return WriteTempAndCallLoader(pkg->entries[idx], *pkg);
+        }
     }
-    if (!pkg)
-    {
-        return false; MessageBoxA(NULL, name, "ErrorByName", S_OK);
+
+    // 見つからなかった場合：basename とディレクトリ部、そして拡張子置換でフォールバックを試す
+    std::string sname(name);
+    fs::path p(sname);
+    std::string basename = p.filename().string(); // e.g. "Alicia_body.psd"
+    std::string stem = p.stem().string();         // e.g. "Alicia_body"
+    std::string dirpart = p.has_parent_path() ? p.parent_path().generic_string() : std::string();
+
+    // 優先拡張子リスト（ユーザー要望：psd を優先したい場合は .psd を前に置く）
+    std::vector<std::string> preferExts = { ".png", ".tga", ".jpg", ".jpeg", ".psd", ".dds" };
+
+    // 1) try basename with preferExts: "Alicia_body.png", ...
+    for (auto& ext : preferExts) {
+        std::string cand = stem + ext; // basename
+        if (FindPackageEntryByName(cand, pkg, idx)) {
+            if (pkg && idx >= 0) return WriteTempAndCallLoader(pkg->entries[idx], *pkg);
+        }
     }
-    if (idx < 0 || idx >= (int)pkg->entries.size()) return false;
-    PackageEntry& e = pkg->entries[idx];
-    return WriteTempAndCallLoader(e, *pkg);
+
+    // 2) try dir + stem + ext: "Texture/Alicia_body.png" style (if dirpart exists)
+    if (!dirpart.empty()) {
+        for (auto& ext : preferExts) {
+            fs::path candP = fs::path(dirpart) / (stem + ext);
+            std::string cand = candP.generic_string();
+            if (FindPackageEntryByName(cand, pkg, idx)) {
+                if (pkg && idx >= 0) return WriteTempAndCallLoader(pkg->entries[idx], *pkg);
+            }
+        }
+    }
+
+    // 3) 最終手段：名前と同じ拡張子でパッケージ中を線形検索（大きくないリストならOK）
+    {
+        for (auto& pack : g_packages) {
+            for (int i = 0; i < (int)pack.entries.size(); ++i) {
+                // match by filename only
+                fs::path ent(pack.entries[i].name);
+                if (ent.filename() == basename) {
+                    return WriteTempAndCallLoader(pack.entries[i], pack);
+                }
+            }
+        }
+    }
+
+    // 見つからなかった
+    return false;
+}
+
+bool IN_LoadTGA_Memory(const char* name, const unsigned char* data, size_t size)
+{
+    if (!name || !data || size < 18) return false;
+
+    // TGA header (18 bytes)
+    const unsigned char* ptr = data;
+    uint8_t idLength = ptr[0];
+    uint8_t colorMapType = ptr[1];
+    uint8_t imageType = ptr[2]; // 2 = uncompressed true-color
+    // we ignore color map fields for simplicity
+    uint16_t width = (uint16_t)ptr[12] | ((uint16_t)ptr[13] << 8);
+    uint16_t height = (uint16_t)ptr[14] | ((uint16_t)ptr[15] << 8);
+    uint8_t bpp = ptr[16]; // bits per pixel
+    uint8_t descriptor = ptr[17];
+
+    if (imageType != 2) {
+        AddMessage("IN_LoadTGA_Memory: unsupported TGA image type (only uncompressed true-color supported)");
+        return false;
+    }
+    if (width == 0 || height == 0) {
+        AddMessage("IN_LoadTGA_Memory: invalid TGA size");
+        return false;
+    }
+    if (bpp != 24 && bpp != 32) {
+        AddMessage("IN_LoadTGA_Memory: unsupported bpp (only 24/32 supported)");
+        return false;
+    }
+
+    // compute image data start
+    size_t headerSize = 18;
+    size_t imageDataSize = (size_t)width * (size_t)height * (bpp / 8);
+    if (idLength) headerSize += idLength;
+    if (size < headerSize + imageDataSize) {
+        AddMessage("IN_LoadTGA_Memory: truncated data");
+        return false;
+    }
+
+    const unsigned char* imgSrc = ptr + headerSize;
+
+    // Prepare RGBA buffer (DX wants RGBA in memory)
+    std::vector<BYTE> pixels((size_t)width * (size_t)height * 4);
+    bool hasAlpha = (bpp == 32);
+
+    // TGA stores BGR(A) per pixel. Also row order may be bottom-up unless descriptor indicates top-left.
+    bool originTop = (descriptor & 0x20) != 0; // bit5: top-left if set
+    size_t srcRowBytes = (size_t)width * (bpp / 8);
+
+    for (uint32_t y = 0; y < height; ++y) {
+        uint32_t srcY = originTop ? y : (height - 1 - y);
+        const unsigned char* rowPtr = imgSrc + (size_t)srcY * srcRowBytes;
+        for (uint32_t x = 0; x < width; ++x) {
+            const unsigned char* px = rowPtr + (size_t)x * (bpp / 8);
+            size_t dstIndex = ((size_t)y * width + x) * 4;
+            // BGR -> RGB, copy alpha if present
+            pixels[dstIndex + 0] = px[2]; // R
+            pixels[dstIndex + 1] = px[1]; // G
+            pixels[dstIndex + 2] = px[0]; // B
+            pixels[dstIndex + 3] = hasAlpha ? px[3] : 0xFF; // A
+        }
+    }
+
+    // Register key
+    int texIndex = KeyMap_Add(&TextureMap, name);
+    if ((int)g_textureSRV.size() <= texIndex) g_textureSRV.resize(texIndex + 1, nullptr);
+
+    if (!GetDevice()) {
+        AddMessage("IN_LoadTGA_Memory: device is null");
+        return false;
+    }
+
+    D3D11_TEXTURE2D_DESC desc{};
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // not sRGB — caller can adjust if needed
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    D3D11_SUBRESOURCE_DATA init{};
+    init.pSysMem = pixels.data();
+    init.SysMemPitch = width * 4;
+
+    ID3D11Texture2D* tex = nullptr;
+    HRESULT hr = GetDevice()->CreateTexture2D(&desc, &init, &tex);
+    if (FAILED(hr)) {
+        AddMessage("IN_LoadTGA_Memory: CreateTexture2D failed");
+        return false;
+    }
+
+    ID3D11ShaderResourceView* srv = nullptr;
+    hr = GetDevice()->CreateShaderResourceView(tex, nullptr, &srv);
+    if (FAILED(hr)) {
+        AddMessage("IN_LoadTGA_Memory: CreateSRV failed");
+        tex->Release();
+        return false;
+    }
+
+    g_textureSRV[texIndex] = srv;
+    SafeRelease(tex);
+    return true;
+}
+
+static std::string ResolveTextureCandidateFull(const std::string& rawTexName)
+{
+    if (rawTexName.empty())
+        return "";
+
+    // 拡張子分解
+    std::string basename = rawTexName;
+    std::string ext = "";
+    {
+        size_t dot = rawTexName.find_last_of('.');
+        if (dot != std::string::npos)
+        {
+            basename = rawTexName.substr(0, dot);
+            ext = rawTexName.substr(dot + 1);
+            for (auto& c : ext) c = (char)tolower(c);
+        }
+    }
+
+    // 探索候補
+    std::vector<std::string> candidates;
+
+    // 1. 元の名前そのまま
+    candidates.push_back("texture/" + rawTexName);
+
+    // 2. PSD → TGA → PNG に置換
+    if (ext != "psd")
+        candidates.push_back("texture/" + basename + ".psd");
+    if (ext != "tga")
+        candidates.push_back("texture/" + basename + ".tga");
+    if (ext != "png")
+        candidates.push_back("texture/" + basename + ".png");
+
+    // ---- ここで pkg の中に存在するかを調べる ----
+    for (auto& c : candidates)
+    {
+        int idx = AL_GetIndexFromPackage(nullptr, c.c_str());
+        if (idx >= 0)
+            return c; // 見つかった！
+    }
+
+    // ---- 見つからなかった場合 ----
+    // ログ用
+    AddMessage(("ResolveTextureCandidateFull: not found -> " + rawTexName).c_str());
+    return ""; // なし
 }
 
 bool AL_LoadFromPackageByIndex(const char* ext, int index) {
@@ -687,119 +1080,292 @@ bool AL_LoadFromPackageByIndex(const char* ext, int index) {
     return WriteTempAndCallLoader(e, *pkg);
 }
 
-static bool RegisterAndLoadFileToPackage(const std::string& filepath)
+bool RegisterAndLoadFileToPackage(const std::string& filepath)
 {
     if (filepath.empty()) return false;
+    fs::path fp(filepath);
+    if (!fs::exists(fp) || !fs::is_regular_file(fp)) return false;
 
-    //読込済みかを確認
+    // Try to see if already loaded by basename or full path
+    std::string basename = fp.filename().generic_string();
+    if (KeyMap_GetIndex(&TextureMap, filepath.c_str()) >= 0) return true;
+    if (KeyMap_GetIndex(&TextureMap, basename.c_str()) >= 0) return true;
 
-    if (AL_LoadFromPackageByName(filepath.c_str())) {
-        return true;
+    // Read file into memory
+    std::ifstream in(fp.string(), std::ios::binary | std::ios::ate);
+    if (!in.is_open()) return false;
+    std::streamsize sz = in.tellg();
+    in.seekg(0);
+    std::vector<uint8_t> buf;
+    if (sz > 0) { buf.resize((size_t)sz); in.read((char*)buf.data(), sz); }
+    in.close();
+
+    std::string ext = ToLowerExt(fp.extension().string());
+    if (!ext.empty() && ext[0] == '.') ext.erase(0, 1);
+
+    bool ok = false;
+    // Decide loader by extension
+    if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") {
+        // register with basename key and full path key (IN_LoadTexture_Memory will register basename alias if implemented)
+        ok = IN_LoadTexture_Memory(basename.c_str(), buf.data(), buf.size());
+        if (ok) {
+            // also register under full path key to be consistent with package-key lookups
+            KeyMap_Add(&TextureMap, filepath.c_str());
+            int idx = KeyMap_GetIndex(&TextureMap, filepath.c_str());
+            if (idx >= 0 && idx < (int)g_textureSRV.size()) {
+                // ensure SRV vector sized and copy pointer from basename index if necessary
+                int baseIdx = KeyMap_GetIndex(&TextureMap, basename.c_str());
+                if (baseIdx >= 0 && baseIdx < (int)g_textureSRV.size()) {
+                    if ((int)g_textureSRV.size() <= idx) g_textureSRV.resize(idx + 1, nullptr);
+                    g_textureSRV[idx] = g_textureSRV[baseIdx];
+                }
+            }
+        }
     }
-    if (!AL_RegisterAssetToBatch(filepath.c_str())) {
-        // registration failed (file not found or unreadable)
-        return false;
+    else if (ext == "tga") {
+        extern bool IN_LoadTGA_Memory(const char* name, const unsigned char* data, size_t size);
+        // If IN_LoadTGA_Memory implemented (we provided one earlier in file), call it with basename
+        ok = IN_LoadTGA_Memory(basename.c_str(), buf.data(), buf.size());
+        if (ok) {
+            KeyMap_Add(&TextureMap, filepath.c_str());
+            int idx = KeyMap_GetIndex(&TextureMap, filepath.c_str());
+            int baseIdx = KeyMap_GetIndex(&TextureMap, basename.c_str());
+            if (idx >= 0 && baseIdx >= 0 && baseIdx < (int)g_textureSRV.size()) {
+                if ((int)g_textureSRV.size() <= idx) g_textureSRV.resize(idx + 1, nullptr);
+                g_textureSRV[idx] = g_textureSRV[baseIdx];
+            }
+        }
     }
-    if (AL_LoadFromPackageByName(filepath.c_str())) {
-        return true;
+    else if (ext == "fbx") {
+        ok = IN_LoadFBX_Memory(basename.c_str(), buf.data(), buf.size());
+        if (ok) {
+            // register under full path too
+            KeyMap_Add(&ModelMap, filepath.c_str());
+        }
+    }
+    else if (ext == "obj") {
+        ok = IN_LoadModelObj_Memory(basename.c_str(), buf.data(), buf.size());
+        if (ok) KeyMap_Add(&ModelMap, filepath.c_str());
+    }
+    else if (ext == "wav") {
+        ok = IN_LoadWav_Memory(basename.c_str(), buf.data(), buf.size());
+        if (ok) KeyMap_Add(&WavMap, filepath.c_str());
+    }
+    else {
+        // unsupported extension for direct load
+        ok = false;
     }
 
-    return false;
+    // If loaded OK, also register to batch packages (so it appears in saved pkg if desired)
+    if (ok) {
+        AL_RegisterAssetToBatch(filepath.c_str());
+    }
+
+    return ok;
 }
-static ID3D11ShaderResourceView* TryResolveAndLoadTextureSRV(const std::string& rawTex, const std::string& modelPath)
+//static std::string ResolveMaterialTextureName(const std::string& rawTex, const std::string& modelPath)
+//{
+//    if (rawTex.empty()) return "";
+//
+//    // 候補生成（psd → png/tga/jpg）
+//    auto candidates = FindAlternativeTexture(rawTex);
+//
+//    fs::path mp(modelPath);
+//    std::string modelDir = mp.has_parent_path() ? mp.parent_path().string() : "";
+//
+//    for (auto& c : candidates)
+//    {
+//        // 1) すでに TextureMap に存在するか？
+//        int idx = KeyMap_GetIndex(&TextureMap, c.c_str());
+//        if (idx >= 0 && idx < (int)g_textureSRV.size() && g_textureSRV[idx])
+//            return c;
+//
+//        // 2) モデルディレクトリに actual file がある？
+//        if (!modelDir.empty())
+//        {
+//            fs::path local = fs::path(modelDir) / fs::path(c);
+//            if (fs::exists(local))
+//                return local.string();
+//        }
+//
+//        // 3) パッケージに入っている？
+//        if (AL_LoadFromPackageByName(c.c_str()))
+//            return c;
+//    }
+//
+//    // すべて失敗 → raw basename を返す
+//    return fs::path(rawTex).filename().string();
+//}
+static std::vector<std::string> FindAlternativeTexture(const std::string& rawName)
 {
+    std::vector<std::string> out;
+    fs::path p(rawName);
+
+    std::string stem = p.stem().string();
+    std::string ext = p.extension().string();
+    for (auto& c : ext) c = ::tolower(c);
+
+    // PSD → PNG/TGA/JPG に変換
+    static const char* altExts[] = { ".png", ".tga", ".jpg", ".jpeg" };
+
+    // 元のファイル名（raw）
+    out.push_back(rawName);
+
+    // basename
+    out.push_back(p.filename().string());
+
+    // 拡張子を差し替えた候補
+    for (auto& ae : altExts)
+    {
+        out.push_back(stem + ae);
+        out.push_back(p.filename().replace_extension(ae).string());
+    }
+
+    return out;
+}
+// ------------------------------
+// TryResolveAndLoadTextureSRV
+// - rawTex: material-provided path/name inside FBX (could be "Texture/Alicia_hair.psd" or "Alicia_hair.psd")
+// - modelPath: optional model source path used to search alongside model folder
+// Search order: png -> tga -> jpg -> jpeg -> psd -> dds -> raw
+// Returns SRV or nullptr. Also registers texture under resolved key name in TextureMap via IN_LoadTexture_Memory or RegisterAndLoadFileToPackage.
+// ------------------------------
+static ID3D11ShaderResourceView* TryResolveAndLoadTextureSRV(
+    const std::string& rawTex,
+    std::string& outResolvedKey,
+    const std::string& modelPath)
+{
+    outResolvedKey.clear();
     if (rawTex.empty()) return nullptr;
 
-    std::string s = rawTex;
-
+    // trim
     auto trim = [](std::string& str) {
         while (!str.empty() && isspace((unsigned char)str.front())) str.erase(str.begin());
         while (!str.empty() && isspace((unsigned char)str.back())) str.pop_back();
-        if (!str.empty() && (str.front() == '\"' || str.front() == '\'')) str.erase(str.begin());
-        if (!str.empty() && (str.back() == '\"' || str.back() == '\'')) str.pop_back();
+        if (!str.empty() && (str.front() == '"' || str.front() == '\'')) str.erase(str.begin());
+        if (!str.empty() && (str.back() == '"' || str.back() == '\'')) str.pop_back();
         };
+
+    std::string s = rawTex;
     trim(s);
     if (s.empty()) return nullptr;
 
     fs::path rawPath(s);
+    std::string dirPart = rawPath.has_parent_path() ? rawPath.parent_path().generic_string() : std::string();
+    std::string stem = rawPath.stem().string();
     std::string basename = rawPath.filename().string();
 
+    // candidate extensions (priority: png -> tga -> jpg -> jpeg -> psd -> dds)
+    std::vector<std::string> exts = { ".png", ".tga", ".jpg", ".jpeg", ".psd", ".dds" };
+
+    // build candidates in order:
+    // 1) as-is raw (maybe "Texture/Alicia_body.psd")
+    // 2) if dirPart exists: dir/stem.ext for exts
+    // 3) stem.ext (basename variants)
+    // 4) basename (original filename)
     std::vector<std::string> candidates;
+    candidates.push_back(s); // raw
 
-    // push raw as-is
-    candidates.push_back(s);
-
-    // push basename as-is if different
-    if (basename != s) candidates.push_back(basename);
-
-    // push preferred ext replacements (png,tga,jpg,dds)
-    std::string stem = rawPath.stem().string();
-    std::vector<std::string> exts = { ".png", ".tga", ".jpg", ".jpeg", ".dds" };
-    for (auto& e : exts) {
-        candidates.push_back(stem + e);
+    if (!dirPart.empty()) {
+        for (auto& e : exts) candidates.push_back((fs::path(dirPart) / (stem + e)).generic_string());
     }
+    for (auto& e : exts) candidates.push_back(stem + e);
+    candidates.push_back(basename);
 
-    // Also consider raw path with changed ext if raw has extension (e.g. .psd -> .png)
-    if (rawPath.has_extension()) {
-        std::string rawStem = rawPath.stem().string();
-        for (auto& e : exts) {
-            std::string p = rawStem + e;
-            // avoid duplicates
-            if (std::find(candidates.begin(), candidates.end(), p) == candidates.end())
-                candidates.push_back(p);
-        }
-    }
-
-    // Also attempt model directory + each candidate
+    // model directory (if modelPath given) will be checked separately for actual file existence
     std::string modelDir;
     if (!modelPath.empty()) {
         fs::path mp(modelPath);
-        if (mp.has_parent_path()) modelDir = mp.parent_path().string();
+        if (mp.has_parent_path()) modelDir = mp.parent_path().generic_string();
     }
 
-    // Search candidates:
-    for (auto& cand : candidates)
-    {
-        // 1) check if already loaded in TextureMap (global)
-        int tIdx = KeyMap_GetIndex(&TextureMap, cand.c_str());
+    // search candidates:
+    for (auto& cand : candidates) {
+        std::string candn = cand;
+        std::replace(candn.begin(), candn.end(), '\\', '/');
+
+        // 1) already loaded under this key?
+        int tIdx = KeyMap_GetIndex(&TextureMap, candn.c_str());
         if (tIdx >= 0 && tIdx < (int)g_textureSRV.size() && g_textureSRV[tIdx]) {
-            // found loaded SRV
+            outResolvedKey = candn;
             return g_textureSRV[tIdx];
         }
 
-        // 2) check model directory file existence and try to register & load it into package system
+        // 2) try to load from package by candidate key
+        if (AL_LoadFromPackageByName(candn.c_str())) {
+            int newIdx = KeyMap_GetIndex(&TextureMap, candn.c_str());
+            if (newIdx >= 0 && newIdx < (int)g_textureSRV.size() && g_textureSRV[newIdx]) {
+                outResolvedKey = candn;
+                return g_textureSRV[newIdx];
+            }
+            // sometimes loader registers under basename, attempt that
+            fs::path cp(candn);
+            std::string base = cp.filename().string();
+            int baseIdx = KeyMap_GetIndex(&TextureMap, base.c_str());
+            if (baseIdx >= 0 && baseIdx < (int)g_textureSRV.size() && g_textureSRV[baseIdx]) {
+                outResolvedKey = base;
+                return g_textureSRV[baseIdx];
+            }
+        }
+
+        // 3) try modelDir + basename file on disk and register+load it (runtime fallback)
         if (!modelDir.empty()) {
-            fs::path localPath = fs::path(modelDir) / fs::path(cand);
-            if (fs::exists(localPath)) {
-                std::string localStr = localPath.string();
-                // Register and load into package system (this will call IN_LoadTexture_Memory internally when appropriate)
+            fs::path local = fs::path(modelDir) / fs::path(cand).filename();
+            if (fs::exists(local)) {
+                std::string localStr = local.generic_string();
                 if (RegisterAndLoadFileToPackage(localStr)) {
-                    // after load, retrieve SRV
-                    ID3D11ShaderResourceView* srv = GetTextureSRV(localStr.c_str());
-                    if (srv) return srv;
-                    // Some code registers texture under basename; try basename
-                    ID3D11ShaderResourceView* srv2 = GetTextureSRV(cand.c_str());
-                    if (srv2) return srv2;
+                    // try retrieving: first by local full path, then by candidate, then basename
+                    int idxFull = KeyMap_GetIndex(&TextureMap, localStr.c_str());
+                    if (idxFull >= 0 && idxFull < (int)g_textureSRV.size() && g_textureSRV[idxFull]) {
+                        outResolvedKey = localStr;
+                        return g_textureSRV[idxFull];
+                    }
+                    int idxCand = KeyMap_GetIndex(&TextureMap, candn.c_str());
+                    if (idxCand >= 0 && idxCand < (int)g_textureSRV.size() && g_textureSRV[idxCand]) {
+                        outResolvedKey = candn;
+                        return g_textureSRV[idxCand];
+                    }
+                    std::string base = fs::path(localStr).filename().string();
+                    int idxBase = KeyMap_GetIndex(&TextureMap, base.c_str());
+                    if (idxBase >= 0 && idxBase < (int)g_textureSRV.size() && g_textureSRV[idxBase]) {
+                        outResolvedKey = base;
+                        return g_textureSRV[idxBase];
+                    }
                 }
             }
         }
 
-        // 3) try to load by candidate name directly from package (maybe already registered under basename)
-        if (AL_LoadFromPackageByName(cand.c_str())) {
-            ID3D11ShaderResourceView* srv = GetTextureSRV(cand.c_str());
-            if (srv) return srv;
+        // 4) finally try GetTextureSRV directly (in case previously loaded under some alias)
+        ID3D11ShaderResourceView* srv = GetTextureSRV(candn.c_str());
+        if (srv) {
+            outResolvedKey = candn;
+            return srv;
         }
-
-        // 4) direct GetTextureSRV for candidate (in case it was loaded earlier by other means)
-        ID3D11ShaderResourceView* srv = GetTextureSRV(cand.c_str());
-        if (srv) return srv;
     }
 
-    // nothing found
+    // last resort: try basename only (some loaders registered basename)
+    {
+        int bi = KeyMap_GetIndex(&TextureMap, basename.c_str());
+        if (bi >= 0 && bi < (int)g_textureSRV.size() && g_textureSRV[bi]) {
+            outResolvedKey = basename;
+            return g_textureSRV[bi];
+        }
+    }
+
+    // nothing found/loaded
     return nullptr;
 }
 
-//Get関数
+// 既存の呼び出し互換性のためのラッパー（古いコード向け）
+static ID3D11ShaderResourceView* TryResolveAndLoadTextureSRV(const std::string& rawTex, const std::string& modelPath)
+{
+    std::string key;
+    return TryResolveAndLoadTextureSRV(rawTex, key, modelPath);
+}
+
+// ------------------------------
+// Get functions for package index / entries
+// ------------------------------
 int AL_GetIndexFromPackage(const char* ext, const char* name) {
     if (!ext || !name) return -1;
     Package* pkg = FindPackageByExt(ToLowerExt(ext));
@@ -824,7 +1390,9 @@ const char* AL_GetPackageEntryName(const char* ext, int index) {
     return pkg->entries[index].name.c_str();
 }
 
-//モデル用Getter
+// ------------------------------
+// Model helpers
+// ------------------------------
 int AL_GetModelMeshCount(const char* modelName) {
     if (!modelName) return 0;
     int idx = KeyMap_GetIndex(&ModelMap, modelName);
@@ -863,4 +1431,348 @@ const char* AL_GetModelMeshTextureName(const char* modelName, int meshIdx) {
     if (idx < 0 || idx >= (int)g_modelSubmeshes.size()) return nullptr;
     if (meshIdx < 0 || meshIdx >= (int)g_modelSubmeshes[idx].size()) return nullptr;
     return g_modelSubmeshes[idx][meshIdx].diffuseTexName.empty() ? nullptr : g_modelSubmeshes[idx][meshIdx].diffuseTexName.c_str();
+}
+
+// ------------------------------
+// Build packages from asset folder (editor/encoder side).
+// - Scans assetRoot recursively, groups files by extension, stores relative keys like "texture/test.png"
+// - Writes saved/package/Asset<ext>.pkg per extension
+// ------------------------------
+bool AL_BuildPackagesFromAssetFolder(const char* assetRootC)
+{
+    if (!assetRootC) return false;
+    fs::path assetRoot(assetRootC);
+    if (!fs::exists(assetRoot) || !fs::is_directory(assetRoot)) {
+        AddMessage("AL_BuildPackagesFromAssetFolder: asset root not found");
+        return false;
+    }
+
+    std::map<std::string, Package> packages; // ext -> Package
+
+    for (auto& it : fs::recursive_directory_iterator(assetRoot)) {
+        try {
+            if (!it.exists() || !it.is_regular_file()) continue;
+        }
+        catch (...) { continue; }
+        fs::path fp = it.path();
+        std::string ext = fp.extension().string();
+        ext = sanitizeExt(ext);
+        if (ext.empty()) continue;
+
+        auto pit = packages.find(ext);
+        if (pit == packages.end()) {
+            Package np;
+            np.ext = ext;
+            KeyMap_Init(&np.keymap);
+            packages.emplace(ext, std::move(np));
+            pit = packages.find(ext);
+        }
+
+        PackageEntry e;
+        e.name = MakeRelativeKey(assetRoot, fp); // relative key e.g. "texture/test.png"
+        // Ensure key uses forward slashes
+        std::replace(e.name.begin(), e.name.end(), '\\', '/');
+
+        try {
+            std::ifstream in(fp.string(), std::ios::binary | std::ios::ate);
+            if (in.is_open()) {
+                std::streamsize sz = in.tellg();
+                in.seekg(0);
+                if (sz > 0) {
+                    e.size = (uint64_t)sz;
+                    e.data.resize((size_t)sz);
+                    in.read((char*)e.data.data(), sz);
+                }
+                else e.size = 0;
+                in.close();
+            }
+            else {
+                AddMessage(("AL_BuildPackages: failed to open file: " + fp.string()).c_str());
+            }
+        }
+        catch (...) {
+            AddMessage(("AL_BuildPackages: exception reading file: " + fp.string()).c_str());
+        }
+
+        Package& pkgref = pit->second;
+        KeyMap_Add(&pkgref.keymap, e.name.c_str());
+        pkgref.entries.push_back(std::move(e));
+    }
+
+    const std::string outDir = std::string("saved/package");
+    if (!EnsureDirectoryExists(outDir)) {
+        AddMessage("AL_BuildPackagesFromAssetFolder: failed to create saved/package directory");
+        return false;
+    }
+
+    // write packages and register indexes into g_packages (entries have offsets assigned in file)
+    {
+        std::lock_guard<std::mutex> lg(g_packageMutex);
+        g_packages.clear();
+        for (auto& kv : packages) {
+            std::string ext = kv.first;
+            Package& pkg = kv.second;
+            std::string outPath = outDir + "/Asset" + pkg.ext + ".pkg";
+            // write package file
+            std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
+            if (!out.is_open()) {
+                AddMessage(("AL_BuildPackagesFromAssetFolder: failed to write " + outPath).c_str());
+                continue;
+            }
+
+            const char magic[8] = "LIA_PKG";
+            uint32_t count = (uint32_t)pkg.entries.size();
+            uint64_t tableOffset = 0;
+            out.write(magic, 8);
+            out.write((char*)&count, sizeof(uint32_t));
+            tableOffset = 8 + 4 + 8;
+            out.write((char*)&tableOffset, sizeof(uint64_t));
+
+            std::streampos tablePos = out.tellp();
+            size_t tableSize = 0;
+            for (auto& e : pkg.entries) {
+                tableSize += sizeof(uint16_t) + e.name.size() + sizeof(uint64_t) * 2;
+            }
+            out.seekp(tablePos + (std::streamoff)tableSize);
+
+            for (auto& e : pkg.entries) {
+                std::streampos dataPos = out.tellp();
+                e.offset = (uint64_t)dataPos;
+                if (!e.data.empty()) out.write((char*)e.data.data(), e.data.size());
+            }
+
+            out.seekp(tablePos);
+            for (auto& e : pkg.entries) {
+                uint16_t len = (uint16_t)e.name.size();
+                out.write((char*)&len, sizeof(uint16_t));
+                out.write(e.name.data(), len);
+                out.write((char*)&e.offset, sizeof(uint64_t));
+                out.write((char*)&e.size, sizeof(uint64_t));
+            }
+            out.close();
+
+            // free entry data to save memory in builder (we are done writing)
+            for (auto& e : pkg.entries) e.data.clear();
+
+            // register index into g_packages
+            Package gp;
+            gp.ext = pkg.ext;
+            KeyMap_Init(&gp.keymap);
+            gp.entries = pkg.entries; // copies offsets + sizes
+            gp.pkgPath = outPath;
+            g_packages.push_back(std::move(gp));
+        }
+    }
+
+    AddMessage("AL_BuildPackagesFromAssetFolder: packages built to saved/package");
+    return true;
+}
+
+
+// ------------------------------
+// AL_LoadAllPackageIndexes - load indices from saved/package directory (no data loaded)
+// Note: header may define default arg; do not re-declare default here.
+// ------------------------------
+bool AL_LoadAllPackageIndexes(const char* savedPackageDir)
+{
+    if (!savedPackageDir) return false;
+    try {
+        fs::path dir(savedPackageDir);
+        if (!fs::exists(dir) || !fs::is_directory(dir)) return false;
+        for (auto& p : fs::directory_iterator(dir)) {
+            if (!p.is_regular_file()) continue;
+            fs::path fp = p.path();
+            if (fp.extension() == ".pkg") {
+                AL_LoadPackageIndex(fp.string().c_str(), fp.string().c_str()); // ext param duplicated but functions expects ext/pkgFilePath; we pass ext as filename's ext stripped
+                // Actually AL_LoadPackageIndex expects (ext, pkgFilePath) in original - to preserve API call semantics we call alternative:
+                // Instead call simple loader: parse ext from filename and call internal load
+                // To avoid confusion, call helper that reads index file (we already have AL_LoadPackageIndex expecting ext and pkgFilePath).
+                // Build ext from filename: Asset<ext>.pkg
+                // We'll implement correct call below after deducing ext.
+            }
+        }
+        // Because above loop used placeholder approach, do proper second pass:
+        for (auto& p : fs::directory_iterator(dir)) {
+            if (!p.is_regular_file()) continue;
+            fs::path fp = p.path();
+            if (fp.extension() != ".pkg") continue;
+            // determine ext from filename: Asset<ext>.pkg
+            std::string stem = fp.stem().string(); // Assetpng etc
+            std::string ext;
+            if (stem.rfind("Asset", 0) == 0) {
+                ext = stem.substr(5);
+            }
+            else {
+                ext = ToLowerExt(fp.extension().string());
+                if (!ext.empty() && ext[0] == '.') ext.erase(0, 1);
+            }
+            AL_LoadPackageIndex(ext.c_str(), fp.string().c_str());
+        }
+        return true;
+    }
+    catch (...) {
+        return false;
+    }
+}
+
+// ------------------------------
+// Utility: Load specific file (by name) from registered packages (on-demand)
+// ------------------------------
+//bool AL_LoadFromPackageByName(const char* name) {
+//    if (!name) return false;
+//    Package* pkg = nullptr;
+//    int idx = -1;
+//    if (!FindPackageEntryByName(name, pkg, idx)) {
+//        return false;
+//    }
+//    if (!pkg) return false;
+//    if (idx < 0 || idx >= (int)pkg->entries.size()) return false;
+//    PackageEntry& e = pkg->entries[idx];
+//    return WriteTempAndCallLoader(e, *pkg);
+//}
+
+// ------------------------------
+// RegisterAndLoadFileToPackage (runtime helper)
+// ------------------------------
+//static bool RegisterAndLoadFileToPackage(const std::string& filepath)
+//{
+//    if (filepath.empty()) return false;
+//    fs::path fp(filepath);
+//    if (!fs::exists(fp)) return false;
+//
+//    // determine ext
+//    std::string ext = ToLowerExt(fp.extension().string());
+//    if (!ext.empty() && ext[0] == '.') ext.erase(0, 1);
+//
+//    // compute key fallback (filename)
+//    std::string key = fp.filename().string();
+//
+//    try {
+//        std::ifstream in(fp.string(), std::ios::binary | std::ios::ate);
+//        if (!in.is_open()) return false;
+//        std::streamsize sz = in.tellg();
+//        in.seekg(0);
+//        std::vector<uint8_t> data;
+//        if (sz > 0) {
+//            data.resize((size_t)sz);
+//            in.read((char*)data.data(), sz);
+//        }
+//        in.close();
+//
+//        std::string keyForReg = key;
+//        if ((ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") && IN_LoadTexture_Memory) {
+//            return IN_LoadTexture_Memory(keyForReg.c_str(), data.data(), data.size());
+//        }
+//        else if (ext == "tga") {
+//            extern bool IN_LoadTGA_Memory(const char* name, const unsigned char* data, size_t size);
+//            return IN_LoadTGA_Memory(keyForReg.c_str(), data.data(), data.size());
+//        }
+//        else if (ext == "fbx") {
+//            return IN_LoadFBX_Memory(keyForReg.c_str(), data.data(), data.size());
+//        }
+//        else if (ext == "obj") {
+//            return IN_LoadModelObj_Memory(keyForReg.c_str(), data.data(), data.size());
+//        }
+//        else if (ext == "wav") {
+//            return IN_LoadWav_Memory(keyForReg.c_str(), data.data(), data.size());
+//        }
+//        return false;
+//    }
+//    catch (...) {
+//        return false;
+//    }
+//}
+
+// ------------------------------
+// Convenience: AL_BuildAndSaveAll
+// ------------------------------
+bool AL_BuildAndSaveAll(const char* assetRoot, const char* outDir)
+{
+    if (!assetRoot) return false;
+    bool ok = AL_BuildPackagesFromAssetFolder(assetRoot);
+    if (!ok) return false;
+    AL_LoadAllPackageIndexes(outDir ? outDir : "saved/package");
+    return true;
+}
+int AL_RegisterFolderRecursive(const char* folder)
+{
+    if (!folder) return -1;
+    try {
+        namespace fs = std::filesystem;
+        fs::path root(folder);
+        if (!fs::exists(root) || !fs::is_directory(root)) {
+            AddMessage(("AL_RegisterFolderRecursive: folder not found: " + std::string(folder)).c_str());
+            return -1;
+        }
+
+        int count = 0;
+        for (auto& entry : fs::recursive_directory_iterator(root)) {
+            try {
+                if (!entry.exists()) continue;
+                if (!entry.is_regular_file()) continue;
+
+                // 拡張子フィルタ（必要なら追加/削除してください）
+                std::string ext = entry.path().extension().string();
+                for (auto& c : ext) c = (char)tolower(c);
+                if (ext.empty()) continue;
+
+                // フルパスを AL_RegisterAssetToBatch に渡す
+                std::string full = entry.path().string();
+                if (AL_RegisterAssetToBatch(full.c_str())) count++;
+            }
+            catch (...) {
+                // 個別ファイルエラーは無視して続行
+            }
+        }
+        return count;
+    }
+    catch (...) {
+        AddMessage("AL_RegisterFolderRecursive: exception");
+        return -1;
+    }
+}
+void AL_LoadAllPackages(const char* folder)
+{
+    namespace fs = std::filesystem;
+
+    fs::path dir(folder);
+
+    if (!fs::exists(dir) || !fs::is_directory(dir))
+    {
+        printf("[AssetManager] Package folder not found: %s\n", folder);
+        return;
+    }
+
+    for (auto& entry : fs::directory_iterator(dir))
+    {
+        if (!entry.is_regular_file())
+            continue;
+
+        const fs::path& p = entry.path();
+        if (p.extension() != ".pkg")
+            continue;
+
+        // pkgファイル名例： Assetpng.pkg → ext = png
+        std::string filename = p.filename().string();
+        std::string ext;
+
+        // "Asset" の後の部分を取得
+        if (filename.rfind("Asset", 0) == 0)
+        {
+            ext = filename.substr(5); // "png.pkg" 等
+            size_t pos = ext.rfind(".pkg");
+            if (pos != std::string::npos)
+                ext = ext.substr(0, pos);
+        }
+        else
+        {
+            // fallback: ファイル名から拡張子取得
+            ext = p.stem().string();
+        }
+
+        printf("[AssetManager] Auto loading package [%s] from file: %s\n",
+            ext.c_str(), p.string().c_str());
+
+        AL_LoadPackageIndex(ext.c_str(), p.string().c_str());
+    }
 }
