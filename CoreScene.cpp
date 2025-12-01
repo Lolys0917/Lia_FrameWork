@@ -11,33 +11,60 @@
 
 void CoreStartUp()
 {
-    AL_Init(); // AssetLoad 初期化
-    // 読み込み予定のアセット登録
-    AL_RegisterAssetToBatch("asset/test.png");
-    AL_RegisterAssetToBatch("asset/est.png");
-    AL_RegisterAssetToBatch("asset/DiscUR_Reel1.png");
-    AL_RegisterAssetToBatch("asset/hamu.png");
-    AL_RegisterAssetToBatch("asset/boy_model4.fbx");
-    AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
+    //AL_Init(); // AssetLoad 初期化
+    //// 読み込み予定のアセット登録
+    //AL_RegisterAssetToBatch("asset/test.png");
+    //AL_RegisterAssetToBatch("asset/est.png");
+    //AL_RegisterAssetToBatch("asset/DiscUR_Reel1.png");
+    //AL_RegisterAssetToBatch("asset/hamu.png");
+    //AL_RegisterAssetToBatch("asset/boy_model4.fbx");
+    //AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
+
+    AL_Init();
+    int registered = AL_RegisterFolderRecursive("asset/");
+    char buf[128];
+    sprintf_s(buf, "Registered %d files from asset folder", registered);
+	MessageBoxA(nullptr, buf, "CoreStartUp", MB_OK);
+    AL_SaveAllPackages("saved/pkg/");
+
     //AL_RegisterAssetToBatch("asset/model/player.fbx");
     //AL_RegisterAssetToBatch("asset/model/ground.obj");
     
-    // pkgファイル化（ゲーム出力時のみ使用）
-    AL_SaveAllPackages("saved/pkg/");
+ 
+    AL_LoadAllPackages("saved/pkg/");
 
-    // 実行時は逆に pkg 読み込み（アセットをまだ展開しない）
-    AL_LoadPackageIndex("png", "saved/pkg/Assetpng.pkg");
+    //// 実行時は逆に pkg 読み込み（アセットをまだ展開しない）
+    /*AL_LoadPackageIndex("png", "saved/pkg/Assetpng.pkg");
     AL_LoadPackageIndex("fbx", "saved/pkg/Assetfbx.pkg");
-    AL_LoadPackageIndex("obj", "saved/pkg/Assetobj.pkg");
+    AL_LoadPackageIndex("obj", "saved/pkg/Assetobj.pkg");*/
 
-    // .pkgからインデックスで読み込み（DirectXリソース生成）
-    AL_LoadFromPackageByName("asset/test.png");
-    AL_LoadFromPackageByName("asset/est.png");
-    AL_LoadFromPackageByName("asset/DiscUR_Reel1.png");
-    AL_LoadFromPackageByName("asset/hamu.png");
-    AL_LoadFromPackageByName("asset/boy_model4.fbx");
+    //// .pkgからインデックスで読み込み（DirectXリソース生成）
+    AL_LoadFromPackageByName("test.png");
+    AL_LoadFromPackageByName("est.png");
+    AL_LoadFromPackageByName("DiscUR_Reel1.png");
+    AL_LoadFromPackageByName("hamu.png");
+    AL_LoadFromPackageByName("boy_model4.fbx");
     AL_LoadFromPackageByName("asset/Alicia_solid_Unity.FBX");
-    //AL_LoadFromPackageByName("asset/model/player.fbx");
+    AL_LoadFromPackageByName("asset/AFK_Snowman.fbx");
+    AL_LoadFromPackageByName("asset/AFK_SnowmanNmap.png");
+    AL_LoadFromPackageByName("asset/AFK_Snowman.png");
+    //"AFK_SnowmanNmap.png" "AFK_Snowman.png" 
+    
+    //AL_LoadFromPackageByName("player.fbx");
+   /* AL_LoadFromPackageByName("Alicia_body.psd");
+    AL_LoadFromPackageByName("Alicia_other.psd");
+    AL_LoadFromPackageByName("Alicia_hair.psd");
+    AL_LoadFromPackageByName("Alicia_eye.psd");
+    AL_LoadFromPackageByName("Alicia_face.psd");
+    AL_LoadFromPackageByName("Alicia_rod.psd");
+    AL_LoadFromPackageByName("Alicia_wear.psd");
+    AL_LoadFromPackageByName("Alicia_body.tga");
+    AL_LoadFromPackageByName("Alicia_other.tga");
+    AL_LoadFromPackageByName("Alicia_hair.tga");
+    AL_LoadFromPackageByName("Alicia_eye.tga");
+    AL_LoadFromPackageByName("Alicia_face.tga");
+    AL_LoadFromPackageByName("Alicia_rod.tga");
+    AL_LoadFromPackageByName("Alicia_wear.tga");*/
 
     // --- カメラ初期化 ---
     AddCamera("MainCamera");
@@ -45,7 +72,7 @@ void CoreStartUp()
     SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
 
     AddCamera("SubCamera");
-    SetCameraPos("SubCamera", 3.0f, 5.0f, -5.0f);
+    SetCameraPos("SubCamera", 4.0f, 5.0f, -10.0f);
     SetCameraLook("SubCamera", 0.0f, 0.0f, 0.0f);
 
     AddCamera("SideCamera");
@@ -116,8 +143,11 @@ void CoreStartUp()
     SetSpriteCylinderAngle("Cylinder03", 0, 1.57f, 0);
 
     AddModel("Model01", "asset/Alicia_solid_Unity.FBX");
-    SetModelPos("Model01", 4.0f, 0, 2);
-    SetModelSize("Model01", 0.02f, 0.02f, 0.02f);
+    //AddModel("Model01", "asset/AFK_Snowman.fbx");
+    SetModelPos("Model01", 4.2f, 0, -3);
+    SetModelSize("Model01", 0.03f, 0.03f, 0.03f);
+	SetModelAngle("Model01", -3.14f/2, 3.14f, 0);
+	//ModelTexture("Model01", "asset/AFK_Snowman.png");
 
 	SceneEndPoint();
 
@@ -145,12 +175,15 @@ void CoreStartUp()
 }
 void CoreSceneUpdate()
 {
+	static float rot = 0.0f;
+	rot += 0.0025f;
+    SetModelAngle("Model01", -3.14f / 2, 3.14f + rot, 0);
 
     static float pos = -3.0f;
 	pos += 0.01f;
     SetGridBoxPos("BoxC", pos, 0, 0);
 
-    SetCameraPos("SubCamera", 3, 5, -5);
+    SetCameraPos("SubCamera", 5, 6, -7);
 
     static float Reel = 0.0f;
     static float Reel1 = 0.0f;

@@ -29,6 +29,9 @@
 #include <d3dcompiler.h>
 #include <DirectXMathMatrix.inl>
 #include <wrl.h>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
 
 #pragma comment (lib, "d3dcompiler.lib")
 
@@ -209,11 +212,30 @@ struct ModelVertex
 struct ModelSubmeshInfo {
     std::vector<ModelVertex> verts;
     std::vector<unsigned int> idx;
+
     int materialIndex = -1;
-    std::string diffuseTexName; // filename (candidate)
     XMFLOAT4 materialDiffuse = { 1,1,1,1 };
+
+    // マテリアルに記載されていた diffuse テクスチャ名（psd/tga/png など）
+    std::string diffuseTexName;
+
+    // ★ 実際に読み込まれた DirectX テクスチャを保持する SRV
+    ID3D11ShaderResourceView* textureSRV = nullptr;
+};
+struct PackageEntry {
+    std::string name;         // key in package (relative path like "Texture/test.png" or "Texture/test.psd")
+    uint64_t offset = 0;
+    uint64_t size = 0;
+    std::vector<uint8_t> data; // runtime に取り出すまで空でも可
 };
 
+struct Package {
+    std::string ext; // 小文字拡張子 (no dot)
+    KeyMap keymap;
+    std::vector<PackageEntry> entries;
+    std::string pkgPath;      // path to .pkg file
+    std::ifstream pkgStream;  // lazy-opened for reading entry data
+};
 //-----------------------------------------
 // Vec4管理用データプール構造体
 struct ObjectDataPool {
@@ -431,6 +453,8 @@ void NotifyAddObject(IndexType type);
 const std::vector<ModelVertex>* GetModelVertices(const char* modelName);
 ID3D11ShaderResourceView* GetTextureSRV(const char* textureName);
 
+bool RegisterAndLoadFileToPackage(const std::string& filepath);
+
 bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t size);
 bool IN_LoadFBX_Memory(const char* name, const unsigned char* data, size_t size);
 bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t size);
@@ -453,9 +477,14 @@ const std::vector<ModelVertex>* AL_GetModelMeshVertices(const char* modelName, i
 const std::vector<unsigned int>* AL_GetModelMeshIndices(const char* modelName, int meshIdx);
 XMFLOAT4 AL_GetModelMeshMaterialDiffuse(const char* modelName, int meshIdx);
 const char* AL_GetModelMeshTextureName(const char* modelName, int meshIdx);
-static bool RegisterAndLoadFileToPackage(const std::string& filepath);
 static ID3D11ShaderResourceView* TryResolveAndLoadTextureSRV(const std::string& rawTex, const std::string& modelPath);
-
+int AL_RegisterFolderRecursive(const char* folder);
+void AL_LoadAllPackages(const char* folder);
+static bool TryLoadAlternativeImageExtensionsForEntry(const PackageEntry& e, Package& pkg);
+static ID3D11ShaderResourceView* TryResolveAndLoadTextureSRV(
+    const std::string& rawTex,
+    std::string& outResolvedKey,
+    const std::string& modelPath);
   ///////////////////
  // ShaderManager //
 ///////////////////
