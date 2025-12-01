@@ -21,10 +21,10 @@ void CoreStartUp()
     //AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
 
     AL_Init();
-    int registered = AL_RegisterFolderRecursive("asset/");
+    /*int registered = AL_RegisterFolderRecursive("asset/");
     char buf[128];
     sprintf_s(buf, "Registered %d files from asset folder", registered);
-	MessageBoxA(nullptr, buf, "CoreStartUp", MB_OK);
+	MessageBoxA(nullptr, buf, "CoreStartUp", MB_OK);*/
     AL_SaveAllPackages("saved/pkg/");
 
     //AL_RegisterAssetToBatch("asset/model/player.fbx");
@@ -45,7 +45,7 @@ void CoreStartUp()
     AL_LoadFromPackageByName("hamu.png");
     AL_LoadFromPackageByName("boy_model4.fbx");
     AL_LoadFromPackageByName("asset/Alicia_solid_Unity.FBX");
-    AL_LoadFromPackageByName("asset/AFK_Snowman.fbx");
+    //AL_LoadFromPackageByName("asset/AFK_Snowman.fbx");
     AL_LoadFromPackageByName("asset/AFK_SnowmanNmap.png");
     AL_LoadFromPackageByName("asset/AFK_Snowman.png");
     //"AFK_SnowmanNmap.png" "AFK_Snowman.png" 

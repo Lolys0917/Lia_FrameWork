@@ -75,6 +75,34 @@ static Package* FindPackageByExt(const std::string& ext) {
     return nullptr;
 }
 
+static void DebugPrintAssimpAnimations(const aiScene* scene)
+{
+    if (!scene) return;
+
+    if (scene->mNumAnimations == 0)
+    {
+        MessageBoxA(NULL, "FBX内にアニメーションはありません", "AnimationCheck", MB_OK);
+        return;
+    }
+
+    std::string msg = "アニメーション数: " + std::to_string(scene->mNumAnimations) + "\n\n";
+
+    for (unsigned int i = 0; i < scene->mNumAnimations; ++i)
+    {
+        const aiAnimation* anim = scene->mAnimations[i];
+        if (!anim) continue;
+
+        msg += "Animation[" + std::to_string(i) + "]\n";
+        msg += "  Name: " + std::string(anim->mName.C_Str()) + "\n";
+        msg += "  Duration: " + std::to_string(anim->mDuration) + "\n";
+        msg += "  TicksPerSecond: " + std::to_string(anim->mTicksPerSecond) + "\n";
+        msg += "  Channels: " + std::to_string(anim->mNumChannels) + "\n";
+        msg += "\n";
+    }
+
+    MessageBoxA(NULL, msg.c_str(), "AnimationCheck", MB_OK);
+}
+
 // find package+index by name among loaded packages
 static bool FindPackageEntryByName(const std::string& name, Package*& outPkg, int& outIndex) {
     std::lock_guard<std::mutex> lg(g_packageMutex);
@@ -357,6 +385,9 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
         ppFlags,
         isFBX ? "fbx" : "obj"
     );
+
+	//デバッグ: アニメーション情報を表示
+    DebugPrintAssimpAnimations(scene);
 
     if (!scene || !scene->HasMeshes()) {
         std::string err = importer.GetErrorString();
@@ -1247,39 +1278,7 @@ bool RegisterAndLoadFileToPackage(const std::string& filepath)
 
     return ok;
 }
-//static std::string ResolveMaterialTextureName(const std::string& rawTex, const std::string& modelPath)
-//{
-//    if (rawTex.empty()) return "";
-//
-//    // 候補生成（psd → png/tga/jpg）
-//    auto candidates = FindAlternativeTexture(rawTex);
-//
-//    fs::path mp(modelPath);
-//    std::string modelDir = mp.has_parent_path() ? mp.parent_path().string() : "";
-//
-//    for (auto& c : candidates)
-//    {
-//        // 1) すでに TextureMap に存在するか？
-//        int idx = KeyMap_GetIndex(&TextureMap, c.c_str());
-//        if (idx >= 0 && idx < (int)g_textureSRV.size() && g_textureSRV[idx])
-//            return c;
-//
-//        // 2) モデルディレクトリに actual file がある？
-//        if (!modelDir.empty())
-//        {
-//            fs::path local = fs::path(modelDir) / fs::path(c);
-//            if (fs::exists(local))
-//                return local.string();
-//        }
-//
-//        // 3) パッケージに入っている？
-//        if (AL_LoadFromPackageByName(c.c_str()))
-//            return c;
-//    }
-//
-//    // すべて失敗 → raw basename を返す
-//    return fs::path(rawTex).filename().string();
-//}
+
 static std::vector<std::string> FindAlternativeTexture(const std::string& rawName)
 {
     std::vector<std::string> out;
@@ -1666,74 +1665,6 @@ bool AL_LoadAllPackageIndexes(const char* savedPackageDir)
         return false;
     }
 }
-
-// ------------------------------
-// Utility: Load specific file (by name) from registered packages (on-demand)
-// ------------------------------
-//bool AL_LoadFromPackageByName(const char* name) {
-//    if (!name) return false;
-//    Package* pkg = nullptr;
-//    int idx = -1;
-//    if (!FindPackageEntryByName(name, pkg, idx)) {
-//        return false;
-//    }
-//    if (!pkg) return false;
-//    if (idx < 0 || idx >= (int)pkg->entries.size()) return false;
-//    PackageEntry& e = pkg->entries[idx];
-//    return WriteTempAndCallLoader(e, *pkg);
-//}
-
-// ------------------------------
-// RegisterAndLoadFileToPackage (runtime helper)
-// ------------------------------
-//static bool RegisterAndLoadFileToPackage(const std::string& filepath)
-//{
-//    if (filepath.empty()) return false;
-//    fs::path fp(filepath);
-//    if (!fs::exists(fp)) return false;
-//
-//    // determine ext
-//    std::string ext = ToLowerExt(fp.extension().string());
-//    if (!ext.empty() && ext[0] == '.') ext.erase(0, 1);
-//
-//    // compute key fallback (filename)
-//    std::string key = fp.filename().string();
-//
-//    try {
-//        std::ifstream in(fp.string(), std::ios::binary | std::ios::ate);
-//        if (!in.is_open()) return false;
-//        std::streamsize sz = in.tellg();
-//        in.seekg(0);
-//        std::vector<uint8_t> data;
-//        if (sz > 0) {
-//            data.resize((size_t)sz);
-//            in.read((char*)data.data(), sz);
-//        }
-//        in.close();
-//
-//        std::string keyForReg = key;
-//        if ((ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") && IN_LoadTexture_Memory) {
-//            return IN_LoadTexture_Memory(keyForReg.c_str(), data.data(), data.size());
-//        }
-//        else if (ext == "tga") {
-//            extern bool IN_LoadTGA_Memory(const char* name, const unsigned char* data, size_t size);
-//            return IN_LoadTGA_Memory(keyForReg.c_str(), data.data(), data.size());
-//        }
-//        else if (ext == "fbx") {
-//            return IN_LoadFBX_Memory(keyForReg.c_str(), data.data(), data.size());
-//        }
-//        else if (ext == "obj") {
-//            return IN_LoadModelObj_Memory(keyForReg.c_str(), data.data(), data.size());
-//        }
-//        else if (ext == "wav") {
-//            return IN_LoadWav_Memory(keyForReg.c_str(), data.data(), data.size());
-//        }
-//        return false;
-//    }
-//    catch (...) {
-//        return false;
-//    }
-//}
 
 // ------------------------------
 // Convenience: AL_BuildAndSaveAll

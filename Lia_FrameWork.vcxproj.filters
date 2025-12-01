@@ -28,9 +28,6 @@
     <Filter Include="ソース ファイル\Manager">
       <UniqueIdentifier>{22cbce6e-5121-4828-bd4d-60cda55cdce2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ソース ファイル\Manager\Loader">
-      <UniqueIdentifier>{4f7653b7-bfcf-4703-bd50-0c73e5551a4b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ソース ファイル\SystemSetUp">
       <UniqueIdentifier>{21c77c0b-0a62-4431-9298-7a09fd3d90f4}</UniqueIdentifier>
     </Filter>
@@ -72,9 +69,6 @@
     <ClCompile Include="ComponentSpriteCylinder.cpp">
       <Filter>ソース ファイル\Component</Filter>
     </ClCompile>
-    <ClCompile Include="AssetLoad.cpp">
-      <Filter>ソース ファイル\Manager\Loader</Filter>
-    </ClCompile>
     <ClCompile Include="ComponentSpriteBox.cpp">
       <Filter>ソース ファイル\Component</Filter>
     </ClCompile>
@@ -91,6 +85,9 @@
       <Filter>ソース ファイル\SystemSetUp</Filter>
     </ClCompile>
     <ClCompile Include="InputManager.cpp">
+      <Filter>ソース ファイル\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="MotionManager.cpp">
       <Filter>ソース ファイル\Manager</Filter>
     </ClCompile>
   </ItemGroup>
@@ -122,9 +119,6 @@
     <ClInclude Include="ComponentSpriteCylinder.h">
       <Filter>ソース ファイル\Component</Filter>
     </ClInclude>
-    <ClInclude Include="AssetLoad.h">
-      <Filter>ソース ファイル\Manager\Loader</Filter>
-    </ClInclude>
     <ClInclude Include="ComponentSpriteBox.h">
       <Filter>ソース ファイル\Component</Filter>
     </ClInclude>
@@ -136,9 +130,6 @@
     </ClInclude>
     <ClInclude Include="Main.h">
       <Filter>ソース ファイル\SystemSetUp</Filter>
-    </ClInclude>
-    <ClInclude Include="SystemAPI.h">
-      <Filter>ソース ファイル\Manager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
