@@ -1,10 +1,10 @@
-﻿#include "ComponentModel.h"
+﻿// ComponentModel.cpp
+#include "ComponentModel.h"
 #include "Manager.h"
 #include "AssetLoad.h"
 #include <fstream>
 #include <algorithm>
-#include <filesystem>
-namespace fs = std::filesystem;
+
 Model::~Model()
 {
     Release();
@@ -32,17 +32,20 @@ void Model::SetModelPath(const char* filename)
         return;
     }
 
+    // get submesh count from AssetManager
     int meshCount = AL_GetModelMeshCount(modelPath.c_str());
     if (meshCount <= 0)
     {
-        MessageBoxA(nullptr, ("Model not loaded or no meshes: " + modelPath).c_str(),
-            "Model::SetModelPath", MB_OK);
+        MessageBoxA(nullptr, ("Model not loaded or no meshes: " + modelPath).c_str(), "Model::SetModelPath", MB_OK);
         return;
     }
+
+    // clear existing submeshes
     Release();
     subMeshes.clear();
     subMeshes.resize(meshCount);
 
+    // create input layout / constant buffer / sampler (shared)
     ID3D11VertexShader* vs = GetVertexShader3D();
     ID3D11PixelShader* ps = GetPixelShader3D();
     ID3DBlob* vsBlob = GetCurrent3DVSBlob();
@@ -81,9 +84,13 @@ void Model::SetModelPath(const char* filename)
         return;
     }
 
+    // --- サンプラー生成 ---
     D3D11_SAMPLER_DESC sd{};
     sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sd.AddressU = sd.AddressV = sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    // <<< ここを WRAP から CLAMP に変更しました（繰り返しタイルを防止） >>>
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
     sd.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
     sd.MinLOD = 0;
     sd.MaxLOD = D3D11_FLOAT32_MAX;
@@ -95,38 +102,30 @@ void Model::SetModelPath(const char* filename)
 
     totalIndexCount = 0;
 
-    auto Normalize = [&](std::string& x) {
-        std::replace(x.begin(), x.end(), '\\', '/');
-        };
-
-    auto GetBasename = [&](const std::string& p) -> std::string {
-        size_t pos = p.find_last_of('/');
-        if (pos == std::string::npos) return p;
-        return p.substr(pos + 1);
-        };
-
-    auto GetDir = [&](const std::string& p) -> std::string {
-        size_t pos = p.find_last_of('/');
-        if (pos == std::string::npos) return "";
-        return p.substr(0, pos);
-        };
-
-    // ===== メインループ =====
+    // For each submesh, create vertex/index buffers and set material/texture info
     for (int mi = 0; mi < meshCount; ++mi)
     {
         const std::vector<ModelVertex>* vtx = AL_GetModelMeshVertices(modelPath.c_str(), mi);
         const std::vector<unsigned int>* idx = AL_GetModelMeshIndices(modelPath.c_str(), mi);
 
-        if (!vtx || vtx->empty() || !idx || idx->empty())
+        if (!vtx || vtx->empty() || !idx || idx->empty()) {
+            // skip empty
             continue;
+        }
 
+        // Copy vertices and indices into GPU buffers
         D3D11_BUFFER_DESC vbd{};
         vbd.Usage = D3D11_USAGE_DEFAULT;
         vbd.ByteWidth = (UINT)(sizeof(ModelVertex) * vtx->size());
         vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         D3D11_SUBRESOURCE_DATA vinit{};
         vinit.pSysMem = vtx->data();
+
         hr = GetDevice()->CreateBuffer(&vbd, &vinit, subMeshes[mi].vertexBuffer.GetAddressOf());
+        if (FAILED(hr)) {
+            MessageBoxA(nullptr, "CreateBuffer(vertex) failed", "Model::SetModelPath", MB_OK);
+            continue;
+        }
 
         D3D11_BUFFER_DESC ibd{};
         ibd.Usage = D3D11_USAGE_DEFAULT;
@@ -134,94 +133,48 @@ void Model::SetModelPath(const char* filename)
         ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
         D3D11_SUBRESOURCE_DATA iinit{};
         iinit.pSysMem = idx->data();
+
         hr = GetDevice()->CreateBuffer(&ibd, &iinit, subMeshes[mi].indexBuffer.GetAddressOf());
+        if (FAILED(hr)) {
+            MessageBoxA(nullptr, "CreateBuffer(index) failed", "Model::SetModelPath", MB_OK);
+            continue;
+        }
 
         subMeshes[mi].indexCount = (UINT)idx->size();
         totalIndexCount += subMeshes[mi].indexCount;
 
-        subMeshes[mi].materialDiffuse =
-            AL_GetModelMeshMaterialDiffuse(modelPath.c_str(), mi);
-
+        // get material diffuse color for this submesh (from AssetManager)
+        XMFLOAT4 matCol = AL_GetModelMeshMaterialDiffuse(modelPath.c_str(), mi);
+        subMeshes[mi].materialDiffuse = matCol;
         subMeshes[mi].hasMaterialColor = true;
 
-        const char* rawTex = AL_GetModelMeshTextureName(modelPath.c_str(), mi);
-
-        if (!rawTex || rawTex[0] == '\0') continue;
-
-        std::string tex = rawTex;
-        Normalize(tex);
-
-        std::vector<std::string> exts = { ".png", ".tga", ".jpg", ".jpeg", ".dds" };
-        std::vector<std::string> candidates;
-
-        // 元パス
-        candidates.push_back(tex);
-
-        std::string base = GetBasename(tex);
-        if (base != tex) candidates.push_back(base);
-
-        // stem 作成
-        std::string stem = base;
-        size_t d = stem.find_last_of('.');
-        if (d != std::string::npos) stem = stem.substr(0, d);
-
-        // ext 差し替え
-        for (auto& e : exts)
-            candidates.push_back(stem + e);
-
-        // モデルのフォルダ
-        std::string mdir = GetDir(modelPath);
-        if (!mdir.empty())
-        {
-            candidates.push_back(mdir + "/" + base);
-            for (auto& e : exts)
-                candidates.push_back(mdir + "/" + stem + e);
-        }
-
-        // ===== ロード試行 =====
-        ID3D11ShaderResourceView* loaded = nullptr;
-
-        for (auto& c : candidates)
-        {
-            if (loaded) break;
-
-            Normalize(c);
-
-            loaded = GetTextureSRV(c.c_str());
-            if (loaded) break;
-
-            if (AL_LoadFromPackageByName(c.c_str()))
-            {
-                loaded = GetTextureSRV(c.c_str());
-                if (loaded) break;
+        // try to get texture SRV via AssetManager
+        const char* texName = AL_GetModelMeshTextureName(modelPath.c_str(), mi);
+        if (texName && texName[0] != '\0') {
+            ID3D11ShaderResourceView* srv = GetTextureSRV(texName);
+            if (srv) {
+                subMeshes[mi].textureSRV = srv;
+                subMeshes[mi].hasTexture = true;
             }
-
-            // 実ファイル
-            {
-                std::ifstream test(c, std::ios::binary);
-                if (test.is_open())
-                {
-                    test.close();
-                    if (RegisterAndLoadFileToPackage(c))
-                    {
-                        loaded = GetTextureSRV(c.c_str());
-                        if (!loaded)
-                        {
-                            std::string cb = GetBasename(c);
-                            loaded = GetTextureSRV(cb.c_str());
-                        }
-                        if (loaded) break;
-                    }
+            else {
+                // attempt to load from package and re-query
+                AL_LoadFromPackageByName(texName);
+                ID3D11ShaderResourceView* srv2 = GetTextureSRV(texName);
+                if (srv2) {
+                    subMeshes[mi].textureSRV = srv2;
+                    subMeshes[mi].hasTexture = true;
                 }
             }
         }
 
-        if (loaded)
-        {
-            subMeshes[mi].textureSRV = loaded;
-            subMeshes[mi].hasTexture = true;
-        }
+        // debug log (optional)
+        // const char* textureName = AL_GetModelMeshTextureName(modelPath.c_str(), mi);
+        // std::string log = "SubMesh[" + std::to_string(mi) + "] Texture = " + (textureName ? textureName : "NULL");
     }
+
+    // Note:
+    // - AssetManager already attempted coordinate corrections / left-hand conversions when producing vertex data.
+    // - If you still need axis swaps for specific FBX files, adjust in AssetManager side (LoadModel_Assimp_FromMemory), not here.
 }
 
 void Model::Init()
@@ -281,10 +234,6 @@ void Model::Draw()
             finalColor.y *= sm.materialDiffuse.y;
             finalColor.z *= sm.materialDiffuse.z;
             finalColor.w *= sm.materialDiffuse.w;
-        }
-        else
-        {
-            // UserDiffuseのみ
         }
 
         // ===== CB 更新 =====

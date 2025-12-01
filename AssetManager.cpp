@@ -425,6 +425,9 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
             }
         }
 
+        //サブメッシュの名前表示デバッグ
+		MessageBoxA(NULL, mesh->mName.C_Str(), "Loaded Submesh", MB_OK);
+
         // push submesh
         g_modelSubmeshes[modelIndex].push_back(std::move(sm));
     }

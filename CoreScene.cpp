@@ -51,12 +51,20 @@ void CoreStartUp()
     //"AFK_SnowmanNmap.png" "AFK_Snowman.png" 
     
     //AL_LoadFromPackageByName("player.fbx");
-    AL_LoadFromPackageByName("Alicia_body.psd");
+   /* AL_LoadFromPackageByName("Alicia_body.psd");
     AL_LoadFromPackageByName("Alicia_other.psd");
     AL_LoadFromPackageByName("Alicia_hair.psd");
+    AL_LoadFromPackageByName("Alicia_eye.psd");
+    AL_LoadFromPackageByName("Alicia_face.psd");
+    AL_LoadFromPackageByName("Alicia_rod.psd");
+    AL_LoadFromPackageByName("Alicia_wear.psd");
     AL_LoadFromPackageByName("Alicia_body.tga");
     AL_LoadFromPackageByName("Alicia_other.tga");
     AL_LoadFromPackageByName("Alicia_hair.tga");
+    AL_LoadFromPackageByName("Alicia_eye.tga");
+    AL_LoadFromPackageByName("Alicia_face.tga");
+    AL_LoadFromPackageByName("Alicia_rod.tga");
+    AL_LoadFromPackageByName("Alicia_wear.tga");*/
 
     // --- ÉJÉÅÉâèâä˙âª ---
     AddCamera("MainCamera");
@@ -64,7 +72,7 @@ void CoreStartUp()
     SetCameraLook("MainCamera", 0.0f, 0.0f, 0.0f);
 
     AddCamera("SubCamera");
-    SetCameraPos("SubCamera", 3.0f, 5.0f, -5.0f);
+    SetCameraPos("SubCamera", 4.0f, 5.0f, -10.0f);
     SetCameraLook("SubCamera", 0.0f, 0.0f, 0.0f);
 
     AddCamera("SideCamera");
@@ -134,9 +142,11 @@ void CoreStartUp()
     SetSpriteCylinderPos("Cylinder03", 2.4f, 0, 0);
     SetSpriteCylinderAngle("Cylinder03", 0, 1.57f, 0);
 
-    AddModel("Model01", "asset/AFK_Snowman.fbx");
-    SetModelPos("Model01", 4.0f, 0, 2);
-    SetModelSize("Model01", 0.02f, 0.02f, 0.02f);
+    AddModel("Model01", "asset/Alicia_solid_Unity.FBX");
+    //AddModel("Model01", "asset/Alicia_solid_Unity.FBX");
+    SetModelPos("Model01", 4.2f, 0, -3);
+    SetModelSize("Model01", 0.03f, 0.03f, 0.03f);
+	SetModelAngle("Model01", -3.14f/2, 3.14f, 0);
 	//ModelTexture("Model01", "asset/AFK_Snowman.png");
 
 	SceneEndPoint();
@@ -170,7 +180,7 @@ void CoreSceneUpdate()
 	pos += 0.01f;
     SetGridBoxPos("BoxC", pos, 0, 0);
 
-    SetCameraPos("SubCamera", 3, 5, -5);
+    SetCameraPos("SubCamera", 5, 6, -7);
 
     static float Reel = 0.0f;
     static float Reel1 = 0.0f;
