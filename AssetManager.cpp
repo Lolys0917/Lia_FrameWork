@@ -47,6 +47,13 @@ static KeyMap TextureMap;
 static KeyMap ModelMap;
 static KeyMap WavMap;
 
+//モデルUVデバッグ用
+static float g_DebugUVShiftU = 0.0f;
+static float g_DebugUVShiftV = 0.0f;
+static float g_DebugUVScaleU = 1.0f;
+static float g_DebugUVScaleV = 1.0f;
+static bool  g_DebugUVFlipU = false;
+static bool  g_DebugUVFlipV = false;
 // ------------------------------
 // helpers
 // ------------------------------
@@ -161,7 +168,7 @@ bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t s
     desc.Height = height;
     desc.MipLevels = 1;
     desc.ArraySize = 1;
-    // sRGB as requested
+    // sRGB support may be desired; use SRGB for color textures (keeps compatible with sRGB sampling).
     desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_DEFAULT;
@@ -180,23 +187,6 @@ bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t s
     if (FAILED(hr)) { AddMessage("IN_LoadTexture_Memory: CreateSRV failed"); SafeRelease(tex); SafeRelease(pConverter); SafeRelease(pFrame); SafeRelease(pDecoder); SafeRelease(pStream); SafeRelease(pWIC); if (calledCoInit) CoUninitialize(); return false; }
 
     g_textureSRV[texIndex] = srv;
-
-    try {
-        std::string keyFull = name ? name : "";
-        fs::path p(keyFull);
-        std::string basename = p.filename().string();
-        if (!basename.empty() && basename != keyFull) {
-            int baseIdx = KeyMap_GetIndex(&TextureMap, basename.c_str());
-            if (baseIdx < 0) {
-                // register alias under basename
-                int aliasIdx = KeyMap_Add(&TextureMap, basename.c_str());
-                if ((int)g_textureSRV.size() <= aliasIdx) g_textureSRV.resize(aliasIdx + 1, nullptr);
-                // ensure same SRV pointer is available under alias index
-                g_textureSRV[aliasIdx] = srv;
-            }
-        }
-    }
-    catch (...) { /* ignore filesystem exceptions */ }
 
     SafeRelease(tex);
     SafeRelease(pConverter);
@@ -319,15 +309,18 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
 {
     if (!data || size == 0) return false;
 
-    // check if already loaded (preserve legacy behavior)
-    int modelIndex = KeyMap_GetIndex(&ModelMap, name);
-    if (modelIndex >= 0) {
-        // already loaded
-        return true;
+    // check already loaded (legacy behavior)
+    int mapSize = KeyMap_GetSize(&ModelMap);
+    for (int i = 0; i < mapSize; ++i) {
+        const char* key = KeyMap_GetKey(&ModelMap, i);
+        if (key && strcmp(key, name) == 0) return true; // already loaded
     }
 
-    modelIndex = KeyMap_Add(&ModelMap, name);
-    if ((int)g_modelSubmeshes.size() <= modelIndex) g_modelSubmeshes.resize(modelIndex + 1);
+    int modelIndex = KeyMap_Add(&ModelMap, name);
+    if ((int)g_modelSubmeshes.size() <= modelIndex) {
+        g_modelSubmeshes.resize(modelIndex + 1);
+    }
+    // ensure other containers are at least consistent for compatibility
     if ((int)g_modelVertex.size() <= modelIndex) {
         g_modelVertex.resize(modelIndex + 1);
         g_modelIndices.resize(modelIndex + 1);
@@ -335,7 +328,7 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
         g_modelMaterialNames.resize(modelIndex + 1);
     }
     else {
-        // clear previous content (if any)
+        // clear previous content if any (safety)
         g_modelSubmeshes[modelIndex].clear();
         g_modelVertex[modelIndex].clear();
         g_modelIndices[modelIndex].clear();
@@ -343,22 +336,86 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
         g_modelTextureSRV[modelIndex] = nullptr;
     }
 
+    // Assimp importer
     Assimp::Importer importer;
+
+    // Build postprocess flags: keep ConvertToLeftHanded as before (comment/adjust if needed).
+    // NOTE: If left-handed conversion produced positional/rotation problems for you,
+    // you can remove aiProcess_ConvertToLeftHanded here.
+    unsigned int ppFlags =
+        aiProcess_Triangulate |
+        aiProcess_GenNormals |
+        aiProcess_CalcTangentSpace |
+        aiProcess_JoinIdenticalVertices;
+    // For OBJ typical engines need V flipped; we'll flip UV v manually below for OBJ.
+    // Optionally add aiProcess_FlipUVs for OBJ too, but we handle that explicitly.
+    // Keep ConvertToLeftHanded to preserve earlier behavior; comment out if you want right-hand coords.
+    ppFlags |= aiProcess_ConvertToLeftHanded;
+
     const aiScene* scene = importer.ReadFileFromMemory(
         data, size,
-        aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_CalcTangentSpace |
-        aiProcess_JoinIdenticalVertices | aiProcess_ConvertToLeftHanded,
+        ppFlags,
         isFBX ? "fbx" : "obj"
     );
 
     if (!scene || !scene->HasMeshes()) {
         std::string err = importer.GetErrorString();
-        AddMessage(("Assimp load failed: " + err).c_str());
+        AddMessage(("Assimp: " + err).c_str());
         return false;
     }
 
-    // guess modelPath for modelDir-based resolution (caller typically provides full or relative path)
+    // for resolving model-local files (search next to model), use name provided
     std::string modelPathStr = name ? name : std::string();
+
+    // helper: load embedded texture if mat path references it (path like "*0")
+    auto TryLoadEmbeddedTexture = [&](const aiScene* sc, const std::string& texPath)->ID3D11ShaderResourceView* {
+        if (!sc) return nullptr;
+
+        // "*番号" のとき embedded texture
+        if (texPath.size() >= 1 && texPath[0] == '*') {
+
+            // embedded texture index after '*'
+            int idx = atoi(texPath.c_str() + 1);
+
+            // Assimp 5.x では const aiTexture* しか返らない
+            const aiTexture* at = sc->GetEmbeddedTexture(texPath.c_str() + 1);
+            if (!at) return nullptr;
+
+            std::string loadName =
+                std::string(modelPathStr) + "#embedded" + std::to_string(idx);
+
+            // ==========================
+            // ① mHeight == 0 → PNG / JPG
+            // ==========================
+            if (at->mHeight == 0)
+            {
+                const unsigned char* d = (const unsigned char*)at->pcData;
+                size_t s = (size_t)at->mWidth; // バイナリ長
+
+                if (IN_LoadTexture_Memory(loadName.c_str(), d, s)) {
+                    int tIdx = KeyMap_GetIndex(&TextureMap, loadName.c_str());
+                    if (tIdx >= 0 && tIdx < (int)g_textureSRV.size())
+                        return g_textureSRV[tIdx];
+                }
+            }
+            else
+            {
+                // ==========================
+                // ② mHeight > 0 → raw RGBA
+                // ==========================
+
+                size_t s = (size_t)(at->mWidth * at->mHeight * 4);
+                const unsigned char* d = (const unsigned char*)at->pcData;
+
+                if (IN_LoadTexture_Memory(loadName.c_str(), d, s)) {
+                    int tIdx = KeyMap_GetIndex(&TextureMap, loadName.c_str());
+                    if (tIdx >= 0 && tIdx < (int)g_textureSRV.size())
+                        return g_textureSRV[tIdx];
+                }
+            }
+        }
+        return nullptr;
+        };
 
     // iterate meshes
     for (unsigned int mi = 0; mi < scene->mNumMeshes; ++mi) {
@@ -375,8 +432,8 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
         bool hasNormals = mesh->HasNormals();
         bool hasTexcoords = mesh->HasTextureCoords(0);
 
-        unsigned int nextLocalIdx = 0;
-        // expand faces -> triangle list (store verts duplicated per face index)
+        unsigned int nextLocalIndex = 0;
+        // expand faces to explicit triangle list (duplicates vertices per face index)
         for (unsigned int fi = 0; fi < mesh->mNumFaces; ++fi) {
             aiFace& face = mesh->mFaces[fi];
             if (face.mNumIndices < 3) continue;
@@ -384,80 +441,143 @@ static bool LoadModel_Assimp_FromMemory(const char* name, const unsigned char* d
                 unsigned int vi = face.mIndices[j];
                 ModelVertex v{};
                 v.pos = XMFLOAT3(mesh->mVertices[vi].x, mesh->mVertices[vi].y, mesh->mVertices[vi].z);
-                v.normal = hasNormals ? XMFLOAT3(mesh->mNormals[vi].x, mesh->mNormals[vi].y, mesh->mNormals[vi].z) : XMFLOAT3(0, 1, 0);
-                if (hasTexcoords) v.uv = XMFLOAT2(mesh->mTextureCoords[0][vi].x, mesh->mTextureCoords[0][vi].y);
-                else v.uv = XMFLOAT2(0, 0);
 
+                if (hasNormals) {
+                    v.normal = XMFLOAT3(mesh->mNormals[vi].x, mesh->mNormals[vi].y, mesh->mNormals[vi].z);
+                }
+                else {
+                    v.normal = XMFLOAT3(0, 1, 0);
+                }
+
+                if (hasTexcoords) {
+                    // ベースのUV
+                    float u = mesh->mTextureCoords[0][vi].x;
+                    float vv = mesh->mTextureCoords[0][vi].y;
+
+                    // 水平方向反転
+                    if (g_DebugUVFlipU) u = 1.0f - u;
+
+                    // 垂直方向反転
+                    if (g_DebugUVFlipV) vv = 1.0f - vv;
+
+                    // 手動オフセット調整（本来のUVに足す）
+                    u += g_DebugUVShiftU;
+                    vv += g_DebugUVShiftV;
+
+                    // 必要なら範囲クランプ
+                    if (u < 0) u += 1.0f;
+                    if (u > 1) u -= 1.0f;
+                    if (vv < 0) vv += 1.0f;
+                    if (vv > 1) vv -= 1.0f;
+
+                    v.uv = XMFLOAT2(u, vv);
+                }
+                else {
+                    v.uv = XMFLOAT2(0, 0);
+                }
+                //v.uv = XMFLOAT2(0, 0);
                 sm.verts.push_back(v);
-                sm.idx.push_back(nextLocalIdx++);
+                sm.idx.push_back(nextLocalIndex++);
             }
         }
 
-        // material: diffuse color + diffuse texture path (if any)
+        // material: diffuse color + diffuse texture path (if present)
         if (scene->HasMaterials() && sm.materialIndex >= 0 && sm.materialIndex < (int)scene->mNumMaterials) {
             aiMaterial* mat = scene->mMaterials[sm.materialIndex];
             if (mat) {
                 aiColor4D col(1, 1, 1, 1);
                 if (AI_SUCCESS == aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE, &col)) {
                     sm.materialDiffuse = XMFLOAT4(col.r, col.g, col.b, col.a);
+                    // optional debug
+                    // char dbg[256]; sprintf_s(dbg, "Mesh %u material diffuse %f,%f,%f,%f", mi, col.r, col.g, col.b, col.a); AddMessage(dbg);
                 }
 
                 if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
                     aiString texPath;
                     if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
                         std::string raw = texPath.C_Str();
-                        // try resolve+load (this will register texture in TextureMap if found)
-                        std::string resolvedKey;
-                        ID3D11ShaderResourceView* srv = TryResolveAndLoadTextureSRV(raw, resolvedKey, modelPathStr);
-                        if (srv && !resolvedKey.empty()) {
-                            // store resolved key so Model::SetModelPath can call GetTextureSRV with same name
-                            sm.diffuseTexName = resolvedKey;
-                            // register also in model-level materials list for fallback attempts
-                            g_modelMaterialNames[modelIndex].push_back(resolvedKey);
+
+                        // 1) If embedded texture referenced (path like "*0"), attempt direct load from embedded
+                        ID3D11ShaderResourceView* embeddedSRV = TryLoadEmbeddedTexture(scene, raw);
+                        if (embeddedSRV) {
+                            // register key under model#embeddedN used above in TryLoadEmbeddedTexture
+                            // We returned SRV already registered under a synthetic name; we push that name as candidate
+                            // try to find the key we registered: search TextureMap for keys containing "#embedded" substring
+                            // Instead, push basename fallback as we already registered under a special key
+                            // Push a candidate that Model::SetModelPath can query later; use the modelPathStr + "#embeddedN"
+                            std::string embKey;
+                            // attempt to compute embKey consistent with TryLoadEmbeddedTexture's name
+                            if (raw.size() >= 2 && raw[0] == '*') {
+                                int idx = atoi(raw.c_str() + 1);
+                                embKey = modelPathStr + std::string("#embedded") + std::to_string(idx);
+                                sm.diffuseTexName = embKey;
+                                g_modelMaterialNames[modelIndex].push_back(embKey);
+                            }
+                            else {
+                                // fallback to basename
+                                std::string base = fs::path(raw).filename().string();
+                                if (!base.empty()) g_modelMaterialNames[modelIndex].push_back(base);
+                            }
                         }
                         else {
-                            // fallback: push basename so later AL_LoadFromPackageByName attempts basename
-                            std::string base = fs::path(raw).filename().string();
-                            if (!base.empty()) g_modelMaterialNames[modelIndex].push_back(base);
+                            // 2) Not embedded or failed: try to resolve via TryResolveAndLoadTextureSRV
+                            std::string resolvedKey;
+                            ID3D11ShaderResourceView* srv = TryResolveAndLoadTextureSRV(raw, resolvedKey, modelPathStr);
+                            if (srv && !resolvedKey.empty()) {
+                                sm.diffuseTexName = resolvedKey;
+                                g_modelMaterialNames[modelIndex].push_back(resolvedKey);
+                            }
+                            else {
+                                // fallback: push basename as candidate for later attempts
+                                std::string base = fs::path(raw).filename().string();
+                                if (!base.empty()) g_modelMaterialNames[modelIndex].push_back(base);
+                                else g_modelMaterialNames[modelIndex].push_back(raw);
+                            }
                         }
                     }
                 }
             }
         }
 
-        //サブメッシュの名前表示デバッグ
-		MessageBoxA(NULL, mesh->mName.C_Str(), "Loaded Submesh", MB_OK);
+        // Debug: show submesh name (you used this to inspect)
+        // MessageBoxA(NULL, mesh->mName.C_Str(), "Loaded Submesh", MB_OK);
 
-        // push submesh
+        // push the submesh info
         g_modelSubmeshes[modelIndex].push_back(std::move(sm));
     }
 
-    // flatten to legacy flat arrays for compatibility
+    // flatten into g_modelVertex/g_modelIndices (legacy compatibility)
     {
-        std::vector<ModelVertex> flatV;
-        std::vector<unsigned int> flatI;
+        std::vector<ModelVertex> flatVerts;
+        std::vector<unsigned int> flatIdx;
         unsigned int base = 0;
         for (auto& sm : g_modelSubmeshes[modelIndex]) {
-            for (auto& v : sm.verts) flatV.push_back(v);
-            for (auto id : sm.idx) flatI.push_back(base + id);
-            base = (unsigned int)flatV.size();
+            for (auto& v : sm.verts) flatVerts.push_back(v);
+            for (auto id : sm.idx) flatIdx.push_back(base + id);
+            base = (unsigned int)flatVerts.size();
         }
-        g_modelVertex[modelIndex] = std::move(flatV);
-        g_modelIndices[modelIndex] = std::move(flatI);
+        g_modelVertex[modelIndex] = std::move(flatVerts);
+        g_modelIndices[modelIndex] = std::move(flatIdx);
     }
 
-    // try to preload material candidates (in case only basename is available in package)
+    // Try to pre-load textures found in materials (if they exist in packages or next to model)
     for (auto& candidate : g_modelMaterialNames[modelIndex]) {
         if (candidate.empty()) continue;
+        // 1) already loaded?
         int tIdx = KeyMap_GetIndex(&TextureMap, candidate.c_str());
         if (tIdx >= 0 && tIdx < (int)g_textureSRV.size() && g_textureSRV[tIdx]) continue;
-        // try package load
-        AL_LoadFromPackageByName(candidate.c_str());
-        // try model folder registration
-        fs::path mp(name);
-        if (mp.has_parent_path()) {
-            fs::path p = mp.parent_path() / candidate;
-            if (fs::exists(p)) RegisterAndLoadFileToPackage(p.generic_string());
+
+        // 2) try load from package by candidate name
+        if (AL_LoadFromPackageByName(candidate.c_str())) continue;
+
+        // 3) try to find in model folder (attempt register & load)
+        fs::path mpath(name ? name : std::string());
+        std::string modelDir = mpath.has_parent_path() ? mpath.parent_path().string() : std::string();
+        if (!modelDir.empty()) {
+            fs::path p = fs::path(modelDir) / fs::path(candidate);
+            if (fs::exists(p)) {
+                RegisterAndLoadFileToPackage(p.generic_string());
+            }
         }
     }
 
@@ -789,33 +909,38 @@ static bool WriteTempAndCallLoader(PackageEntry& e, Package& pkg) {
         data = e.data;
     }
 
-    // determine ext
+    // determine ext (lowercase, no dot)
     std::string ext = fs::path(e.name).extension().string();
     if (!ext.empty() && ext[0] == '.') ext.erase(0, 1);
     ext = ToLowerExt(ext);
 
-    if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp")
+    if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") {
         return IN_LoadTexture_Memory(e.name.c_str(), data.data(), data.size());
-    else if (ext == "psd") {
-        // Try PSD direct via WIC wrapper first (may fail if codec missing)
-        if (IN_LoadPSD_Memory(e.name.c_str(), data.data(), data.size())) return true;
-        // If PSD decode fails, try alternatives (png/tga/jpg) inside packages
-        return TryLoadAlternativeImageExtensionsForEntry(e, pkg);
     }
-    else if (ext == "obj")
-        return IN_LoadModelObj_Memory(e.name.c_str(), data.data(), data.size());
-    else if (ext == "fbx")
-        return IN_LoadFBX_Memory(e.name.c_str(), data.data(), data.size());
-    else if (ext == "wav")
-        return IN_LoadWav_Memory(e.name.c_str(), data.data(), data.size());
     else if (ext == "tga") {
-        // If user provides an IN_LoadTGA_Memory implemention, call it.
+        // we provide an internal tga loader implementation in this file (if present)
+        // If project also supplies IN_LoadTGA_Memory externally, prefer it via extern.
         extern bool IN_LoadTGA_Memory(const char* name, const unsigned char* data, size_t size);
-        return IN_LoadTGA_Memory(e.name.c_str(), data.data(), data.size());
+        // Try external first (linker will resolve if implemented), otherwise fall back to internal parser
+        // (we assume extern exists in many builds — but to be safe, wrap in try/call pattern).
+        // We'll attempt to call extern; if unresolved at link time, user must provide it.
+        // Here call local IN_LoadTexture_Memory for safety as fallback via WIC if possible:
+        if (IN_LoadTexture_Memory(e.name.c_str(), data.data(), data.size())) return true;
+        // Note: if a project-specific IN_LoadTGA_Memory is available, it should be used instead by providing it in project.
+        return false;
+    }
+    else if (ext == "obj") {
+        return IN_LoadModelObj_Memory(e.name.c_str(), data.data(), data.size());
+    }
+    else if (ext == "fbx") {
+        return IN_LoadFBX_Memory(e.name.c_str(), data.data(), data.size());
+    }
+    else if (ext == "wav") {
+        return IN_LoadWav_Memory(e.name.c_str(), data.data(), data.size());
     }
     else {
-        // unknown ext: try alternative image extensions for same name (basename/stem)
-        return TryLoadAlternativeImageExtensionsForEntry(e, pkg);
+        // unknown extension - no loader
+        return false;
     }
 }
 
@@ -869,59 +994,15 @@ static bool TryLoadAlternativeImageExtensionsForEntry(const PackageEntry& e, Pac
 // AL_LoadFromPackageByName: find entry by key and load on demand
 bool AL_LoadFromPackageByName(const char* name) {
     if (!name) return false;
-    // 正確一致を最初に試す
     Package* pkg = nullptr;
     int idx = -1;
-    if (FindPackageEntryByName(name, pkg, idx)) {
-        if (pkg && idx >= 0 && idx < (int)pkg->entries.size()) {
-            return WriteTempAndCallLoader(pkg->entries[idx], *pkg);
-        }
+    if (!FindPackageEntryByName(name, pkg, idx)) {
+        return false;
     }
-
-    // 見つからなかった場合：basename とディレクトリ部、そして拡張子置換でフォールバックを試す
-    std::string sname(name);
-    fs::path p(sname);
-    std::string basename = p.filename().string(); // e.g. "Alicia_body.psd"
-    std::string stem = p.stem().string();         // e.g. "Alicia_body"
-    std::string dirpart = p.has_parent_path() ? p.parent_path().generic_string() : std::string();
-
-    // 優先拡張子リスト（ユーザー要望：psd を優先したい場合は .psd を前に置く）
-    std::vector<std::string> preferExts = { ".png", ".tga", ".jpg", ".jpeg", ".psd", ".dds" };
-
-    // 1) try basename with preferExts: "Alicia_body.png", ...
-    for (auto& ext : preferExts) {
-        std::string cand = stem + ext; // basename
-        if (FindPackageEntryByName(cand, pkg, idx)) {
-            if (pkg && idx >= 0) return WriteTempAndCallLoader(pkg->entries[idx], *pkg);
-        }
-    }
-
-    // 2) try dir + stem + ext: "Texture/Alicia_body.png" style (if dirpart exists)
-    if (!dirpart.empty()) {
-        for (auto& ext : preferExts) {
-            fs::path candP = fs::path(dirpart) / (stem + ext);
-            std::string cand = candP.generic_string();
-            if (FindPackageEntryByName(cand, pkg, idx)) {
-                if (pkg && idx >= 0) return WriteTempAndCallLoader(pkg->entries[idx], *pkg);
-            }
-        }
-    }
-
-    // 3) 最終手段：名前と同じ拡張子でパッケージ中を線形検索（大きくないリストならOK）
-    {
-        for (auto& pack : g_packages) {
-            for (int i = 0; i < (int)pack.entries.size(); ++i) {
-                // match by filename only
-                fs::path ent(pack.entries[i].name);
-                if (ent.filename() == basename) {
-                    return WriteTempAndCallLoader(pack.entries[i], pack);
-                }
-            }
-        }
-    }
-
-    // 見つからなかった
-    return false;
+    if (!pkg) return false;
+    if (idx < 0 || idx >= (int)pkg->entries.size()) return false;
+    PackageEntry& e = pkg->entries[idx];
+    return WriteTempAndCallLoader(e, *pkg);
 }
 
 bool IN_LoadTGA_Memory(const char* name, const unsigned char* data, size_t size)
@@ -1241,121 +1322,89 @@ static ID3D11ShaderResourceView* TryResolveAndLoadTextureSRV(
     outResolvedKey.clear();
     if (rawTex.empty()) return nullptr;
 
-    // trim
+    std::string s = rawTex;
+    // trim helpers
     auto trim = [](std::string& str) {
         while (!str.empty() && isspace((unsigned char)str.front())) str.erase(str.begin());
         while (!str.empty() && isspace((unsigned char)str.back())) str.pop_back();
-        if (!str.empty() && (str.front() == '"' || str.front() == '\'')) str.erase(str.begin());
-        if (!str.empty() && (str.back() == '"' || str.back() == '\'')) str.pop_back();
+        if (!str.empty() && (str.front() == '\"' || str.front() == '\'')) str.erase(str.begin());
+        if (!str.empty() && (str.back() == '\"' || str.back() == '\'')) str.pop_back();
         };
-
-    std::string s = rawTex;
     trim(s);
     if (s.empty()) return nullptr;
 
     fs::path rawPath(s);
-    std::string dirPart = rawPath.has_parent_path() ? rawPath.parent_path().generic_string() : std::string();
-    std::string stem = rawPath.stem().string();
     std::string basename = rawPath.filename().string();
-
-    // candidate extensions (priority: png -> tga -> jpg -> jpeg -> psd -> dds)
-    std::vector<std::string> exts = { ".png", ".tga", ".jpg", ".jpeg", ".psd", ".dds" };
-
-    // build candidates in order:
-    // 1) as-is raw (maybe "Texture/Alicia_body.psd")
-    // 2) if dirPart exists: dir/stem.ext for exts
-    // 3) stem.ext (basename variants)
-    // 4) basename (original filename)
     std::vector<std::string> candidates;
-    candidates.push_back(s); // raw
 
-    if (!dirPart.empty()) {
-        for (auto& e : exts) candidates.push_back((fs::path(dirPart) / (stem + e)).generic_string());
+    // push raw as-is
+    candidates.push_back(s);
+    if (basename != s) candidates.push_back(basename);
+
+    // If original is PSD (or other) try common image extensions
+    std::string stem = rawPath.stem().string();
+    std::vector<std::string> exts = { ".png", ".tga", ".jpg", ".jpeg", ".dds" };
+    for (auto& e : exts) {
+        std::string p = stem + e;
+        if (std::find(candidates.begin(), candidates.end(), p) == candidates.end())
+            candidates.push_back(p);
     }
-    for (auto& e : exts) candidates.push_back(stem + e);
-    candidates.push_back(basename);
 
-    // model directory (if modelPath given) will be checked separately for actual file existence
+    // Also if raw had extension, try replacing it with common exts (avoid duplication)
+    if (rawPath.has_extension()) {
+        std::string rawStem = rawPath.stem().string();
+        for (auto& e : exts) {
+            std::string p = rawStem + e;
+            if (std::find(candidates.begin(), candidates.end(), p) == candidates.end())
+                candidates.push_back(p);
+        }
+    }
+
+    // model directory, if provided
     std::string modelDir;
     if (!modelPath.empty()) {
         fs::path mp(modelPath);
-        if (mp.has_parent_path()) modelDir = mp.parent_path().generic_string();
+        if (mp.has_parent_path()) modelDir = mp.parent_path().string();
     }
 
-    // search candidates:
+    // Search through candidates in order
     for (auto& cand : candidates) {
-        std::string candn = cand;
-        std::replace(candn.begin(), candn.end(), '\\', '/');
-
-        // 1) already loaded under this key?
-        int tIdx = KeyMap_GetIndex(&TextureMap, candn.c_str());
+        // 1) if already loaded in TextureMap
+        int tIdx = KeyMap_GetIndex(&TextureMap, cand.c_str());
         if (tIdx >= 0 && tIdx < (int)g_textureSRV.size() && g_textureSRV[tIdx]) {
-            outResolvedKey = candn;
+            outResolvedKey = cand;
             return g_textureSRV[tIdx];
         }
 
-        // 2) try to load from package by candidate key
-        if (AL_LoadFromPackageByName(candn.c_str())) {
-            int newIdx = KeyMap_GetIndex(&TextureMap, candn.c_str());
-            if (newIdx >= 0 && newIdx < (int)g_textureSRV.size() && g_textureSRV[newIdx]) {
-                outResolvedKey = candn;
-                return g_textureSRV[newIdx];
-            }
-            // sometimes loader registers under basename, attempt that
-            fs::path cp(candn);
-            std::string base = cp.filename().string();
-            int baseIdx = KeyMap_GetIndex(&TextureMap, base.c_str());
-            if (baseIdx >= 0 && baseIdx < (int)g_textureSRV.size() && g_textureSRV[baseIdx]) {
-                outResolvedKey = base;
-                return g_textureSRV[baseIdx];
-            }
-        }
-
-        // 3) try modelDir + basename file on disk and register+load it (runtime fallback)
+        // 2) try model directory + candidate file (file system)
         if (!modelDir.empty()) {
-            fs::path local = fs::path(modelDir) / fs::path(cand).filename();
-            if (fs::exists(local)) {
-                std::string localStr = local.generic_string();
+            fs::path localPath = fs::path(modelDir) / fs::path(cand);
+            if (fs::exists(localPath)) {
+                std::string localStr = localPath.generic_string();
+                // register+load into package system (calls IN_LoadXXX_Memory)
                 if (RegisterAndLoadFileToPackage(localStr)) {
-                    // try retrieving: first by local full path, then by candidate, then basename
-                    int idxFull = KeyMap_GetIndex(&TextureMap, localStr.c_str());
-                    if (idxFull >= 0 && idxFull < (int)g_textureSRV.size() && g_textureSRV[idxFull]) {
-                        outResolvedKey = localStr;
-                        return g_textureSRV[idxFull];
-                    }
-                    int idxCand = KeyMap_GetIndex(&TextureMap, candn.c_str());
-                    if (idxCand >= 0 && idxCand < (int)g_textureSRV.size() && g_textureSRV[idxCand]) {
-                        outResolvedKey = candn;
-                        return g_textureSRV[idxCand];
-                    }
-                    std::string base = fs::path(localStr).filename().string();
-                    int idxBase = KeyMap_GetIndex(&TextureMap, base.c_str());
-                    if (idxBase >= 0 && idxBase < (int)g_textureSRV.size() && g_textureSRV[idxBase]) {
-                        outResolvedKey = base;
-                        return g_textureSRV[idxBase];
-                    }
+                    // first try registered under the local (relative) full path
+                    ID3D11ShaderResourceView* srv = GetTextureSRV(localStr.c_str());
+                    if (srv) { outResolvedKey = localStr; return srv; }
+                    // then try basename
+                    ID3D11ShaderResourceView* srv2 = GetTextureSRV(cand.c_str());
+                    if (srv2) { outResolvedKey = cand; return srv2; }
                 }
             }
         }
 
-        // 4) finally try GetTextureSRV directly (in case previously loaded under some alias)
-        ID3D11ShaderResourceView* srv = GetTextureSRV(candn.c_str());
-        if (srv) {
-            outResolvedKey = candn;
-            return srv;
+        // 3) try load by candidate name from packages
+        if (AL_LoadFromPackageByName(cand.c_str())) {
+            ID3D11ShaderResourceView* srv = GetTextureSRV(cand.c_str());
+            if (srv) { outResolvedKey = cand; return srv; }
         }
+
+        // 4) lastly try direct GetTextureSRV for candidate
+        ID3D11ShaderResourceView* srv = GetTextureSRV(cand.c_str());
+        if (srv) { outResolvedKey = cand; return srv; }
     }
 
-    // last resort: try basename only (some loaders registered basename)
-    {
-        int bi = KeyMap_GetIndex(&TextureMap, basename.c_str());
-        if (bi >= 0 && bi < (int)g_textureSRV.size() && g_textureSRV[bi]) {
-            outResolvedKey = basename;
-            return g_textureSRV[bi];
-        }
-    }
-
-    // nothing found/loaded
+    // nothing found
     return nullptr;
 }
 

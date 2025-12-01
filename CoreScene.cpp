@@ -143,7 +143,7 @@ void CoreStartUp()
     SetSpriteCylinderAngle("Cylinder03", 0, 1.57f, 0);
 
     AddModel("Model01", "asset/Alicia_solid_Unity.FBX");
-    //AddModel("Model01", "asset/Alicia_solid_Unity.FBX");
+    //AddModel("Model01", "asset/AFK_Snowman.fbx");
     SetModelPos("Model01", 4.2f, 0, -3);
     SetModelSize("Model01", 0.03f, 0.03f, 0.03f);
 	SetModelAngle("Model01", -3.14f/2, 3.14f, 0);
@@ -175,6 +175,9 @@ void CoreStartUp()
 }
 void CoreSceneUpdate()
 {
+	static float rot = 0.0f;
+	rot += 0.0025f;
+    SetModelAngle("Model01", -3.14f / 2, 3.14f + rot, 0);
 
     static float pos = -3.0f;
 	pos += 0.01f;

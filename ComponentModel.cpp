@@ -1,9 +1,14 @@
 ﻿// ComponentModel.cpp
+// Model コンポーネント。AssetManager のサブメッシュ/マテリアル情報を使って GPU バッファを作る。
+// Model::SetModelPath 関連の全文を含む差し替え版。
+
 #include "ComponentModel.h"
 #include "Manager.h"
 #include "AssetLoad.h"
+#include <filesystem>
 #include <fstream>
 #include <algorithm>
+namespace fs = std::filesystem;
 
 Model::~Model()
 {
@@ -12,14 +17,14 @@ Model::~Model()
 
 void Model::SetModelPath(const char* filename)
 {
-    modelPath = filename;
+    modelPath = filename ? filename : std::string();
 
-    std::string s = filename;
+    std::string s = modelPath;
     auto dot = s.find_last_of('.');
     if (dot != std::string::npos)
     {
         std::string ext = s.substr(dot + 1);
-        for (auto& c : ext) c = ::tolower(c);
+        for (auto& c : ext) c = ::tolower((unsigned char)c);
 
         if (ext == "fbx") modelType = ModelType::FBX;
         else modelType = ModelType::OBJ;
@@ -32,7 +37,7 @@ void Model::SetModelPath(const char* filename)
         return;
     }
 
-    // get submesh count from AssetManager
+    // サブメッシュ数を AssetManager から取得
     int meshCount = AL_GetModelMeshCount(modelPath.c_str());
     if (meshCount <= 0)
     {
@@ -40,12 +45,12 @@ void Model::SetModelPath(const char* filename)
         return;
     }
 
-    // clear existing submeshes
+    // 既存リソースを解放して初期化
     Release();
     subMeshes.clear();
     subMeshes.resize(meshCount);
 
-    // create input layout / constant buffer / sampler (shared)
+    // シェーダー / 入力レイアウト / 定数バッファ / サンプラを作成
     ID3D11VertexShader* vs = GetVertexShader3D();
     ID3D11PixelShader* ps = GetPixelShader3D();
     ID3DBlob* vsBlob = GetCurrent3DVSBlob();
@@ -57,9 +62,9 @@ void Model::SetModelPath(const char* filename)
 
     D3D11_INPUT_ELEMENT_DESC layoutDesc[] =
     {
-        {"POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,0, D3D11_INPUT_PER_VERTEX_DATA,0},
-        {"NORMAL",  0,DXGI_FORMAT_R32G32B32_FLOAT,0,12,D3D11_INPUT_PER_VERTEX_DATA,0},
-        {"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,   0,24,D3D11_INPUT_PER_VERTEX_DATA,0},
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
 
     HRESULT hr = GetDevice()->CreateInputLayout(
@@ -84,13 +89,10 @@ void Model::SetModelPath(const char* filename)
         return;
     }
 
-    // --- サンプラー生成 ---
+    // サンプラは CLAMP にしておく（キャラクタ系テクスチャのタイリング回避）
     D3D11_SAMPLER_DESC sd{};
     sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    // <<< ここを WRAP から CLAMP に変更しました（繰り返しタイルを防止） >>>
-    sd.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sd.AddressU = sd.AddressV = sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
     sd.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
     sd.MinLOD = 0;
     sd.MaxLOD = D3D11_FLOAT32_MAX;
@@ -102,18 +104,18 @@ void Model::SetModelPath(const char* filename)
 
     totalIndexCount = 0;
 
-    // For each submesh, create vertex/index buffers and set material/texture info
+    // 各サブメッシュごとに VB / IB を作成し、マテリアル情報 -> テクスチャをセット
     for (int mi = 0; mi < meshCount; ++mi)
     {
         const std::vector<ModelVertex>* vtx = AL_GetModelMeshVertices(modelPath.c_str(), mi);
         const std::vector<unsigned int>* idx = AL_GetModelMeshIndices(modelPath.c_str(), mi);
 
         if (!vtx || vtx->empty() || !idx || idx->empty()) {
-            // skip empty
+            // empty サブメッシュならスキップ
             continue;
         }
 
-        // Copy vertices and indices into GPU buffers
+        // 頂点バッファ
         D3D11_BUFFER_DESC vbd{};
         vbd.Usage = D3D11_USAGE_DEFAULT;
         vbd.ByteWidth = (UINT)(sizeof(ModelVertex) * vtx->size());
@@ -121,12 +123,19 @@ void Model::SetModelPath(const char* filename)
         D3D11_SUBRESOURCE_DATA vinit{};
         vinit.pSysMem = vtx->data();
 
+        /*for (int k = 0; k < 10 && k < vtx->size(); ++k) {
+            char msg[256];
+            sprintf_s(msg, "VTX[%d] U=%.3f  V=%.3f", k, vtx->at(k).uv.x, vtx->at(k).uv.y);
+            MessageBoxA(NULL, msg, "CHECK UV", MB_OK);
+        }*/
+
         hr = GetDevice()->CreateBuffer(&vbd, &vinit, subMeshes[mi].vertexBuffer.GetAddressOf());
         if (FAILED(hr)) {
             MessageBoxA(nullptr, "CreateBuffer(vertex) failed", "Model::SetModelPath", MB_OK);
             continue;
         }
 
+        // インデックスバッファ
         D3D11_BUFFER_DESC ibd{};
         ibd.Usage = D3D11_USAGE_DEFAULT;
         ibd.ByteWidth = (UINT)(sizeof(unsigned int) * idx->size());
@@ -143,12 +152,12 @@ void Model::SetModelPath(const char* filename)
         subMeshes[mi].indexCount = (UINT)idx->size();
         totalIndexCount += subMeshes[mi].indexCount;
 
-        // get material diffuse color for this submesh (from AssetManager)
+        // マテリアル色を取得
         XMFLOAT4 matCol = AL_GetModelMeshMaterialDiffuse(modelPath.c_str(), mi);
         subMeshes[mi].materialDiffuse = matCol;
         subMeshes[mi].hasMaterialColor = true;
 
-        // try to get texture SRV via AssetManager
+        // テクスチャ（マテリアルにセットされていれば GetTextureSRV で取得）
         const char* texName = AL_GetModelMeshTextureName(modelPath.c_str(), mi);
         if (texName && texName[0] != '\0') {
             ID3D11ShaderResourceView* srv = GetTextureSRV(texName);
@@ -157,24 +166,31 @@ void Model::SetModelPath(const char* filename)
                 subMeshes[mi].hasTexture = true;
             }
             else {
-                // attempt to load from package and re-query
+                // パッケージからロードして再試行
                 AL_LoadFromPackageByName(texName);
                 ID3D11ShaderResourceView* srv2 = GetTextureSRV(texName);
                 if (srv2) {
                     subMeshes[mi].textureSRV = srv2;
                     subMeshes[mi].hasTexture = true;
                 }
+                else {
+                    // 試しにベース名でのロードを試す（AssetManager が basename を登録した可能性）
+                    std::string base = fs::path(texName).filename().string();
+                    if (!base.empty()) {
+                        AL_LoadFromPackageByName(base.c_str());
+                        ID3D11ShaderResourceView* srv3 = GetTextureSRV(base.c_str());
+                        if (srv3) {
+                            subMeshes[mi].textureSRV = srv3;
+                            subMeshes[mi].hasTexture = true;
+                        }
+                    }
+                }
             }
         }
-
-        // debug log (optional)
-        // const char* textureName = AL_GetModelMeshTextureName(modelPath.c_str(), mi);
-        // std::string log = "SubMesh[" + std::to_string(mi) + "] Texture = " + (textureName ? textureName : "NULL");
     }
 
-    // Note:
-    // - AssetManager already attempted coordinate corrections / left-hand conversions when producing vertex data.
-    // - If you still need axis swaps for specific FBX files, adjust in AssetManager side (LoadModel_Assimp_FromMemory), not here.
+    // ※補正: Assimp 側で left-handed 変換を行っているため、ここでは追加の座標変換は行わない。
+    // もしモデルがまだ反転・オフセットしている場合は AssetManager の読み込みオプションを調整してください。
 }
 
 void Model::Init()
@@ -221,7 +237,6 @@ void Model::Draw()
         {
             useTex = true;
             srv = sm.textureSRV.Get();
-            // Diffuse 色も乗算（ユーザー設定色含む）
             finalColor.x *= sm.hasMaterialColor ? sm.materialDiffuse.x : 1.0f;
             finalColor.y *= sm.hasMaterialColor ? sm.materialDiffuse.y : 1.0f;
             finalColor.z *= sm.hasMaterialColor ? sm.materialDiffuse.z : 1.0f;
@@ -229,7 +244,6 @@ void Model::Draw()
         }
         else if (sm.hasMaterialColor)
         {
-            // Material × User 色
             finalColor.x *= sm.materialDiffuse.x;
             finalColor.y *= sm.materialDiffuse.y;
             finalColor.z *= sm.materialDiffuse.z;
@@ -312,11 +326,9 @@ void Model::SetProj(const XMMATRIX& p)
 
 void Model::SetTexture(const char* texName)
 {
-    // model-level override: set all submeshes to this texture
     texturePath = texName;
     ID3D11ShaderResourceView* tmp = GetTextureSRV(texName);
     if (!tmp) {
-        // try load from package
         AL_LoadFromPackageByName(texName);
         tmp = GetTextureSRV(texName);
     }
