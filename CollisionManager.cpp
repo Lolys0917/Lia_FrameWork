@@ -64,19 +64,19 @@ bool HitBoxBox(const XMFLOAT3& p1, const XMFLOAT3& s1,
 bool HitSphereBox(const XMFLOAT3& sp, float r,
     const XMFLOAT3& bp, const XMFLOAT3& bs)
 {
-    float hx = bs.x * 0.5f;
-    float hy = bs.y * 0.5f;
-    float hz = bs.z * 0.5f;
-
-    float cx = std::max(bp.x - hx, std::min(sp.x, bp.x + hx));
-    float cy = std::max(bp.y - hy, std::min(sp.y, bp.y + hy));
-    float cz = std::max(bp.z - hz, std::min(sp.z, bp.z + hz));
-
-    float dx = sp.x - cx;
-    float dy = sp.y - cy;
-    float dz = sp.z - cz;
-
-    return (dx * dx + dy * dy + dz * dz) <= r * r;
+//    float hx = bs.x * 0.5f;
+//    float hy = bs.y * 0.5f;
+//    float hz = bs.z * 0.5f;
+//
+//    float cx = std::max(bp.x - hx, std::min(sp.x, bp.x + hx));
+//    float cy = std::max(bp.y - hy, std::min(sp.y, bp.y + hy));
+//    float cz = std::max(bp.z - hz, std::min(sp.z, bp.z + hz));
+//
+//    float dx = sp.x - cx;
+//    float dy = sp.y - cy;
+//    float dz = sp.z - cz;
+//
+//    return (dx * dx + dy * dy + dz * dz) <= r * r;
 }
 
 

@@ -180,6 +180,8 @@ void Model::Init()
 
 void Model::Update()
 {
+    MatPos = XMMatrixTransformation(GetPosition)
+
     world = MatSize * MatAngle * MatPos;
 }
 

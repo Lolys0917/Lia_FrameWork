@@ -8,7 +8,12 @@
 
 using namespace DirectX;
 
-enum CollisionType;
+enum CollisionType
+{
+    CollisionBox,
+    CollisionSphere,
+    CollisionCylinder
+};
 
 class Collision : public Component
 {

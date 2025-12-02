@@ -16,6 +16,7 @@ typedef struct {
     int StartIndex_SpriteBox, EndIndex_SpriteBox;
     int StartIndex_SpriteCylinder, EndIndex_SpriteCylinder;
     int StartIndex_Model, EndIndex_Model;
+    int StartIndex_Collision, EndIndex_Collision;
     int UseCameraIndex;
     bool Finalized;
 } SceneRange;
@@ -57,6 +58,8 @@ void AddScene(const char* name)
     range.EndIndex_Grid = idx->GridLineIndex;
     range.StartIndex_Model = idx->ModelIndex;
     range.EndIndex_Model = idx->ModelIndex;
+    range.StartIndex_Collision = idx->CollisionIndex;
+    range.EndIndex_Collision = idx->CollisionIndex;
     range.UseCameraIndex = -1;
     range.Finalized = false;
 
@@ -358,6 +361,7 @@ void DrawScene()
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
         }
     }
+    //Model
     if (SceneRanges[CurrentSceneIndex].StartIndex_Model >= 0 &&
         SceneRanges[CurrentSceneIndex].EndIndex_Model <= (int)pool->ModelPos.size)
     {
@@ -381,6 +385,32 @@ void DrawScene()
             else
             {
                 MessageBoxA(nullptr, "CameraNotFound", "Model", MB_OK);
+            }
+        }
+    }
+    if (SceneRanges[CurrentSceneIndex].StartIndex_Collision >= 0 &&
+        SceneRanges[CurrentSceneIndex].EndIndex_Collision <= (int)pool->CollisionPos.size)
+    {
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_Collision;
+            i < SceneRanges[CurrentSceneIndex].EndIndex_Collision; ++i)
+        {
+            if (i < 0 || i >= (int)pool->CollisionPos.size) continue;
+            Vec4 v4Pos = Vec4_Get(&pool->CollisionPos, i);
+            Vec4 v4Size = Vec4_Get(&pool->CollisionSize, i);
+            Vec4 v4Angle = Vec4_Get(&pool->CollisionAngle, i);
+
+            GetObjectClass()->GetComponent<Collision>(i)->SetOffsetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetObjectClass()->GetComponent<Collision>(i)->SetOffsetSize(v4Size.X, v4Size.Y, v4Size.Z);
+            GetObjectClass()->GetComponent<Collision>(i)->SetOffsetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+
+            //カメラ行列を渡す
+            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+                GetObjectClass()->GetComponent<Model>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+                GetObjectClass()->GetComponent<Model>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+            }
+            else
+            {
+                MessageBoxA(nullptr, "CameraNotFound", "Collision", MB_OK);
             }
         }
     }

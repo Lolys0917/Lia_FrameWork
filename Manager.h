@@ -92,12 +92,6 @@ enum SoundEffect
     Limiter,
     Gate,
 };
-enum CollisionType
-{
-    CollisionBox,
-    CollisionSphere,
-    CollisionCylinder
-};
 enum Input
 {
     Key_0,
