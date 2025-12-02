@@ -2,15 +2,15 @@
 
 void Collision::Update()
 {
-	m_worldPos.x = m_basePos.x + m_offPos.x;
-	m_worldPos.y = m_basePos.y + m_offPos.y;
-	m_worldPos.z = m_basePos.z + m_offPos.z;
+	m_worldPos.x = GetPosition().x + m_offPos.x;
+	m_worldPos.y = GetPosition().y + m_offPos.y;
+	m_worldPos.z = GetPosition().z + m_offPos.z;
 
-	m_worldSize.x = m_baseSize.x + m_offSize.x;
-	m_worldSize.y = m_baseSize.y + m_offSize.y;
-	m_worldSize.z = m_baseSize.z + m_offSize.z;
+	m_worldSize.x = GetSize().x + m_offSize.x;
+	m_worldSize.y = GetSize().y + m_offSize.y;
+	m_worldSize.z = GetSize().z + m_offSize.z;
 
-	m_worldAngle.x = m_baseAngle.x + m_offAngle.x;
-	m_worldAngle.y = m_baseAngle.y + m_offAngle.y;
-	m_worldAngle.z = m_baseAngle.z + m_offAngle.z;
+	m_worldAngle.x = GetAngle().x + m_offAngle.x;
+	m_worldAngle.y = GetAngle().y + m_offAngle.y;
+	m_worldAngle.z = GetAngle().z + m_offAngle.z;
 }

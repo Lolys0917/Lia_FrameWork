@@ -22,10 +22,9 @@ public:
 
     void Update() override;
 
+    //ベースの値はComponent基準Get/Set ??
+
     // ---- Offset 設定 ----
-    void SetBasePos(float x, float y, float z) { m_basePos = { x,y,z }; }
-    void SetBaseSize(float x, float y, float z) { m_baseSize = { x,y,z }; }
-    void SetBaseAngle(float x, float y, float z) { m_baseAngle = { x,y,z }; }
     void SetOffsetPos(float x, float y, float z) { m_offPos = { x,y,z }; }
     void SetOffsetSize(float x, float y, float z) { m_offSize = { x,y,z }; }
     void SetOffsetAngle(float x, float y, float z) { m_offAngle = { x,y,z }; }
@@ -39,12 +38,6 @@ public:
     void SetCollisionType(CollisionType type) { m_type = type; }
 
 private:
-
-    // Base（親の値）
-    XMFLOAT3 m_basePos = { 0,0,0 };
-    XMFLOAT3 m_baseSize = { 1,1,1 };
-    XMFLOAT3 m_baseAngle = { 0,0,0 };
-
     // Offset（ユーザー指定）
     XMFLOAT3 m_offPos = { 0,0,0 };
     XMFLOAT3 m_offSize = { 1,1,1 };

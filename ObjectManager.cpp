@@ -8,8 +8,8 @@
 
 #include "Manager.h"
 #include "ComponentCamera.h"
-#include "ComponentSpriteWorld.h"
 #include "ComponentSpriteScreen.h"
+#include "ComponentSpriteWorld.h"
 #include "ComponentSpriteBox.h"
 #include "ComponentSpriteCylinder.h"
 #include "ComponentSound.h"

@@ -126,7 +126,7 @@ void InitScene(const char* name)
     {
         if (i < 0 || i >= (int)pool->GridBoxPos.size) continue;
         Vec4 v4Pos = Vec4_Get(&pool->SpriteWorldPos, i);
-        GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+        GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
     }
     // Grid の初期化（ここでは色のみ復帰）
     for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; ++i)
@@ -269,8 +269,8 @@ void DrawScene()
 
             
             GetObjectClass()->GetComponent<SpriteWorld>(i)->SetColor({ v4Color.X, v4Color.Y, v4Color.Z, v4Color.W });
-            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
-            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetSize(v4Size.X, v4Size.Y);
+            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetSize(v4Size.X, v4Size.Y, 0);
             GetObjectClass()->GetComponent<SpriteWorld>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
 
             //カメラ行列を渡す
@@ -327,7 +327,7 @@ void DrawScene()
             Vec4 v4Color = Vec4_Get(&pool->SpriteCylinderColor, i);
             Vec4 v4Angle = Vec4_Get(&pool->SpriteCylinderAngle, i);
 
-            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
             GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
             GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
             GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
@@ -356,8 +356,8 @@ void DrawScene()
             Vec4 v4Color = Vec4_Get(&pool->SpriteScreenColor, i);
             int vIAngle = VecInt_Get(&pool->SpriteScreenAngle, i);
 
-            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPos(v4Pos.X, v4Pos.Y);
-            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize(v4Size.X, v4Size.Y);
+            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPos2D(v4Pos.X, v4Pos.Y);
+            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize2D(v4Size.X, v4Size.Y);
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
         }
     }
@@ -373,7 +373,7 @@ void DrawScene()
             Vec4 v4Size = Vec4_Get(&pool->ModelSize, i);
             Vec4 v4Angle = Vec4_Get(&pool->ModelAngle, i);
 
-            GetObjectClass()->GetComponent<Model>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetObjectClass()->GetComponent<Model>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
             GetObjectClass()->GetComponent<Model>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
             GetObjectClass()->GetComponent<Model>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
 
@@ -388,6 +388,7 @@ void DrawScene()
             }
         }
     }
+    //Collision
     if (SceneRanges[CurrentSceneIndex].StartIndex_Collision >= 0 &&
         SceneRanges[CurrentSceneIndex].EndIndex_Collision <= (int)pool->CollisionPos.size)
     {
@@ -402,6 +403,8 @@ void DrawScene()
             GetObjectClass()->GetComponent<Collision>(i)->SetOffsetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
             GetObjectClass()->GetComponent<Collision>(i)->SetOffsetSize(v4Size.X, v4Size.Y, v4Size.Z);
             GetObjectClass()->GetComponent<Collision>(i)->SetOffsetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+
+            //
 
             //カメラ行列を渡す
             if (GetObjectClass()->GetComponent<Camera>(useCam)) {

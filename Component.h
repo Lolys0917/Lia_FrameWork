@@ -4,6 +4,13 @@ class Component
 {
 protected:
     class Object* object = nullptr;
+
+    struct FLOAT3
+    {
+        float x;
+        float y;
+        float z;
+    };
 public:
     //デフォルトコンストラクタ消去
     Component() = delete;
@@ -18,12 +25,6 @@ public:
     virtual void Draw() {}
     virtual void Release() {}
 private:
-    struct FLOAT3
-    {
-        float x;
-        float y;
-        float z;
-    };
     FLOAT3 position;
     FLOAT3 size;
     FLOAT3 angle;

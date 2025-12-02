@@ -74,11 +74,11 @@ void SpriteScreen::SetTexture(const char* path)
 // -----------------------------------------------------------
 // 各種パラメータ設定
 // -----------------------------------------------------------
-void SpriteScreen::SetPos(float x, float y)
+void SpriteScreen::SetPos2D(float x, float y)
 {
     m_pos = { x, y, 0 };
 }
-void SpriteScreen::SetSize(float w, float h)
+void SpriteScreen::SetSize2D(float w, float h)
 {
     m_size = { w, h, 1 };
 }

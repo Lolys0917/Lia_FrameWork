@@ -76,20 +76,6 @@ void SpriteCylinder::Init()
     BuildMesh();
 }
 
-void SpriteCylinder::SetPos(float x, float y, float z)
-{
-    m_pos = { x, y, z };
-}
-void SpriteCylinder::SetSize(float x, float y, float z)
-{
-    // API-compatible: x = radius, y = height (z ignored)
-    m_size = { x, y, z };
-    BuildMesh();
-}
-void SpriteCylinder::SetAngle(float rx, float ry, float rz)
-{
-    m_angle = { rx, ry, rz };
-}
 void SpriteCylinder::SetColor(float r, float g, float b, float a)
 {
     m_color = { r, g, b, a };
@@ -125,7 +111,13 @@ void SpriteCylinder::Draw()
 {
     if (!m_vs || !m_ps) return;
 
+    m_pos = GetPosition();
+    m_size = GetSize();
+    m_angle = GetAngle();
+
     SetSegment(m_seg);
+
+    BuildMesh();
 
     ID3D11DeviceContext* ctx = GetContext();
 
