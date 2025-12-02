@@ -41,6 +41,7 @@ static int ModelIndex = 0, ModelOldIndex = 0;
 static int BoxColliderIndex = 0, BoxColliderOldIndex = 0;
 static int GridBoxIndex = 0, GridBoxOldIndex = 0;
 static int GridPolygonIndex = 0, GridPolygonOldIndex = 0;
+static int CollisionIndex = 0, CollisionOldIndex = 0;
 
 //-----------------------------------------
 // Getter群
@@ -457,6 +458,52 @@ void SetModelTexture(const char* name, const char* pathName)
     VecBool_Set(&g_ObjectPool.ModelUseTexture, idx, true);
 }
 
+//========================================
+// Collision
+//========================================
+void AddCollision(const char* name)
+{
+    KeyMap_Add(&g_ObjectPool.CollisionMap, name);
+    KeyMap_Add(&g_ObjectPool.CollisionParentMap, "NoParent");
+    Vec4_PushBack(&g_ObjectPool.CollisionPos, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.CollisionSize, { 1,1,1,1 });
+    Vec4_PushBack(&g_ObjectPool.CollisionAngle, { 0,0,0,0 });
+    VecBool_PushBack(&g_ObjectPool.CollisionHit, false);
+    VecInt_PushBack(&g_ObjectPool.CollisionType, CollisionType::CollisionBox);
+    CollisionIndex++;
+    ObjectIdx.CollisionIndex = CollisionIndex;
+}
+void SetCollisionParent(const char* name, const char* parent)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    KeyMap_SetKey(&g_ObjectPool.CollisionParentMap, idx, parent);
+}
+void SetCollisionPos(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    Vec4_Set(&g_ObjectPool.CollisionPos, idx, { x,y,z,0 });
+}
+void SetCollisionSize(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    Vec4_Set(&g_ObjectPool.CollisionSize, idx, { x,y,z,1 });
+}
+void SetCollisionAngle(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    Vec4_Set(&g_ObjectPool.CollisionAngle, idx, { x,y,z,0 });
+}
+void SetCollisionType(const char* name, CollisionType type)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    VecInt_Set(&g_ObjectPool.CollisionType, idx, type);
+}
+
+
+  //////////////////////
+ // オブジェクト管理 //
+//////////////////////
+//
 // オブジェクトの作成・管理
 void CreateObject()
 {
@@ -542,9 +589,7 @@ void InitDo()
     ObjectIdx.SpriteWorldIndex = 0;
     ObjectIdx.SpriteScreenIndex = 0;
     ObjectIdx.ModelIndex = 0;
-    ObjectIdx.BoxColliderIndex = 0;
-    ObjectIdx.SphereColliderIndex = 0;
-    ObjectIdx.CapsuleColliderIndex = 0;
+    ObjectIdx.CollisionIndex = 0;
     ObjectIdx.GridLineIndex = 0;
     ObjectIdx.GridBoxIndex = 0;
     ObjectIdx.GridPolygonIndex = 0;
@@ -625,19 +670,6 @@ void InitDo()
 
 void UpdateDo()
 {
-	static bool testOnce = false;
-    //if (!testOnce)
-    //{
-    //    object->AddComponent<Model>();
-    //    object->GetComponent<Model>(0)->SetModelPath("asset/Alicia_solid_Unity.FBX");
-    //    //object->GetComponent<Model>(0)->SetTexture("asset/test.png");
-    //    //object->GetComponent<Model>(0)->SetColor(1, 1, 1, 1);
-    //    object->GetComponent<Model>(0)->SetPos(0, 0, 0);
-    //    object->GetComponent<Model>(0)->SetSize(0.02f, 0.02f, 0.02f);
-    //    object->GetComponent<Model>(0)->SetAngle(0, 0, 0);
-    //
-    //    testOnce = true;
-    //}
 
     ShaderManager_Update();
     UpdateInput();
@@ -645,11 +677,6 @@ void UpdateDo()
     CreateObject();
     UpdateScene();
     object->Update();
-
-	int camIdx = KeyMap_GetIndex(&g_ObjectPool.CameraMap, "MainCamera");
-    //object->GetComponent<Model>(0)->SetProj(object->GetComponent<Camera>(camIdx)->GetProjection());
-    //object->GetComponent<Model>(0)->SetView(object->GetComponent<Camera>(camIdx)->GetView());
-	//object->GetComponent<Model>(0)->Update();
 }
 
 void DrawDo()

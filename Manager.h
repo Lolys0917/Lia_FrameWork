@@ -55,9 +55,7 @@ typedef struct {
     int SpriteBoxIndex;
     int SpriteCylinderIndex;
 	int ModelIndex;			//Model__________
-	int BoxColliderIndex;	//Collider_______
-	int SphereColliderIndex;
-	int CapsuleColliderIndex;
+	int CollisionIndex; 	//Collider_______
 	int GridLineIndex;      //Grid___________
 	int GridBoxIndex;
 	int GridPolygonIndex;
@@ -260,7 +258,7 @@ struct ObjectDataPool {
     Vec4Vector CollisionPos;
     Vec4Vector CollisionSize;
     Vec4Vector CollisionAngle;
-    CharVector CollisionType;
+    IntVector  CollisionType;
     BoolVector CollisionHit;
     // Grid(Box / Polygon)
     Vec4Vector GridBoxPos;
@@ -290,6 +288,7 @@ struct ObjectDataPool {
     KeyMap SpriteCylinderMap;
     KeyMap UIMap;
     KeyMap CollisionMap;
+    KeyMap CollisionParentMap;
     KeyMap GridBoxMap;
     KeyMap GridPolygonMap;
     KeyMap SpriteWorldTexturePathMap;
