@@ -338,12 +338,13 @@ int KeyMap_EnsureCapacity(KeyMap* map) {
     return 1; // ¬Œ÷
 }
 int KeyMap_Add(KeyMap* map, const char* key) {
-    for (size_t i = 0; i < map->size; i++) {
-        if (strcmp(map->keys[i], key) == 0) {
-            printf("error: key '%s' already exists!\n", key);
-            //return -1; // Šù‘¶
-        }
-    }
+    //for (size_t i = 0; i < map->size; i++) {
+    //    if (strcmp(map->keys[i], key) == 0) {
+    //        printf("error: key '%s' already exists!\n", key);
+    //        
+    //        //return -1; // Šù‘¶
+    //    }
+    //}
     if (!KeyMap_EnsureCapacity(map)) return -1;
 
     map->keys[map->size] = _strdup(key);

@@ -113,33 +113,33 @@ bool HitJudgeTo(
     // if(type1 == CollisionType::Cylinder || type2 == CollisionType::Cylinder)...
 }
 
-void HitJudgeAll()
+bool HitJudgeAll(
+    XMFLOAT3 pos, XMFLOAT3 size, XMFLOAT3 angle,
+    CollisionType type, int myLayer, int myMask)
 {
 	//全ての当たり判定を取得
-    ObjectDataPool* p = GetObjectDataPool();
+    Object* objs = GetObjectClass();
+    int total = GetObjectIndex()->CollisionIndex;
 
-    for (int i = 0; i < KeyMap_GetSize(&p->CollisionMap); i++)
+    for (int i = 0; i < total; i++)
     {
-        for (int ii = 0; ii < KeyMap_GetSize(&p->CollisionMap); ii++)
-        {
-            if (!(i == ii))
-            {
-                bool hit =
-                    HitJudgeTo(
-                        GetObjectClass()->GetComponent<Collision>(i)->GetWorldPos(),
-                        GetObjectClass()->GetComponent<Collision>(i)->GetWorldSize(),
-                        GetObjectClass()->GetComponent<Collision>(i)->GetWorldAngle(),
-                        GetObjectClass()->GetComponent<Collision>(i)->GetType(),
-                        GetObjectClass()->GetComponent<Collision>(ii)->GetWorldPos(),
-                        GetObjectClass()->GetComponent<Collision>(ii)->GetWorldSize(),
-                        GetObjectClass()->GetComponent<Collision>(ii)->GetWorldAngle(),
-                        GetObjectClass()->GetComponent<Collision>(ii)->GetType()
-                    );
+        Collision* col = objs[i].GetComponent<Collision>(0);
+        if (!col) continue;
 
-                VecBool_Set(&p->CollisionHit, i, hit);
-            }
+        // --- レイヤーマスクによるフィルタ ---
+        if ((myMask & col->GetLayer()) == 0)
+            continue;
+
+        if (HitJudgeTo(
+            pos, size, angle, type,
+            col->GetWorldPos(), col->GetWorldSize(),
+            col->GetWorldAngle(), col->GetType()
+        ))
+        {
+            return true;
         }
     }
+    return false;
 }
 
 //API用-----------------------------

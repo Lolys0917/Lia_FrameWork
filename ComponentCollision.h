@@ -35,6 +35,12 @@ public:
     XMFLOAT3 GetWorldAngle() const { return m_worldAngle; }
     CollisionType GetType() const { return m_type; }
 
+    void SetLayer(int layer) { m_layer = layer; }
+    void SetMask(int maskBit) { m_mask = maskBit; }
+
+    int GetLayer() { return m_layer; }
+    int GetMask() { return m_mask; }
+
     void SetCollisionType(CollisionType type) { m_type = type; }
 
 private:
@@ -49,4 +55,7 @@ private:
     XMFLOAT3 m_worldAngle = { 0,0,0 };
 
     CollisionType m_type = CollisionType::CollisionBox;
+
+    int m_layer = 0;
+    int m_mask = 0xFFFF;    //相手レイヤーとのびっとマスク
 };

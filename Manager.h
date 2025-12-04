@@ -283,6 +283,7 @@ struct ObjectDataPool {
     KeyMap SpriteCylinderMap;
     KeyMap UIMap;
     KeyMap CollisionMap;
+    KeyMap CollisionTagMap;
     KeyMap CollisionParentMap;
     KeyMap GridBoxMap;
     KeyMap GridPolygonMap;
@@ -400,6 +401,15 @@ void SetModelSize(const char* name, float x, float y, float z);                 
 void SetModelAngle(const char* name, float x, float y, float z);                    //モデルの角度設定
 void SetModelMotion(const char* name, const char* pathName, int Attack);            //モデルのモーション設定移行速度設定
 void ModelTexture(const char* name, const char* pathName);
+//|| Collision ||_____________________
+void AddCollision(const char* name, const char* tag);
+bool HitToTag(const char* name, const char* tag);
+bool HitToName(const char* name1, const char* name2);
+void SetCollisionParent(const char* name, const char* parent);
+void SetCollisionPos(const char* name, float x, float y, float z);
+void SetCollisionSize(const char* name, float x, float y, float z);
+void SetCollisionAngle(const char* name, float x, float y, float z);
+//void SetCollisionType(const char* name, CollisionType type);
 
 ///////////////////////////////////
 

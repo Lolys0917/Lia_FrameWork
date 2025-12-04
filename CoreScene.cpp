@@ -142,9 +142,20 @@ void CoreStartUp()
     AddGridBox("BoxD");
     SetGridBoxPos("BoxD", 2, 0, 0);
 
+    AddCollision("player", "playerTag");
+    AddCollision("enemy", "enemyTag");
+
+    //ìñÇƒÇ»Ç¢ÇΩÇﬂÇ…ç¿ïWÇ∏ÇÁÇµ
+    SetCollisionPos("player", 1, 0, 0);
+
 }
 void CoreSceneUpdate()
 {
+
+    if (HitToTag("player", "enemyTag"))
+    {
+        MessageBoxA(NULL, "Hit", "Hit", S_OK);
+    }
 
     static float pos = -3.0f;
 	pos += 0.01f;

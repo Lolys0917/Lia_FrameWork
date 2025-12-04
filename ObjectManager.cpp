@@ -461,9 +461,10 @@ void SetModelTexture(const char* name, const char* pathName)
 //========================================
 // Collision
 //========================================
-void AddCollision(const char* name)
+void AddCollision(const char* name, const char* tag)
 {
     KeyMap_Add(&g_ObjectPool.CollisionMap, name);
+    KeyMap_Add(&g_ObjectPool.CollisionTagMap, tag);
     KeyMap_Add(&g_ObjectPool.CollisionParentMap, "NoParent");
     Vec4_PushBack(&g_ObjectPool.CollisionPos, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.CollisionSize, { 1,1,1,1 });
@@ -473,6 +474,142 @@ void AddCollision(const char* name)
     CollisionIndex++;
     ObjectIdx.CollisionIndex = CollisionIndex;
 }
+//内部機能性関数------------------------------
+int Collision_GetIndexByName(const char* name)
+{
+    return KeyMap_GetIndex(&GetObjectDataPool()->CollisionMap, name);
+}
+int Collision_GetIndexByTag(const char* tag)
+{
+    return KeyMap_GetIndex(&GetObjectDataPool()->CollisionTagMap, tag);
+}
+const char* Collision_GetTagByIndex(int idx)
+{
+    return KeyMap_GetKey(&GetObjectDataPool()->CollisionTagMap, idx);
+}
+int Collision_Find(const char* name, const char* tag)
+{
+    ObjectDataPool* p = GetObjectDataPool();
+    int total = GetObjectIndex()->CollisionIndex;
+
+    for (int i = 0; i < total; i++)
+    {
+        const char* cname = KeyMap_GetKey(&p->CollisionMap, i);
+        const char* ctag = KeyMap_GetKey(&p->CollisionTagMap, i);
+
+        if (!strcmp(cname, name) && !strcmp(ctag, tag))
+            return i;
+    }
+    return -1;
+}
+
+bool Collision_TagAllow(int idx1, int idx2)
+{
+    //ALLに入れられたら全てと判定する
+    const char* tag1 = Collision_GetTagByIndex(idx1);
+    const char* tag2 = Collision_GetTagByIndex(idx2);
+
+    if (strcmp(tag1, "ALL") == 0) return true;
+    if (strcmp(tag2, "ALL") == 0) return true;
+
+    return strcmp(tag1, tag2) == 0;
+}
+bool HitJudgeTo(int idx1, int idx2)
+{
+    //HitToName用
+
+    ObjectDataPool* p = GetObjectDataPool();
+
+    if (!Collision_TagAllow(idx1, idx2))
+    {
+        return false;
+    }
+
+    //値取得
+    Vec4 aPos = Vec4_Get(&p->CollisionPos, idx1);
+    Vec4 aSize = Vec4_Get(&p->CollisionSize, idx1);
+    Vec4 bPos = Vec4_Get(&p->CollisionPos, idx2);
+    Vec4 bSize = Vec4_Get(&p->CollisionSize, idx2);
+
+    //AABB判定
+    float dx = fabs(aPos.X - bPos.X);
+    float dy = fabs(aPos.Y - bPos.Y);
+    float dz = fabs(aPos.Z - bPos.Z);
+
+    if (dx < (aSize.X + bSize.X) * 0.5f &&
+        dy < (aSize.Y + bSize.Y) * 0.5f &&
+        dz < (aSize.Z + bSize.Z) * 0.5f)
+    {
+        return true;
+    }
+    return false;
+}
+
+//API用関数------------------------
+bool HitToTag(const char* name, const char* tag)
+{
+    ObjectDataPool* p = GetObjectDataPool();
+    int total = GetObjectIndex()->CollisionIndex;
+
+    // 衝突元（src）
+    int idxSrc = Collision_GetIndexByName(name);
+    if (idxSrc < 0) return false;
+
+    Vec4 srcPos = Vec4_Get(&p->CollisionPos, idxSrc);
+    Vec4 srcSize = Vec4_Get(&p->CollisionSize, idxSrc);
+
+    // ------------- TAG = "ALL" の場合 -------------
+    if (strcmp(tag, "ALL") == 0)
+    {
+        for (int i = 0; i < total; i++)
+        {
+            if (i == idxSrc) continue;
+
+            Vec4 dstPos = Vec4_Get(&p->CollisionPos, i);
+            Vec4 dstSize = Vec4_Get(&p->CollisionSize, i);
+
+            if (fabs(srcPos.X - dstPos.X) < (srcSize.X + dstSize.X) * 0.5f &&
+                fabs(srcPos.Y - dstPos.Y) < (srcSize.Y + dstSize.Y) * 0.5f &&
+                fabs(srcPos.Z - dstPos.Z) < (srcSize.Z + dstSize.Z) * 0.5f)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ----------- TAG が通常の場合（特定タグだけ判定） ----------
+    for (int i = 0; i < total; i++)
+    {
+        const char* t = Collision_GetTagByIndex(i);
+        if (strcmp(t, tag) != 0) continue;
+        if (i == idxSrc) continue;
+
+        Vec4 dstPos = Vec4_Get(&p->CollisionPos, i);
+        Vec4 dstSize = Vec4_Get(&p->CollisionSize, i);
+
+        if (fabs(srcPos.X - dstPos.X) < (srcSize.X + dstSize.X) * 0.5f &&
+            fabs(srcPos.Y - dstPos.Y) < (srcSize.Y + dstSize.Y) * 0.5f &&
+            fabs(srcPos.Z - dstPos.Z) < (srcSize.Z + dstSize.Z) * 0.5f)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool HitToName(const char* name1, const char* name2)
+{
+    int idx1 = Collision_GetIndexByName(name1);
+    int idx2 = Collision_GetIndexByName(name2);
+
+    if (idx1 < 0 || idx2 < 0)
+         return false;
+
+    return HitJudgeTo(idx1, idx2);
+}
+
 void SetCollisionParent(const char* name, const char* parent)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
