@@ -22,9 +22,6 @@ public:
     void Release() override;
 
     void SetTexture(const char* assetPath);  // AssetManager‚©‚çŽæ“¾
-    void SetPos(float x, float y, float z);
-    void SetSize(float w, float h);
-    void SetAngle(float rx, float ry, float rz);
     void SetView(const XMMATRIX& view);
     void SetProj(const XMMATRIX& proj);
     void SetColor(const XMFLOAT4& color);
@@ -42,8 +39,8 @@ private:
     XMMATRIX ProjSet;
 
     bool m_isBillboard = false;
-    XMFLOAT3 m_pos{ 0,0,0 };
-    XMFLOAT3 m_angle{ 0,0,0 };
+    FLOAT3 m_pos{ 0,0,0 };
+    FLOAT3 m_angle{ 0,0,0 };
     XMFLOAT2 m_size{ 1,1 };
     XMFLOAT4 m_color{ 1,1,1,1 };
 

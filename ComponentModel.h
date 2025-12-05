@@ -46,9 +46,6 @@ public:
     void Draw() override;
     void Release() override;
 
-    void SetPos(float PosX, float PosY, float PosZ);
-    void SetSize(float SizeX, float SizeY, float SizeZ);
-    void SetAngle(float AngleX, float AngleY, float AngleZ);
     void SetColor(float R, float G, float B, float A);
 
     void SetView(const XMMATRIX& view);

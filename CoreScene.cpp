@@ -164,7 +164,7 @@ void CoreStartUp()
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
     // ç≈èâÇÃÉVÅ[Éìê›íË
-    ChangeScene("Scene3");
+    ChangeScene("Scene1");
 
     AddGridBox("BoxC");
     SetGridBoxPos("BoxC", 0, 0, 0);
@@ -172,12 +172,24 @@ void CoreStartUp()
     AddGridBox("BoxD");
     SetGridBoxPos("BoxD", 2, 0, 0);
 
+    AddCollision("player", "playerTag");
+    AddCollision("enemy", "enemyTag");
+    //AddCollision("enemy", "enemyTag");
+
+    //ìñÇΩÇËîªíË
+    SetCollisionPos("player", 1, 0, 0);
+
 }
 void CoreSceneUpdate()
 {
 	static float rot = 0.0f;
 	rot += 0.0025f;
     SetModelAngle("Model01", -3.14f / 2, 3.14f + rot, 0);
+
+    if (HitToTag("player", "enemyTag"))
+    {
+        MessageBoxA(NULL, "Hit", "Hit", S_OK);
+    }
 
     static float pos = -3.0f;
 	pos += 0.01f;

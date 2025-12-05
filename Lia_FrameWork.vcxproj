@@ -134,7 +134,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AssetManager.cpp" />
+    <ClCompile Include="CollisionManager.cpp" />
     <ClCompile Include="ComponentCamera.cpp" />
+    <ClCompile Include="ComponentCollision.cpp" />
     <ClCompile Include="ComponentLight.cpp" />
     <ClCompile Include="ComponentModel.cpp" />
     <ClCompile Include="ComponentSound.cpp" />
@@ -156,6 +158,7 @@
   <ItemGroup>
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentCamera.h" />
+    <ClInclude Include="ComponentCollision.h" />
     <ClInclude Include="ComponentLight.h" />
     <ClInclude Include="ComponentSound.h" />
     <ClInclude Include="ComponentSpriteBox.h" />
