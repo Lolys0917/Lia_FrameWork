@@ -176,7 +176,7 @@ void CoreStartUp()
     AddCollision("enemy", "enemyTag");
     //AddCollision("enemy", "enemyTag");
 
-    //“–‚Ä‚È‚¢‚½‚ß‚ÉÀ•W‚¸‚ç‚µ
+    //“–‚½‚è”»’è
     SetCollisionPos("player", 1, 0, 0);
 
 }
