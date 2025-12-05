@@ -101,4 +101,6 @@ private:
     XMMATRIX world = XMMatrixIdentity();
     XMMATRIX ViewSet = XMMatrixIdentity();
     XMMATRIX ProjSet = XMMatrixIdentity();
+
+    MotionPackage* motionPackage = nullptr;
 };

@@ -1,75 +1,111 @@
 //=====================================================================
-// MotionManager.cpp   （クラスなし / データ＋関数のみ）
+// MotionManager.cpp   （完全版：パッケージ化対応 / クラス不使用）
 //=====================================================================
 #include <vector>
 #include <string>
+#include <unordered_map>
 #include <windows.h>
 #include <sstream>
+#include <fstream>
 #include <algorithm>
 #include <assimp/scene.h>
 
-// ------------------------------
-// Motion データ（クラスではない）
-// ------------------------------
+#include "AssetLoad.h"
+#include "Manager.h"
+
+//=====================================================================
+// ★ Motion データ構造（クラスなし、純粋な構造体）
+//=====================================================================
 struct Motion {
-    std::string name;
-    double startTime;
-    double endTime;
-    const aiAnimation* source; // Assimp の元データ
+    std::string name;          // モーション名（KeyMap用）
+    double startTime;          // 開始時刻（秒 or ticks）
+    double endTime;            // 終了時刻
+    double ticksPerSecond;     // 必須（FBX/OBJ）
+    const aiAnimation* anim;   // Assimp のアニメーション元
 };
 
-// ------------------------------
-static std::vector<Motion> g_Motions;
-// ------------------------------
+//=====================================================================
+// ★ Motion パッケージ（ModelMotion.pkg）へ保存する構造
+//=====================================================================
+struct MotionPackageEntry {
+    Motion motion;
+};
+static std::vector<MotionPackageEntry> g_MotionPackage;
 
+//=====================================================================
+// ★ KeyMap：MotionName → インデックス
+//=====================================================================
+static KeyMap g_MotionMap;   // MotionName → index
 
-// =============================================================
-// モーションを MessageBox で確認
-// =============================================================
-void DebugPrintMotions()
+//=====================================================================
+// ★ 重複チェック
+//=====================================================================
+static int FindDuplicate(const Motion& m)
 {
-    std::ostringstream oss;
+    int sz = (int)g_MotionPackage.size();
+    for (int i = 0; i < sz; i++)
+    {
+        const Motion& x = g_MotionPackage[i].motion;
 
-    oss << "Registered Motions: " << g_Motions.size() << "\n";
-
-    for (size_t i = 0; i < g_Motions.size(); i++) {
-        const Motion& m = g_Motions[i];
-        oss << "[" << i << "] " << m.name
-            << "  Start: " << m.startTime
-            << "  End: " << m.endTime
-            << "\n";
-    }
-
-    MessageBoxA(NULL, oss.str().c_str(), "MotionManager", MB_OK);
-}
-
-
-
-// =============================================================
-// 重複モーションの判定（非常に簡易版）
-// =============================================================
-int FindDuplicateMotion(const Motion& m)
-{
-    for (size_t i = 0; i < g_Motions.size(); i++) {
-        const Motion& x = g_Motions[i];
-
-        if (x.source == m.source &&
+        if (x.anim == m.anim &&
             fabs(x.startTime - m.startTime) < 0.0001 &&
             fabs(x.endTime - m.endTime) < 0.0001)
         {
-            return (int)i; // 同じモーションがすでに存在
+            return i;
         }
     }
     return -1;
 }
 
+//=====================================================================
+// ★ パッケージへ Motion を追加
+//=====================================================================
+int RegisterMotion(const Motion& m)
+{
+    int dup = FindDuplicate(m);
+    if (dup >= 0)
+        return dup;
 
+    // パッケージ登録
+    MotionPackageEntry entry;
+    entry.motion = m;
 
-// =============================================================
-// ★ モデルに含まれるモーションをすべて追加（統合関数）
-//   → モデル読み込み時にこれだけ呼べば OK
-// =============================================================
-void AddMotionsFromScene(const aiScene* scene)
+    int newIndex = (int)g_MotionPackage.size();
+    g_MotionPackage.push_back(entry);
+
+    // KeyMap へ登録
+    KeyMap_Add(&g_MotionMap, m.name.c_str());
+
+    return newIndex;
+}
+
+//=====================================================================
+// ★ Debug 表示
+//=====================================================================
+void DebugPrintMotions()
+{
+    std::ostringstream oss;
+
+    oss << "Motion Count = " << g_MotionPackage.size() << "\n\n";
+
+    for (size_t i = 0; i < g_MotionPackage.size(); i++)
+    {
+        const Motion& m = g_MotionPackage[i].motion;
+        oss << "[" << i << "] "
+            << m.name
+            << "  Start=" << m.startTime
+            << "  End=" << m.endTime
+            << "  TPS=" << m.ticksPerSecond
+            << "\n";
+    }
+
+    MessageBoxA(NULL, oss.str().c_str(), "MotionManager Debug", MB_OK);
+}
+
+//=====================================================================
+// ★ FBX / OBJ 内の全モーション自動登録
+//=====================================================================
+void AddMotionsFromScene(const aiScene* scene, const char* modelName)
 {
     if (!scene || scene->mNumAnimations == 0) return;
 
@@ -79,75 +115,107 @@ void AddMotionsFromScene(const aiScene* scene)
         if (!anim) continue;
 
         Motion m;
-        m.name = anim->mName.C_Str();
-        if (m.name.empty()) {
-            m.name = "Anim" + std::to_string(i);
-        }
-
+        m.anim = anim;
         m.startTime = 0.0;
         m.endTime = anim->mDuration;
-        m.source = anim;
+        m.ticksPerSecond = anim->mTicksPerSecond != 0 ? anim->mTicksPerSecond : 30.0;
 
-        // すでに同じモーションがあればスキップ
-        int dup = FindDuplicateMotion(m);
-        if (dup >= 0) continue;
+        // モーション名決定
+        if (anim->mName.length > 0)
+            m.name = anim->mName.C_Str();
+        else
+            m.name = std::string(modelName) + "_Anim" + std::to_string(i);
 
-        g_Motions.push_back(m);
+        RegisterMotion(m);
     }
 
     DebugPrintMotions();
 }
 
-
-
-// =============================================================
-// ユーザーが指定した範囲を一つのモーションとして登録
-// =============================================================
-int AddMotionByRange(int animIndex, double start, double end, const aiScene* scene)
+//=====================================================================
+// ★ ユーザー指定区間を Motion として登録
+//=====================================================================
+int AddMotionRange(
+    const aiScene* scene,
+    int animIndex,
+    double start,
+    double end,
+    const std::string& tag
+)
 {
-    if (!scene) return -1;
-    if (animIndex < 0 || animIndex >= (int)scene->mNumAnimations) return -1;
+    if (!scene || animIndex < 0 || animIndex >= (int)scene->mNumAnimations)
+        return -1;
 
     const aiAnimation* anim = scene->mAnimations[animIndex];
 
     Motion m;
-    m.name = anim->mName.C_Str();
-    if (m.name.empty()) m.name = "AnimRange";
-
-    m.name += "_range_" + std::to_string((int)start) + "_" + std::to_string((int)end);
+    m.anim = anim;
     m.startTime = start;
     m.endTime = end;
-    m.source = anim;
+    m.ticksPerSecond = anim->mTicksPerSecond != 0 ? anim->mTicksPerSecond : 30;
 
-    int dup = FindDuplicateMotion(m);
-    if (dup >= 0) return dup;
+    // 名前にタグをつける
+    if (anim->mName.length > 0)
+        m.name = anim->mName.C_Str();
+    else
+        m.name = "AnimRange";
 
-    g_Motions.push_back(m);
+    m.name += "_" + tag;
+
+    int idx = RegisterMotion(m);
 
     DebugPrintMotions();
-    return (int)g_Motions.size() - 1;
+    return idx;
 }
 
-
-
-// =============================================================
-// モーション再生（Blend 付き）
-// ここでは「インデックス指定で再生できる」だけを実装
-// =============================================================
-void PlayMotion(int index, float blendIn, float blendOut)
+//=====================================================================
+// ★ インデックスから Motion を取得
+//=====================================================================
+const Motion* GetMotion(int index)
 {
-    if (index < 0 || index >= (int)g_Motions.size()) return;
+    if (index < 0 || index >= (int)g_MotionPackage.size()) return nullptr;
+    return &g_MotionPackage[index].motion;
+}
 
-    const Motion& m = g_Motions[index];
+//=====================================================================
+// ★ 名前から Motion を取得
+//=====================================================================
+int FindMotionIndex(const char* name)
+{
+    return KeyMap_GetIndex(&g_MotionMap, name);
+}
 
-    std::ostringstream oss;
-    oss << "Play Motion: " << m.name
-        << "\nStart: " << m.startTime
-        << " End: " << m.endTime
-        << "\nBlendIn: " << blendIn
-        << " BlendOut: " << blendOut;
+//=====================================================================
+// ★ 外部使用 API：Model などから呼ばれる
+//=====================================================================
+extern "C"
+{
+    // モデルロード後に呼び、FBX に入っているアニメーションを自動登録
+    __declspec(dllexport)
+        void MM_AddSceneMotions(const aiScene* scene, const char* modelName)
+    {
+        AddMotionsFromScene(scene, modelName);
+    }
 
-    MessageBoxA(NULL, oss.str().c_str(), "PlayMotion", MB_OK);
+    // 登録済み Motion の数
+    __declspec(dllexport)
+        int MM_GetMotionCount()
+    {
+        return (int)g_MotionPackage.size();
+    }
 
-    // 実際のボーン更新処理は Model 側で実装する想定
+    // Motion 名
+    __declspec(dllexport)
+        const char* MM_GetMotionName(int index)
+    {
+        if (index < 0 || index >= (int)g_MotionPackage.size()) return "";
+        return g_MotionPackage[index].motion.name.c_str();
+    }
+
+    // Motion 構造体を取得
+    __declspec(dllexport)
+        const Motion* MM_GetMotion(int index)
+    {
+        return GetMotion(index);
+    }
 }

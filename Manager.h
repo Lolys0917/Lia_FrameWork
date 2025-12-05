@@ -228,7 +228,6 @@ struct PackageEntry {
     uint64_t size = 0;
     std::vector<uint8_t> data; // runtime に取り出すまで空でも可
 };
-
 struct Package {
     std::string ext; // 小文字拡張子 (no dot)
     KeyMap keymap;
@@ -236,6 +235,34 @@ struct Package {
     std::string pkgPath;      // path to .pkg file
     std::ifstream pkgStream;  // lazy-opened for reading entry data
 };
+struct MotionRange {
+    std::string name;
+    double startTime;
+    double endTime;
+};
+
+struct MotionChannel_Bone {
+    std::string boneName;
+    std::vector<double> times;
+    std::vector<aiVectorKey> posKeys;
+    std::vector<aiQuatKey> rotKeys;
+    std::vector<aiVectorKey> scaleKeys;
+};
+
+struct MotionPackage {
+    std::string name;
+
+    double duration = 0;
+    double ticksPerSecond = 30;
+
+    std::vector<MotionRange> motions;   // "Take001" + range motion
+
+    std::vector<MotionChannel_Bone> boneChannels; // FBX/OBJ 共通チャンネル化
+
+    // OBJ にモーフアニメ等があれば追加
+    // std::vector<MotionChannel_Vertex> vertexChannels;
+};
+
 //-----------------------------------------
 // Vec4管理用データプール構造体
 struct ObjectDataPool {
@@ -577,3 +604,36 @@ bool GetInputState(Input input, int index);
 //API用
 bool Input_GetKey(Input input);
 bool Input_GetPad(Input input, int index);
+
+//
+// MotionManager //
+//
+/// 初期化 / 終了
+void MM_Init();
+void MM_Shutdown();
+
+/// シーンをパッケージ化（key: モデル名やパスをキーに使う）
+/// 戻り値: true=登録成功（既に存在していれば true を返す）
+bool MM_LoadFromScene(const char* key, const aiScene* scene);
+
+/// 指定パッケージのインデックス取得 (存在しない場合 -1)
+int MM_GetIndex(const char* key);
+
+/// インデックスからパッケージ取得 (内部ポインタ、変更不可)
+MotionPackage* MM_GetPackage(int index);
+
+/// デバッグ表示（MessageBox）
+void MM_DebugPrint();
+
+/// アニメーション（aiAnimation）から自動でモーション区間候補を検出する
+/// 戻り値: (start,end) ペアの vector を [start0,end0,start1,end1,...] の形で返す
+std::vector<double> MM_DetectMotionSegmentsFromAnimation(const aiAnimation* anim);
+
+/// 指定パッケージにユーザー指定の区間を追加しインデックスを返す（重複検出して既存があればそれを返す）
+int MM_AddMotionRange(int packageIndex, const std::string& name, double startTime, double endTime);
+
+/// パッケージ内のモーション数取得
+int MM_GetMotionCount(int packageIndex);
+
+/// パッケージ内のモーション情報取得（nullptr なら無効）
+const MotionRange* MM_GetMotionRange(int packageIndex, int motionIndex);
