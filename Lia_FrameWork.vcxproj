@@ -133,7 +133,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AssetLoad.cpp" />
     <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="CollisionManager.cpp" />
     <ClCompile Include="ComponentCamera.cpp" />
@@ -150,13 +149,13 @@
     <ClCompile Include="Grid.cpp" />
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MotionManager.cpp" />
     <ClCompile Include="ObjectManager.cpp" />
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="ShaderManager.cpp" />
     <ClCompile Include="UtilManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AssetLoad.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentCamera.h" />
     <ClInclude Include="ComponentCollision.h" />
