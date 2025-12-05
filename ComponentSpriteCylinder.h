@@ -20,9 +20,6 @@ public:
     void Release() override;
 
     // setters (API compatible with SpriteWorld-like usage)
-    void SetPos(float x, float y, float z);
-    void SetSize(float x, float y, float z);
-    void SetAngle(float rx, float ry, float rz); // rad
     void SetColor(float r, float g, float b, float a);
 
     void SetView(const XMMATRIX& view);
@@ -51,9 +48,9 @@ private:
     };
 
     // transform / visual
-    XMFLOAT3 m_pos{ 0,0,0 };
-    XMFLOAT3 m_angle{ 0,0,0 };
-    XMFLOAT3 m_size{ 1,1,1 }; // radius, height
+    FLOAT3 m_pos{ 0,0,0 };
+    FLOAT3 m_angle{ 0,0,0 };
+    FLOAT3 m_size{ 1,1,1 }; // radius, height
     XMFLOAT4 m_color{ 1,1,1,1 };
 
     // camera matrices (set each frame by SceneManager)

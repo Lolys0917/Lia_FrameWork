@@ -8,8 +8,8 @@
 
 #include "Manager.h"
 #include "ComponentCamera.h"
-#include "ComponentSpriteWorld.h"
 #include "ComponentSpriteScreen.h"
+#include "ComponentSpriteWorld.h"
 #include "ComponentSpriteBox.h"
 #include "ComponentSpriteCylinder.h"
 #include "ComponentModel.h"
@@ -42,6 +42,7 @@ static int ModelIndex = 0, ModelOldIndex = 0;
 static int BoxColliderIndex = 0, BoxColliderOldIndex = 0;
 static int GridBoxIndex = 0, GridBoxOldIndex = 0;
 static int GridPolygonIndex = 0, GridPolygonOldIndex = 0;
+static int CollisionIndex = 0, CollisionOldIndex = 0;
 
 //-----------------------------------------
 // Getter群
@@ -458,6 +459,197 @@ void SetModelTexture(const char* name, const char* pathName)
     VecBool_Set(&g_ObjectPool.ModelUseTexture, idx, true);
 }
 
+//========================================
+// Collision
+//========================================
+void AddCollision(const char* name, const char* tag)
+{
+    KeyMap_Add(&g_ObjectPool.CollisionMap, name);
+    KeyMap_Add(&g_ObjectPool.CollisionTagMap, tag);
+    KeyMap_Add(&g_ObjectPool.CollisionParentMap, "NoParent");
+    Vec4_PushBack(&g_ObjectPool.CollisionPos, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.CollisionSize, { 1,1,1,1 });
+    Vec4_PushBack(&g_ObjectPool.CollisionAngle, { 0,0,0,0 });
+    VecBool_PushBack(&g_ObjectPool.CollisionHit, false);
+    VecInt_PushBack(&g_ObjectPool.CollisionType, CollisionType::CollisionBox);
+    CollisionIndex++;
+    ObjectIdx.CollisionIndex = CollisionIndex;
+}
+//内部機能性関数------------------------------
+int Collision_GetIndexByName(const char* name)
+{
+    return KeyMap_GetIndex(&GetObjectDataPool()->CollisionMap, name);
+}
+int Collision_GetIndexByTag(const char* tag)
+{
+    return KeyMap_GetIndex(&GetObjectDataPool()->CollisionTagMap, tag);
+}
+const char* Collision_GetTagByIndex(int idx)
+{
+    return KeyMap_GetKey(&GetObjectDataPool()->CollisionTagMap, idx);
+}
+int Collision_Find(const char* name, const char* tag)
+{
+    ObjectDataPool* p = GetObjectDataPool();
+    int total = GetObjectIndex()->CollisionIndex;
+
+    for (int i = 0; i < total; i++)
+    {
+        const char* cname = KeyMap_GetKey(&p->CollisionMap, i);
+        const char* ctag = KeyMap_GetKey(&p->CollisionTagMap, i);
+
+        if (!strcmp(cname, name) && !strcmp(ctag, tag))
+            return i;
+    }
+    return -1;
+}
+
+bool Collision_TagAllow(int idx1, int idx2)
+{
+    //ALLに入れられたら全てと判定する
+    const char* tag1 = Collision_GetTagByIndex(idx1);
+    const char* tag2 = Collision_GetTagByIndex(idx2);
+
+    if (strcmp(tag1, "ALL") == 0) return true;
+    if (strcmp(tag2, "ALL") == 0) return true;
+
+    return strcmp(tag1, tag2) == 0;
+}
+bool HitJudgeTo(int idx1, int idx2)
+{
+    //HitToName用
+
+    ObjectDataPool* p = GetObjectDataPool();
+
+    if (!Collision_TagAllow(idx1, idx2))
+    {
+        return false;
+    }
+
+    //値取得
+    Vec4 aPos = Vec4_Get(&p->CollisionPos, idx1);
+    Vec4 aSize = Vec4_Get(&p->CollisionSize, idx1);
+    Vec4 bPos = Vec4_Get(&p->CollisionPos, idx2);
+    Vec4 bSize = Vec4_Get(&p->CollisionSize, idx2);
+
+    //AABB判定
+    float dx = fabs(aPos.X - bPos.X);
+    float dy = fabs(aPos.Y - bPos.Y);
+    float dz = fabs(aPos.Z - bPos.Z);
+
+    if (dx < (aSize.X + bSize.X) * 0.5f &&
+        dy < (aSize.Y + bSize.Y) * 0.5f &&
+        dz < (aSize.Z + bSize.Z) * 0.5f)
+    {
+        return true;
+    }
+    return false;
+}
+void UpdateCollisionFromParent(int colIndex)
+{
+    ObjectDataPool* p = GetObjectDataPool();
+    const char* parentName = KeyMap_GetKey(&p->CollisionParentMap, colIndex);
+
+    if (strcmp(parentName, "NoParent") == 0)
+        return;
+
+    Vec4 parentPos;
+}
+
+//API用関数------------------------
+bool HitToTag(const char* name, const char* tag)
+{
+    ObjectDataPool* p = GetObjectDataPool();
+    int total = GetObjectIndex()->CollisionIndex;
+
+    // 衝突元（src）
+    int idxSrc = Collision_GetIndexByName(name);
+    if (idxSrc < 0) return false;
+
+    Vec4 srcPos = Vec4_Get(&p->CollisionPos, idxSrc);
+    Vec4 srcSize = Vec4_Get(&p->CollisionSize, idxSrc);
+
+    // ------------- TAG = "ALL" の場合 -------------
+    if (strcmp(tag, "ALL") == 0)
+    {
+        for (int i = 0; i < total; i++)
+        {
+            if (i == idxSrc) continue;
+
+            Vec4 dstPos = Vec4_Get(&p->CollisionPos, i);
+            Vec4 dstSize = Vec4_Get(&p->CollisionSize, i);
+
+            if (fabs(srcPos.X - dstPos.X) < (srcSize.X + dstSize.X) * 0.5f &&
+                fabs(srcPos.Y - dstPos.Y) < (srcSize.Y + dstSize.Y) * 0.5f &&
+                fabs(srcPos.Z - dstPos.Z) < (srcSize.Z + dstSize.Z) * 0.5f)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ----------- TAG が通常の場合（特定タグだけ判定） ----------
+    for (int i = 0; i < total; i++)
+    {
+        const char* t = Collision_GetTagByIndex(i);
+        if (strcmp(t, tag) != 0) continue;
+        if (i == idxSrc) continue;
+
+        Vec4 dstPos = Vec4_Get(&p->CollisionPos, i);
+        Vec4 dstSize = Vec4_Get(&p->CollisionSize, i);
+
+        if (fabs(srcPos.X - dstPos.X) < (srcSize.X + dstSize.X) * 0.5f &&
+            fabs(srcPos.Y - dstPos.Y) < (srcSize.Y + dstSize.Y) * 0.5f &&
+            fabs(srcPos.Z - dstPos.Z) < (srcSize.Z + dstSize.Z) * 0.5f)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+bool HitToName(const char* name1, const char* name2)
+{
+    int idx1 = Collision_GetIndexByName(name1);
+    int idx2 = Collision_GetIndexByName(name2);
+
+    if (idx1 < 0 || idx2 < 0)
+         return false;
+
+    return HitJudgeTo(idx1, idx2);
+}
+void SetCollisionParent(const char* name, const char* parent)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    KeyMap_SetKey(&g_ObjectPool.CollisionParentMap, idx, parent);
+}
+void SetCollisionPos(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    Vec4_Set(&g_ObjectPool.CollisionPos, idx, { x,y,z,0 });
+}
+void SetCollisionSize(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    Vec4_Set(&g_ObjectPool.CollisionSize, idx, { x,y,z,1 });
+}
+void SetCollisionAngle(const char* name, float x, float y, float z)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    Vec4_Set(&g_ObjectPool.CollisionAngle, idx, { x,y,z,0 });
+}
+void SetCollisionType(const char* name, CollisionType type)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
+    VecInt_Set(&g_ObjectPool.CollisionType, idx, type);
+}
+
+
+  //////////////////////
+ // オブジェクト管理 //
+//////////////////////
+//
 // オブジェクトの作成・管理
 void CreateObject()
 {
@@ -543,9 +735,7 @@ void InitDo()
     ObjectIdx.SpriteWorldIndex = 0;
     ObjectIdx.SpriteScreenIndex = 0;
     ObjectIdx.ModelIndex = 0;
-    ObjectIdx.BoxColliderIndex = 0;
-    ObjectIdx.SphereColliderIndex = 0;
-    ObjectIdx.CapsuleColliderIndex = 0;
+    ObjectIdx.CollisionIndex = 0;
     ObjectIdx.GridLineIndex = 0;
     ObjectIdx.GridBoxIndex = 0;
     ObjectIdx.GridPolygonIndex = 0;
@@ -576,9 +766,9 @@ void InitDo()
     Vec4_Init(&p->ModelAngle);
 
     // BoxCollider
-    Vec4_Init(&p->BoxColliderPos);
-    Vec4_Init(&p->BoxColliderSize);
-    Vec4_Init(&p->BoxColliderAngle);
+    Vec4_Init(&p->CollisionPos);
+    Vec4_Init(&p->CollisionSize);
+    Vec4_Init(&p->CollisionAngle);
 
     // Grid Box / Polygon
     Vec4_Init(&p->GridBoxPos);
@@ -605,7 +795,7 @@ void InitDo()
     KeyMap_Init(&p->TextureMap);
     KeyMap_Init(&p->SpriteWorldMap);
     KeyMap_Init(&p->UIMap);
-    KeyMap_Init(&p->BoxColliderMap);
+    KeyMap_Init(&p->CollisionMap);
     KeyMap_Init(&p->GridBoxMap);
     KeyMap_Init(&p->GridPolygonMap);
     KeyMap_Init(&p->SpriteWorldTexturePathMap);
@@ -626,16 +816,12 @@ void InitDo()
 
 void UpdateDo()
 {
-	static bool testOnce = false;
-
     ShaderManager_Update();
     UpdateInput();
 
     CreateObject();
     UpdateScene();
     object->Update();
-
-	int camIdx = KeyMap_GetIndex(&g_ObjectPool.CameraMap, "MainCamera");
 }
 
 void DrawDo()
@@ -665,9 +851,9 @@ void ReleaseDo()
     Vec4_Free(&p->ModelSize);
     Vec4_Free(&p->ModelAngle);
 
-    Vec4_Free(&p->BoxColliderPos);
-    Vec4_Free(&p->BoxColliderSize);
-    Vec4_Free(&p->BoxColliderAngle);
+    Vec4_Free(&p->CollisionPos);
+    Vec4_Free(&p->CollisionSize);
+    Vec4_Free(&p->CollisionAngle);
 
     Vec4_Free(&p->GridBoxPos);
     Vec4_Free(&p->GridBoxSize);
@@ -691,7 +877,7 @@ void ReleaseDo()
     KeyMap_Free(&p->TextureMap);
     KeyMap_Free(&p->SpriteWorldMap);
     KeyMap_Free(&p->UIMap);
-    KeyMap_Free(&p->BoxColliderMap);
+    KeyMap_Free(&p->CollisionMap);
     KeyMap_Free(&p->GridBoxMap);
     KeyMap_Free(&p->GridPolygonMap);
 

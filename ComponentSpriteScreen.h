@@ -18,8 +18,8 @@ public:
     void Release() override;
 
     void SetTexture(const char* path);
-    void SetPos(float x, float y);
-    void SetSize(float w, float h);
+    void SetPos2D(float x, float y);
+    void SetSize2D(float w, float h);
     void SetColor(float r, float g, float b, float a);
 
 private:
@@ -34,8 +34,8 @@ private:
     };
 
 
-    XMFLOAT3 m_pos{ 0, 0, 0 };
-    XMFLOAT3 m_size{ 100, 100, 1 };
+    FLOAT3 m_pos{ 0, 0, 0 };
+    FLOAT3 m_size{ 100, 100, 1 };
     XMFLOAT4 m_color{ 1, 1, 1, 1 };
     bool m_visible = true;
 

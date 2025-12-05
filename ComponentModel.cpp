@@ -200,6 +200,10 @@ void Model::Init()
 
 void Model::Update()
 {
+    MatPos = XMMatrixTranslation(GetPosition().x, GetPosition().y, GetPosition().z);
+    MatSize = XMMatrixScaling(GetSize().x, GetSize().y, GetSize().z);
+    MatAngle = XMMatrixRotationRollPitchYaw(GetAngle().x, GetAngle().y, GetAngle().z);
+
     world = MatSize * MatAngle * MatPos;
 }
 
@@ -298,18 +302,6 @@ void Model::Release()
     sampler.Reset();
 }
 
-void Model::SetPos(float x, float y, float z)
-{
-    MatPos = XMMatrixTranslation(x, y, z);
-}
-void Model::SetSize(float x, float y, float z)
-{
-    MatSize = XMMatrixScaling(x, y, z);
-}
-void Model::SetAngle(float x, float y, float z)
-{
-    MatAngle = XMMatrixRotationRollPitchYaw(x, y, z);
-}
 void Model::SetColor(float r, float g, float b, float a)
 {
     diffuseColor = { r, g, b, a };

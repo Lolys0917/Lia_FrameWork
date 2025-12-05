@@ -93,9 +93,6 @@ void SpriteWorld::SetTexture(const char* assetPath)
     }
 }
 
-void SpriteWorld::SetPos(float x, float y, float z) { m_pos = { x,y,z }; }
-void SpriteWorld::SetSize(float w, float h) { m_size = { w,h }; }
-void SpriteWorld::SetAngle(float rx, float ry, float rz) { m_angle = { rx,ry,rz }; }
 void SpriteWorld::SetColor(const XMFLOAT4& color) { m_color = color; }
 void SpriteWorld::SetBillboard(bool enable) { m_isBillboard = enable; }
 
@@ -110,6 +107,11 @@ void SpriteWorld::Draw()
     char buf[256];
     sprintf_s(buf, "Draw: srv=%p pos=(%f,%f,%f) size=(%f,%f) angle=(%f,%f,%f)",
         m_srv, m_pos.x, m_pos.y, m_pos.z, m_size.x, m_size.y, m_angle.x, m_angle.y, m_angle.z);
+
+    m_pos = GetPosition();
+    m_angle = GetAngle();
+    m_size.x = GetSize().x;
+    m_size.y = GetSize().y;
 
     // 頂点設定
     float hw = m_size.x * 0.5f, hh = m_size.y * 0.5f;

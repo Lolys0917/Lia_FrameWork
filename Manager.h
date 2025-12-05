@@ -38,6 +38,7 @@
 // Define_________________________
 
 // 構造体定義_____________________
+
 // Vec4構造体
 typedef struct { float X, Y, Z, W; } Vec4;
 // Char2構造体
@@ -58,9 +59,7 @@ typedef struct {
     int SpriteBoxIndex;
     int SpriteCylinderIndex;
 	int ModelIndex;			//Model__________
-	int BoxColliderIndex;	//Collider_______
-	int SphereColliderIndex;
-	int CapsuleColliderIndex;
+	int CollisionIndex; 	//Collider_______
 	int GridLineIndex;      //Grid___________
 	int GridBoxIndex;
 	int GridPolygonIndex;
@@ -272,10 +271,12 @@ struct ObjectDataPool {
     Vec4Vector ModelSize;
     Vec4Vector ModelAngle;
     BoolVector ModelUseTexture;
-    // BoxCollider
-    Vec4Vector BoxColliderPos;
-    Vec4Vector BoxColliderSize;
-    Vec4Vector BoxColliderAngle;
+    // Collision
+    Vec4Vector CollisionPos;
+    Vec4Vector CollisionSize;
+    Vec4Vector CollisionAngle;
+    IntVector  CollisionType;
+    BoolVector CollisionHit;
     // Grid(Box / Polygon)
     Vec4Vector GridBoxPos;
     Vec4Vector GridBoxSize;
@@ -303,7 +304,9 @@ struct ObjectDataPool {
     KeyMap SpriteBoxMap;
     KeyMap SpriteCylinderMap;
     KeyMap UIMap;
-    KeyMap BoxColliderMap;
+    KeyMap CollisionMap;
+    KeyMap CollisionTagMap;
+    KeyMap CollisionParentMap;
     KeyMap GridBoxMap;
     KeyMap GridPolygonMap;
     KeyMap SpriteWorldTexturePathMap;
@@ -420,6 +423,15 @@ void SetModelSize(const char* name, float x, float y, float z);                 
 void SetModelAngle(const char* name, float x, float y, float z);                    //モデルの角度設定
 void SetModelMotion(const char* name, const char* pathName, int Attack);            //モデルのモーション設定移行速度設定
 void ModelTexture(const char* name, const char* pathName);
+//|| Collision ||_____________________
+void AddCollision(const char* name, const char* tag);
+bool HitToTag(const char* name, const char* tag);
+bool HitToName(const char* name1, const char* name2);
+void SetCollisionParent(const char* name, const char* parent);
+void SetCollisionPos(const char* name, float x, float y, float z);
+void SetCollisionSize(const char* name, float x, float y, float z);
+void SetCollisionAngle(const char* name, float x, float y, float z);
+//void SetCollisionType(const char* name, CollisionType type);
 
 ///////////////////////////////////
 

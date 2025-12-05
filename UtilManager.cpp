@@ -330,6 +330,8 @@ int KeyMap_EnsureCapacity(KeyMap* map) {
         char** new_keys = (char**)realloc(map->keys, new_capacity * sizeof(char*));
         if (!new_keys) {
             AddMessage("\nerror : keymap_ensure_capacity/ƒƒ‚ƒŠ‚ÌŠm•Û‚É¸”s\n");
+            MessageBoxA(NULL, "KeyMap_ErrorMemory", "Error", S_OK);
+            
             return 0; // ƒƒ‚ƒŠŠm•Û¸”s
         }
         map->keys = new_keys;
@@ -338,12 +340,13 @@ int KeyMap_EnsureCapacity(KeyMap* map) {
     return 1; // ¬Œ÷
 }
 int KeyMap_Add(KeyMap* map, const char* key) {
-    for (size_t i = 0; i < map->size; i++) {
-        if (strcmp(map->keys[i], key) == 0) {
-            printf("error: key '%s' already exists!\n", key);
-            //return -1; // Šù‘¶
-        }
-    }
+    //for (size_t i = 0; i < map->size; i++) {
+    //    if (strcmp(map->keys[i], key) == 0) {
+    //        printf("error: key '%s' already exists!\n", key);
+    //        
+    //        //return -1; // Šù‘¶
+    //    }
+    //}
     if (!KeyMap_EnsureCapacity(map)) return -1;
 
     map->keys[map->size] = _strdup(key);
