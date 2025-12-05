@@ -1,0 +1,14 @@
+|| 2025_1205～のリファクタについて ||||||||||||||||||||||||||||||
+
+・今現在、ModelIndexやObujectDataPoolのVec4 ScreenPos等を全て
+　ObjectIndexやVec4 ObjectPosとして一括管理型にする
+・意図：当たり判定等の親子付けをするために
+　　　　一括管理をする必要がある
+・Componentに入れ込んだposition,size,angleの三大数値とObjectNameMapは
+　全てObjectPosition等として管理することとする
+
+変更場所
+　Manager.h
+  Component.h
+  ObjectManager.cpp
+  SceneManager.cpp

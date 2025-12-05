@@ -320,6 +320,15 @@ struct ObjectDataPool {
     KeyMap SpriteCylinderTopTexturePathMap;
     KeyMap SpriteCylinderBottomTexturePathMap;
     KeyMap SpriteCylinderSideTexturePathMap;
+
+
+    //ã§ópç\ë¢ëÃ
+    KeyMap ObjectMap;
+    Vec4Vector ObjectPosition;
+    Vec4Vector ObjectSize;
+    Vec4Vector ObjectAngle;
+    BoolVector ObjectActive;
+
 };
 ObjectDataPool* GetObjectDataPool();
 
