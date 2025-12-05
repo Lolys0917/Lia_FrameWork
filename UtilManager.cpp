@@ -330,6 +330,8 @@ int KeyMap_EnsureCapacity(KeyMap* map) {
         char** new_keys = (char**)realloc(map->keys, new_capacity * sizeof(char*));
         if (!new_keys) {
             AddMessage("\nerror : keymap_ensure_capacity/ƒƒ‚ƒŠ‚ÌŠm•Û‚ÉŽ¸”s\n");
+            MessageBoxA(NULL, "KeyMap_ErrorMemory", "Error", S_OK);
+            
             return 0; // ƒƒ‚ƒŠŠm•ÛŽ¸”s
         }
         map->keys = new_keys;

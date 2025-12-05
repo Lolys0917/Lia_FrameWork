@@ -544,6 +544,16 @@ bool HitJudgeTo(int idx1, int idx2)
     }
     return false;
 }
+void UpdateCollisionFromParent(int colIndex)
+{
+    ObjectDataPool* p = GetObjectDataPool();
+    const char* parentName = KeyMap_GetKey(&p->CollisionParentMap, colIndex);
+
+    if (strcmp(parentName, "NoParent") == 0)
+        return;
+
+    Vec4 parentPos;
+}
 
 //API用関数------------------------
 bool HitToTag(const char* name, const char* tag)
@@ -598,7 +608,6 @@ bool HitToTag(const char* name, const char* tag)
 
     return false;
 }
-
 bool HitToName(const char* name1, const char* name2)
 {
     int idx1 = Collision_GetIndexByName(name1);
@@ -609,7 +618,6 @@ bool HitToName(const char* name1, const char* name2)
 
     return HitJudgeTo(idx1, idx2);
 }
-
 void SetCollisionParent(const char* name, const char* parent)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);

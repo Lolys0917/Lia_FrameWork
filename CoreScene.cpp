@@ -134,7 +134,7 @@ void CoreStartUp()
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
     // Å‰‚ÌƒV[ƒ“İ’è
-    ChangeScene("Scene3");
+    ChangeScene("Scene1");
 
     AddGridBox("BoxC");
     SetGridBoxPos("BoxC", 0, 0, 0);
@@ -144,6 +144,7 @@ void CoreStartUp()
 
     AddCollision("player", "playerTag");
     AddCollision("enemy", "enemyTag");
+    //AddCollision("enemy", "enemyTag");
 
     //“–‚Ä‚È‚¢‚½‚ß‚ÉÀ•W‚¸‚ç‚µ
     SetCollisionPos("player", 1, 0, 0);
