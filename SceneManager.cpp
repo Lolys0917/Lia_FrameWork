@@ -50,12 +50,8 @@ void AddScene(const char* name)
     range.EndIndex_SpriteBox = idx->SpriteBoxIndex;
     range.StartIndex_SpriteCylinder = idx->SpriteCylinderIndex;
     range.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
-    range.StartIndex_GridBox = idx->GridBoxIndex;
-    range.EndIndex_GridBox = idx->GridBoxIndex;
-    range.StartIndex_GridPolygon = idx->GridPolygonIndex;
-    range.EndIndex_GridPolygon = idx->GridPolygonIndex;
-    range.StartIndex_Grid = idx->GridLineIndex;
-    range.EndIndex_Grid = idx->GridLineIndex;
+    range.StartIndex_GridBox = idx->GridIndex;
+    range.EndIndex_GridBox = idx->GridIndex;
     range.StartIndex_Model = idx->ModelIndex;
     range.EndIndex_Model = idx->ModelIndex;
     range.StartIndex_Collision = idx->CollisionIndex;
@@ -77,9 +73,7 @@ void SceneEndPoint()
     r.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
     r.EndIndex_SpriteBox = idx->SpriteBoxIndex;
     r.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
-    r.EndIndex_GridBox = idx->GridBoxIndex;
-    r.EndIndex_GridPolygon = idx->GridPolygonIndex;
-    r.EndIndex_Grid = idx->GridLineIndex;
+    r.EndIndex_GridBox = idx->GridIndex;
     r.EndIndex_Model = idx->ModelIndex;
     r.Finalized = true;
 
@@ -96,9 +90,7 @@ void RefreshSceneRange()
     range.EndIndex_Camera = idx->CameraIndex;
     range.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
     range.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
-    range.EndIndex_GridBox = idx->GridBoxIndex;
-    range.EndIndex_GridPolygon = idx->GridPolygonIndex;
-    range.EndIndex_Grid = idx->GridLineIndex;
+    range.EndIndex_GridBox = idx->GridIndex;
 }
 //-----------------------------------------
 // Scene初期化
@@ -124,7 +116,7 @@ void InitScene(const char* name)
     //SpriteWorld
     for (int i = range.StartIndex_SpriteWorld; i < range.EndIndex_SpriteWorld; i++)
     {
-        if (i < 0 || i >= (int)pool->GridBoxPos.size) continue;
+        if (i < 0 || i >= (int)pool->GridPos.size) continue;
         Vec4 v4Pos = Vec4_Get(&pool->SpriteWorldPos, i);
         GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
     }
@@ -231,7 +223,7 @@ void DrawScene()
             Vec4 ang = Vec4_Get(&pool->GridBoxAngle, i);
             Vec4 col = Vec4_Get(&pool->GridBoxColor, i);
             GetGridClass()->SetColor({ col.X,col.Y,col.Z,col.W });
-            GetGridClass()->DrawBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
+            GetGridClass()->SetBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
             GetGridClass()->Draw();
         }
     }
@@ -245,7 +237,7 @@ void DrawScene()
             Vec4 ang = Vec4_Get(&pool->GridPolygonAngle, i);
             Vec4 col = Vec4_Get(&pool->GridPolygonColor, i);
             GetGridClass()->SetColor({ col.X,col.Y,col.Z,col.W });
-            GetGridClass()->DrawGridPolygon(VecInt_Get(&pool->GridPolygonSides, i),
+            GetGridClass()->SetPolygon(VecInt_Get(&pool->GridPolygonSides, i),
                 { pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
             GetGridClass()->Draw();
         }

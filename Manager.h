@@ -64,11 +64,7 @@ typedef struct {
     int SpriteCylinderIndex;
 	int ModelIndex;			//Model__________
 	int CollisionIndex; 	//Collider_______
-	int GridLineIndex;      //Grid___________
-	int GridBoxIndex;
-	int GridPolygonIndex;
-	int GridSphereIndex;
-	int GridCapsuleIndex;
+	int GridIndex;      //Grid___________
 	int EffectIndex;		//Effect_________
 } ObjectIndex;
 enum class IndexType {
@@ -79,12 +75,15 @@ enum class IndexType {
 	BoxCollider,
 	SphereCollider,
 	CapsuleCollider,
-	GridLine,
-	GridBox,
-	GridPolygon,
-	GridSphere,
-	GridCapsule,
+	Grid,
 	Effect
+};
+enum GridType
+{
+    Grid_Line,
+    Grid_Box,
+    Grid_Polygon,
+    Grid_GridPolygon,
 };
 enum LightType
 {
@@ -309,16 +308,13 @@ struct ObjectDataPool {
     IntVector  CollisionType;
     BoolVector CollisionHit;
     // Grid(Box / Polygon)
-    Vec4Vector GridBoxPos;
-    Vec4Vector GridBoxSize;
-    Vec4Vector GridBoxAngle;
-    Vec4Vector GridBoxColor;
-    Vec4Vector GridPolygonPos;
-    Vec4Vector GridPolygonSize;
-    Vec4Vector GridPolygonAngle;
-    Vec4Vector GridPolygonColor;
+    Vec4Vector GridPos;
+    Vec4Vector GridSize;
+    Vec4Vector GridAngle;
+    Vec4Vector GridColor;
+    IntVector  GridSides;
+    IntVector  GridTypeIndex;
     // Int / Bool / Char Vec
-    IntVector GridPolygonSides;
     CharVector TexturePath;
     CharVector ModelPath;
     IntVector NumberOfScenes;
@@ -338,8 +334,7 @@ struct ObjectDataPool {
     KeyMap CollisionMap;
     KeyMap CollisionTagMap;
     KeyMap CollisionParentMap;
-    KeyMap GridBoxMap;
-    KeyMap GridPolygonMap;
+    KeyMap GridMap;
     KeyMap SpriteWorldTexturePathMap;
     KeyMap SpriteScreenTexturePathMap;
     KeyMap SpriteBoxTopTexturePathMap;
@@ -414,17 +409,11 @@ void AddGridLine(const char* name);                                             
 void SetGridLinePos(const char* name, float Start, float End);                      //グリッドの描画範囲指定
 void SetGridLineColor(const char* name, float r, float g, float b, float a);        //グリッドの色設定
 // Grid Box                                                                         //
-void AddGridBox(const char* name);                                                  //箱形グリッドの追加
-void SetGridBoxPos(const char* name, float x, float y, float z);                    //箱形グリッドの座標設定
-void SetGridBoxSize(const char* name, float x, float y, float z);                   //箱形グリッドのサイズ設定
-void SetGridBoxColor(const char* name, float R, float G, float B, float A);         //箱形グリッドの色設定
-// Grid Polygon                                                                     //
-void AddGridPolygon(const char* name);                                              //多角グリッドの追加
-void SetGridPolygonPos(const char* name, float x, float y, float z);                //多角グリッドの座標設定
-void SetGridPolygonSize(const char* name, float x, float y, float z);               //多角グリッドのサイズ設定
-void SetGridPolygonAngle(const char* name, float x, float y, float z);              //多角グリッドの角度設定
-void SetGridPolygonColor(const char* name, float R, float G, float B, float A);     //多角グリッドの色設定
-void SetGridPolygonSides(const char* name, int sides);                              //多角グリッドの角数設定
+void AddGrid(const char* name);                                                  //箱形グリッドの追加
+void SetGridPos(const char* name, float x, float y, float z);                    //箱形グリッドの座標設定
+void SetGridSize(const char* name, float x, float y, float z);                   //箱形グリッドのサイズ設定
+void SetGridColor(const char* name, float R, float G, float B, float A);         //箱形グリッドの色設定
+void SetGridSides(const char* name, int sides);                              //多角グリッドの角数設定
 //|| Sound ||_______________________ 
 //World
 void AddSpeaker(const char* name, const char* pathName);                            //スピーカーの追加音源指定

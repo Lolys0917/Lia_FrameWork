@@ -40,8 +40,7 @@ static int SpriteBoxIndex = 0, SpriteBoxOldIndex = 0;
 static int SpriteCylinderIndex = 0, SpriteCylinderOldIndex = 0;
 static int ModelIndex = 0, ModelOldIndex = 0;
 static int BoxColliderIndex = 0, BoxColliderOldIndex = 0;
-static int GridBoxIndex = 0, GridBoxOldIndex = 0;
-static int GridPolygonIndex = 0, GridPolygonOldIndex = 0;
+static int GridIndex = 0, GridOldIndex = 0;
 static int CollisionIndex = 0, CollisionOldIndex = 0;
 
 //-----------------------------------------
@@ -63,8 +62,7 @@ Vec4 GetVec4FromPool(IndexType type, int index)
     switch (type)
     {
     case IndexType::Camera: return Vec4_Get(&p->CameraPos, index);
-    case IndexType::GridBox: return Vec4_Get(&p->GridBoxPos, index);
-    case IndexType::GridPolygon: return Vec4_Get(&p->GridPolygonPos, index);
+    case IndexType::Grid: return Vec4_Get(&p->GridPos, index);
     case IndexType::Model: return Vec4_Get(&p->ModelPos, index);
     default: return { 0,0,0,0 };
     }
@@ -76,8 +74,7 @@ void SetVec4ToPool(IndexType type, int index, Vec4 v)
     switch (type)
     {
     case IndexType::Camera: Vec4_Set(&p->CameraPos, index, v); break;
-    case IndexType::GridBox: Vec4_Set(&p->GridBoxPos, index, v); break;
-    case IndexType::GridPolygon: Vec4_Set(&p->GridPolygonPos, index, v); break;
+    case IndexType::Grid: Vec4_Set(&p->GridPos, index, v); break;
     case IndexType::Model: Vec4_Set(&p->ModelPos, index, v); break;
     default: break;
     }
@@ -355,71 +352,43 @@ void SetSpriteCylinderTextureBottom(const char* name, const char* pathName){
 //-----------------------------------------
 // Grid管理
 //-----------------------------------------
-void AddGridBox(const char* Name)
+void AddGridBox(const char* Name, GridType type)
 {
-    Vec4_PushBack(&g_ObjectPool.GridBoxPos, { 0,0,0,0 });
-    Vec4_PushBack(&g_ObjectPool.GridBoxSize, { 1,1,1,1 });
-    Vec4_PushBack(&g_ObjectPool.GridBoxAngle, { 0,0,0,0 });
-    Vec4_PushBack(&g_ObjectPool.GridBoxColor, { 1,1,1,1 });
-    KeyMap_Add(&g_ObjectPool.GridBoxMap, Name);
-    GridBoxIndex++;
-    ObjectIdx.GridBoxIndex = GridBoxIndex;
+    Vec4_PushBack(&g_ObjectPool.GridPos, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.GridSize, { 1,1,1,1 });
+    Vec4_PushBack(&g_ObjectPool.GridAngle, { 0,0,0,0 });
+    Vec4_PushBack(&g_ObjectPool.GridColor, { 1,1,1,1 });
+    VecInt_PushBack(&g_ObjectPool.GridSides, 4);
+    VecInt_PushBack(&g_ObjectPool.GridTypeIndex, type);
+    KeyMap_Add(&g_ObjectPool.GridMap, Name);
+    GridIndex++;
+    ObjectIdx.GridIndex = GridIndex;
 
-    NotifyAddObject(IndexType::GridBox);
+    NotifyAddObject(IndexType::Grid);
 }
 void SetGridBoxPos(const char* Name, float x, float y, float z)
 {
-    int idx = KeyMap_GetIndex(&g_ObjectPool.GridBoxMap, Name);
+    int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxPos: not found ", Name)); return; }
-    Vec4_Set(&g_ObjectPool.GridBoxPos, idx, { x,y,z,0 });
+    Vec4_Set(&g_ObjectPool.GridPos, idx, { x,y,z,0 });
 }
 void SetGridBoxSize(const char* Name, float x, float y, float z)
 {
-    int idx = KeyMap_GetIndex(&g_ObjectPool.GridBoxMap, Name);
+    int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxSize: not found ", Name)); return; }
-    Vec4_Set(&g_ObjectPool.GridBoxSize, idx, { x,y,z,0 });
+    Vec4_Set(&g_ObjectPool.GridSize, idx, { x,y,z,0 });
 }
 void SetGridBoxAngle(const char* Name, float x, float y, float z)
 {
-    int idx = KeyMap_GetIndex(&g_ObjectPool.GridBoxMap, Name);
+    int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxAngle: not found ", Name)); return; }
-    Vec4_Set(&g_ObjectPool.GridBoxAngle, idx, { x,y,z,0 });
+    Vec4_Set(&g_ObjectPool.GridAngle, idx, { x,y,z,0 });
 }
 void SetGridBoxColor(const char* Name, float R, float G, float B, float A)
 {
-    int idx = KeyMap_GetIndex(&g_ObjectPool.GridBoxMap, Name);
+    int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxColor: not found ", Name)); return; }
-    Vec4_Set(&g_ObjectPool.GridBoxColor, idx, { R,G,B,A });
-}
-
-void AddGridPolygon(const char* Name)
-{
-    Vec4_PushBack(&g_ObjectPool.GridPolygonPos, { 0,0,0,0 });
-    Vec4_PushBack(&g_ObjectPool.GridPolygonSize, { 1,1,1,1 });
-    Vec4_PushBack(&g_ObjectPool.GridPolygonAngle, { 0,0,0,0 });
-    Vec4_PushBack(&g_ObjectPool.GridPolygonColor, { 0,0,0,1 });
-    VecInt_PushBack(&g_ObjectPool.GridPolygonSides, 4);
-    KeyMap_Add(&g_ObjectPool.GridPolygonMap, Name);
-    GridPolygonIndex++;
-    ObjectIdx.GridPolygonIndex = GridPolygonIndex;
-}
-void SetGridPolygonPos(const char* Name, float x, float y, float z)
-{
-    int idx = KeyMap_GetIndex(&g_ObjectPool.GridPolygonMap, Name);
-    if (idx < 0) { AddMessage(ConcatCStr("SetGridPolygonPos: not found ", Name)); return; }
-    Vec4_Set(&g_ObjectPool.GridPolygonPos, idx, { x,y,z,0 });
-}
-void SetGridPolygonColor(const char* Name, float R, float G, float B, float A)
-{
-    int idx = KeyMap_GetIndex(&g_ObjectPool.GridPolygonMap, Name);
-    if (idx < 0) { AddMessage(ConcatCStr("SetGridPolygonColor: not found ", Name)); return; }
-    Vec4_Set(&g_ObjectPool.GridPolygonColor, idx, { R,G,B,A });
-}
-void SetGridPolygonSides(const char* Name, int sides)
-{
-    int idx = KeyMap_GetIndex(&g_ObjectPool.GridPolygonMap, Name);
-    if (idx < 0) { AddMessage(ConcatCStr("SetGridPolygonSides: not found ", Name)); return; }
-    VecInt_Set(&g_ObjectPool.GridPolygonSides, idx, sides);
+    Vec4_Set(&g_ObjectPool.GridColor, idx, { R,G,B,A });
 }
 
 //==================================
@@ -728,19 +697,15 @@ void InitDo()
 {
     // インデックス初期化・ObjectIdx リセット
     UseCamera = -1;
-    CameraIndex = UIIndex = SpriteWorldIndex = ModelIndex = BoxColliderIndex = GridBoxIndex = GridPolygonIndex = 0;
-    CameraOldIdx = UIOldIndex = SpriteWorldOldIndex = ModelOldIndex = BoxColliderOldIndex = GridBoxOldIndex = GridPolygonOldIndex = 0;
+    CameraIndex = UIIndex = SpriteWorldIndex = ModelIndex = BoxColliderIndex = GridIndex = 0;
+    CameraOldIdx = UIOldIndex = SpriteWorldOldIndex = ModelOldIndex = BoxColliderOldIndex = GridOldIndex = 0;
 
     ObjectIdx.CameraIndex = 0;
     ObjectIdx.SpriteWorldIndex = 0;
     ObjectIdx.SpriteScreenIndex = 0;
     ObjectIdx.ModelIndex = 0;
     ObjectIdx.CollisionIndex = 0;
-    ObjectIdx.GridLineIndex = 0;
-    ObjectIdx.GridBoxIndex = 0;
-    ObjectIdx.GridPolygonIndex = 0;
-    ObjectIdx.GridSphereIndex = 0;
-    ObjectIdx.GridCapsuleIndex = 0;
+    ObjectIdx.GridIndex = 0;
     ObjectIdx.EffectIndex = 0;
 
     // Vec4Init（Pool 全部） --- ここを必ずすべて列挙することが重要
@@ -771,18 +736,12 @@ void InitDo()
     Vec4_Init(&p->CollisionAngle);
 
     // Grid Box / Polygon
-    Vec4_Init(&p->GridBoxPos);
-    Vec4_Init(&p->GridBoxSize);
-    Vec4_Init(&p->GridBoxAngle);
-    Vec4_Init(&p->GridBoxColor);
-
-    Vec4_Init(&p->GridPolygonPos);
-    Vec4_Init(&p->GridPolygonSize);
-    Vec4_Init(&p->GridPolygonAngle);
-    Vec4_Init(&p->GridPolygonColor);
-
+    Vec4_Init(&p->GridPos);
+    Vec4_Init(&p->GridSize);
+    Vec4_Init(&p->GridAngle);
+    Vec4_Init(&p->GridColor);
     // Int/Char/Bool vectors
-    VecInt_Init(&p->GridPolygonSides);
+    VecInt_Init(&p->GridSides);
     VecC_Init(&p->TexturePath);
     VecC_Init(&p->ModelPath);
     VecInt_Init(&p->NumberOfScenes);
@@ -796,8 +755,7 @@ void InitDo()
     KeyMap_Init(&p->SpriteWorldMap);
     KeyMap_Init(&p->UIMap);
     KeyMap_Init(&p->CollisionMap);
-    KeyMap_Init(&p->GridBoxMap);
-    KeyMap_Init(&p->GridPolygonMap);
+    KeyMap_Init(&p->GridMap);
     KeyMap_Init(&p->SpriteWorldTexturePathMap);
     KeyMap_Init(&p->SpriteScreenTexturePathMap);
 
@@ -855,17 +813,12 @@ void ReleaseDo()
     Vec4_Free(&p->CollisionSize);
     Vec4_Free(&p->CollisionAngle);
 
-    Vec4_Free(&p->GridBoxPos);
-    Vec4_Free(&p->GridBoxSize);
-    Vec4_Free(&p->GridBoxAngle);
-    Vec4_Free(&p->GridBoxColor);
+    Vec4_Free(&p->GridPos);
+    Vec4_Free(&p->GridSize);
+    Vec4_Free(&p->GridAngle);
+    Vec4_Free(&p->GridColor);
 
-    Vec4_Free(&p->GridPolygonPos);
-    Vec4_Free(&p->GridPolygonSize);
-    Vec4_Free(&p->GridPolygonAngle);
-    Vec4_Free(&p->GridPolygonColor);
-
-    VecInt_Free(&p->GridPolygonSides);
+    VecInt_Free(&p->GridSides);
     VecC_Free(&p->TexturePath);
     VecC_Free(&p->ModelPath);
     VecInt_Free(&p->NumberOfScenes);
@@ -878,8 +831,7 @@ void ReleaseDo()
     KeyMap_Free(&p->SpriteWorldMap);
     KeyMap_Free(&p->UIMap);
     KeyMap_Free(&p->CollisionMap);
-    KeyMap_Free(&p->GridBoxMap);
-    KeyMap_Free(&p->GridPolygonMap);
+    KeyMap_Free(&p->GridMap);
 
     // オブジェクト解放
     if (object) { delete object; object = nullptr; }
