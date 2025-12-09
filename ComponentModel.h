@@ -23,6 +23,7 @@ using Microsoft::WRL::ComPtr;
 
 struct ModelVertex;
 struct MatrixBuffer;
+struct MotionPackage;
 
 enum class ModelType
 {

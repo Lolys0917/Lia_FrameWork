@@ -33,6 +33,10 @@
 #include <sstream>
 #include <filesystem>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 #pragma comment (lib, "d3dcompiler.lib")
 
 // Define_________________________
