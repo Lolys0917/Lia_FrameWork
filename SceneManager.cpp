@@ -196,9 +196,9 @@ void DrawScene()
         if (i != 5)
         {
             GetGridClass()->SetPosition( i - 5.0f, 0.0f, -5.0f);
-            GetGridClass()->SetSides(i - 5.0f, 0.0f, 5.0f);
-            GetGridClass()->Draw();
-            GetGridClass()->SetPos({ -5.0f, 0.0f, i - 5.0f }, { 5.0f, 0.0f, i - 5.0f });
+            GetGridClass()->SetSize(i - 5.0f, 0.0f, 5.0f);
+            GetGridClass()->SetPosition( -5.0f, 0.0f, i - 5.0f );
+            GetGridClass()->SetSize( 5.0f, 0.0f, i - 5.0f );
             GetGridClass()->Draw();
         }
     }
@@ -206,9 +206,9 @@ void DrawScene()
     GetGridClass()->SetColor({ 1,0,0,1 });
     GetGridClass()->SetPosition({ -5,0,0 }, { 5,0,0 }); GetGridClass()->Draw();
     GetGridClass()->SetColor({ 0,1,0,1 });
-    GetGridClass()->SetPos({ 0,-5,0 }, { 0,5,0 }); GetGridClass()->Draw();
+    GetGridClass()->SetPosition({ 0,-5,0 }, { 0,5,0 }); GetGridClass()->Draw();
     GetGridClass()->SetColor({ 0,0,1,1 });
-    GetGridClass()->SetPos({ 0,0,-5 }, { 0,0,5 }); GetGridClass()->Draw();
+    GetGridClass()->SetPosition({ 0,0,-5 }, { 0,0,5 }); GetGridClass()->Draw();
 
      //GridBox
     if (SceneRanges[CurrentSceneIndex].StartIndex_GridBox >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_GridBox <= (int)pool->GridBoxPos.size) {
