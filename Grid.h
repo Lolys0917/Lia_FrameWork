@@ -13,7 +13,7 @@ using Microsoft::WRL::ComPtr;
 class Grid : Component
 {
 public:
-    Grid() {}
+    using Component::Component;
     ~Grid() {}
 
     void Init();

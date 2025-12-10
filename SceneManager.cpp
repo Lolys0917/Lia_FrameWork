@@ -3,6 +3,7 @@
 // Objectにインデックスを割り振り、Sceneごとに管理する仕組みを提供。
 
 #include "Manager.h"
+#include "Component.h"
 #include <vector>
 
 // Scene範囲構造体（元通り）
@@ -123,14 +124,8 @@ void InitScene(const char* name)
     // Grid の初期化（ここでは色のみ復帰）
     for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; ++i)
     {
-        if (i < 0 || i >= (int)pool->GridBoxColor.size) continue;
-        Vec4 col = Vec4_Get(&pool->GridBoxColor, i);
-        GetGridClass()->SetColor({ col.X, col.Y, col.Z, col.W });
-    }
-    for (int i = range.StartIndex_GridPolygon; i < range.EndIndex_GridPolygon; ++i)
-    {
-        if (i < 0 || i >= (int)pool->GridPolygonColor.size) continue;
-        Vec4 col = Vec4_Get(&pool->GridPolygonColor, i);
+        if (i < 0 || i >= (int)pool->GridColor.size) continue;
+        Vec4 col = Vec4_Get(&pool->GridColor, i);
         GetGridClass()->SetColor({ col.X, col.Y, col.Z, col.W });
     }
 
@@ -200,7 +195,8 @@ void DrawScene()
     {
         if (i != 5)
         {
-            GetGridClass()->SetPos({ i - 5.0f, 0.0f, -5.0f }, { i - 5.0f, 0.0f, 5.0f });
+            GetGridClass()->SetPosition( i - 5.0f, 0.0f, -5.0f);
+            GetGridClass()->SetSides(i - 5.0f, 0.0f, 5.0f);
             GetGridClass()->Draw();
             GetGridClass()->SetPos({ -5.0f, 0.0f, i - 5.0f }, { 5.0f, 0.0f, i - 5.0f });
             GetGridClass()->Draw();
@@ -208,7 +204,7 @@ void DrawScene()
     }
 
     GetGridClass()->SetColor({ 1,0,0,1 });
-    GetGridClass()->SetPos({ -5,0,0 }, { 5,0,0 }); GetGridClass()->Draw();
+    GetGridClass()->SetPosition({ -5,0,0 }, { 5,0,0 }); GetGridClass()->Draw();
     GetGridClass()->SetColor({ 0,1,0,1 });
     GetGridClass()->SetPos({ 0,-5,0 }, { 0,5,0 }); GetGridClass()->Draw();
     GetGridClass()->SetColor({ 0,0,1,1 });
@@ -290,7 +286,7 @@ void DrawScene()
             Vec4 v4Color = Vec4_Get(&pool->SpriteBoxColor, i);
             Vec4 v4Angle = Vec4_Get(&pool->SpriteBoxAngle, i);
 
-            GetObjectClass()->GetComponent<SpriteBox>(i)->SetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetObjectClass()->GetComponent<SpriteBox>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
             GetObjectClass()->GetComponent<SpriteBox>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
             GetObjectClass()->GetComponent<SpriteBox>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
             GetObjectClass()->GetComponent<SpriteBox>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
