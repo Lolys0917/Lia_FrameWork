@@ -352,7 +352,7 @@ void SetSpriteCylinderTextureBottom(const char* name, const char* pathName){
 //-----------------------------------------
 // Grid管理
 //-----------------------------------------
-void AddGridBox(const char* Name, GridType type)
+void AddGrid(const char* name, GridType type)
 {
     Vec4_PushBack(&g_ObjectPool.GridPos, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.GridSize, { 1,1,1,1 });
@@ -360,35 +360,41 @@ void AddGridBox(const char* Name, GridType type)
     Vec4_PushBack(&g_ObjectPool.GridColor, { 1,1,1,1 });
     VecInt_PushBack(&g_ObjectPool.GridSides, 4);
     VecInt_PushBack(&g_ObjectPool.GridTypeIndex, type);
-    KeyMap_Add(&g_ObjectPool.GridMap, Name);
+    KeyMap_Add(&g_ObjectPool.GridMap, name);
     GridIndex++;
     ObjectIdx.GridIndex = GridIndex;
 
     NotifyAddObject(IndexType::Grid);
 }
-void SetGridBoxPos(const char* Name, float x, float y, float z)
+void SetGridPos(const char* Name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxPos: not found ", Name)); return; }
     Vec4_Set(&g_ObjectPool.GridPos, idx, { x,y,z,0 });
 }
-void SetGridBoxSize(const char* Name, float x, float y, float z)
+void SetGridSize(const char* Name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxSize: not found ", Name)); return; }
     Vec4_Set(&g_ObjectPool.GridSize, idx, { x,y,z,0 });
 }
-void SetGridBoxAngle(const char* Name, float x, float y, float z)
+void SetGridAngle(const char* Name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxAngle: not found ", Name)); return; }
     Vec4_Set(&g_ObjectPool.GridAngle, idx, { x,y,z,0 });
 }
-void SetGridBoxColor(const char* Name, float R, float G, float B, float A)
+void SetGridColor(const char* Name, float R, float G, float B, float A)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxColor: not found ", Name)); return; }
     Vec4_Set(&g_ObjectPool.GridColor, idx, { R,G,B,A });
+}
+void SetGridSides(const char* Name, int sides)
+{
+    int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
+    if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxSides: not found ", Name)); return; }
+    VecInt_Set(&g_ObjectPool.GridSides, idx, sides);
 }
 
 //==================================
@@ -687,6 +693,12 @@ void CreateObject()
 
         ModelOldIndex++;
     }
+    while (GridOldIndex < GridIndex)
+    {
+		object->AddComponent<Grid>()->SetGridType((GridType)VecInt_Get(&g_ObjectPool.GridTypeIndex, GridOldIndex));
+
+		GridOldIndex++;
+    }
 }
 
 
@@ -764,7 +776,7 @@ void InitDo()
 
 
     // クラス取得
-    grid = new Grid();
+    grid = new Grid(nullptr);
     grid->Init();
     object = new Object();
     object->Init();

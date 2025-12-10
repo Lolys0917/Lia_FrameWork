@@ -9,8 +9,6 @@
 // Scene範囲構造体（元通り）
 typedef struct {
     int StartIndex_Grid, EndIndex_Grid;
-    int StartIndex_GridBox, EndIndex_GridBox;
-    int StartIndex_GridPolygon, EndIndex_GridPolygon;
     int StartIndex_Camera, EndIndex_Camera;
     int StartIndex_SpriteWorld, EndIndex_SpriteWorld;
     int StartIndex_SpriteScreen, EndIndex_SpriteScreen;
@@ -51,8 +49,8 @@ void AddScene(const char* name)
     range.EndIndex_SpriteBox = idx->SpriteBoxIndex;
     range.StartIndex_SpriteCylinder = idx->SpriteCylinderIndex;
     range.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
-    range.StartIndex_GridBox = idx->GridIndex;
-    range.EndIndex_GridBox = idx->GridIndex;
+    range.StartIndex_Grid = idx->GridIndex;
+    range.EndIndex_Grid = idx->GridIndex;
     range.StartIndex_Model = idx->ModelIndex;
     range.EndIndex_Model = idx->ModelIndex;
     range.StartIndex_Collision = idx->CollisionIndex;
@@ -74,7 +72,7 @@ void SceneEndPoint()
     r.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
     r.EndIndex_SpriteBox = idx->SpriteBoxIndex;
     r.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
-    r.EndIndex_GridBox = idx->GridIndex;
+    r.EndIndex_Grid = idx->GridIndex;
     r.EndIndex_Model = idx->ModelIndex;
     r.Finalized = true;
 
@@ -82,16 +80,27 @@ void SceneEndPoint()
 }
 void RefreshSceneRange()
 {
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size()) return;
+    // ActiveSceneIndex が有効ならそちらを優先して更新する（オブジェクト追加中のシーンを追跡）
+    int targetScene = ActiveSceneIndex;
+    if (targetScene < 0 || targetScene >= (int)SceneRanges.size()) {
+        // Active が無効なら Current を参照するが、原則は Active を使う
+        targetScene = CurrentSceneIndex;
+    }
+    if (targetScene < 0 || targetScene >= (int)SceneRanges.size()) return;
 
-    SceneRange& range = SceneRanges[CurrentSceneIndex];
-    if (range.Finalized) return; // ✅ 確定済みは更新しない
+    SceneRange& range = SceneRanges[targetScene];
+    if (range.Finalized) return; // 確定済みは更新しない
 
     ObjectIndex* idx = GetObjectIndex();
+    // すべての EndIndex を現在のプールインデックスに追随させる
     range.EndIndex_Camera = idx->CameraIndex;
     range.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
     range.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
-    range.EndIndex_GridBox = idx->GridIndex;
+    range.EndIndex_SpriteBox = idx->SpriteBoxIndex;
+    range.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
+    range.EndIndex_Grid = idx->GridIndex;
+    range.EndIndex_Model = idx->ModelIndex;
+    range.EndIndex_Collision = idx->CollisionIndex;
 }
 //-----------------------------------------
 // Scene初期化
@@ -122,12 +131,12 @@ void InitScene(const char* name)
         GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
     }
     // Grid の初期化（ここでは色のみ復帰）
-    for (int i = range.StartIndex_GridBox; i < range.EndIndex_GridBox; ++i)
+    /*for (int i = range.StartIndex_Grid; i < range.EndIndex_Grid; ++i)
     {
         if (i < 0 || i >= (int)pool->GridColor.size) continue;
         Vec4 col = Vec4_Get(&pool->GridColor, i);
         GetGridClass()->SetColor({ col.X, col.Y, col.Z, col.W });
-    }
+    }*/
 
     AddMessage(ConcatCStr("InitScene(): ", name));
 }
@@ -190,13 +199,14 @@ void DrawScene()
 
     // GridBase
     GetGridClass()->SetColor({ 0,0,0,1 });
-
+    GetGridClass()->SetGridType(GridType::Grid_Line);
     for (int i = 0; i < 10; i++)
     {
         if (i != 5)
         {
             GetGridClass()->SetPosition( i - 5.0f, 0.0f, -5.0f);
             GetGridClass()->SetSize(i - 5.0f, 0.0f, 5.0f);
+            GetGridClass()->Draw();
             GetGridClass()->SetPosition( -5.0f, 0.0f, i - 5.0f );
             GetGridClass()->SetSize( 5.0f, 0.0f, i - 5.0f );
             GetGridClass()->Draw();
@@ -204,38 +214,46 @@ void DrawScene()
     }
 
     GetGridClass()->SetColor({ 1,0,0,1 });
-    GetGridClass()->SetPosition({ -5,0,0 }, { 5,0,0 }); GetGridClass()->Draw();
+    GetGridClass()->SetPosition( -5,0,0 ); 
+    GetGridClass()->SetSize( 5,0,0 ); 
+    GetGridClass()->Draw();
     GetGridClass()->SetColor({ 0,1,0,1 });
-    GetGridClass()->SetPosition({ 0,-5,0 }, { 0,5,0 }); GetGridClass()->Draw();
+    GetGridClass()->SetPosition( 0,-5,0 );
+    GetGridClass()->SetSize( 0,5,0 );
+    GetGridClass()->Draw();
     GetGridClass()->SetColor({ 0,0,1,1 });
-    GetGridClass()->SetPosition({ 0,0,-5 }, { 0,0,5 }); GetGridClass()->Draw();
+    GetGridClass()->SetPosition( 0,0,-5 );
+    GetGridClass()->SetSize( 0,0,5 );
+    GetGridClass()->Draw();
 
      //GridBox
-    if (SceneRanges[CurrentSceneIndex].StartIndex_GridBox >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_GridBox <= (int)pool->GridBoxPos.size) {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_GridBox; i < SceneRanges[CurrentSceneIndex].EndIndex_GridBox; i++) {
-            if (i < 0 || i >= (int)pool->GridBoxPos.size) continue;
-            Vec4 pos = Vec4_Get(&pool->GridBoxPos, i);
-            Vec4 size = Vec4_Get(&pool->GridBoxSize, i); 
-            Vec4 ang = Vec4_Get(&pool->GridBoxAngle, i);
-            Vec4 col = Vec4_Get(&pool->GridBoxColor, i);
-            GetGridClass()->SetColor({ col.X,col.Y,col.Z,col.W });
-            GetGridClass()->SetBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
-            GetGridClass()->Draw();
-        }
-    }
+    if (SceneRanges[CurrentSceneIndex].StartIndex_Grid >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_Grid <= (int)pool->GridPos.size) {
+        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_Grid; i < SceneRanges[CurrentSceneIndex].EndIndex_Grid; i++) {
+            if (i < 0 || i >= (int)pool->GridPos.size) continue;
+            Vec4 pos = Vec4_Get(&pool->GridPos, i);
+            Vec4 size = Vec4_Get(&pool->GridSize, i); 
+            Vec4 ang = Vec4_Get(&pool->GridAngle, i);
+            Vec4 col = Vec4_Get(&pool->GridColor, i);
+			int sides = (int)VecInt_Get(&pool->GridSides, i);
+			int gridTypeIndex = (int)VecInt_Get(&pool->GridTypeIndex, i);
 
-    // GridPolygon
-    if (SceneRanges[CurrentSceneIndex].StartIndex_GridPolygon >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_GridPolygon <= (int)pool->GridPolygonPos.size) {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_GridPolygon; i < SceneRanges[CurrentSceneIndex].EndIndex_GridPolygon; i++) {
-            if (i < 0 || i >= (int)pool->GridPolygonPos.size) continue;
-            Vec4 pos = Vec4_Get(&pool->GridPolygonPos, i);
-            Vec4 size = Vec4_Get(&pool->GridPolygonSize, i);
-            Vec4 ang = Vec4_Get(&pool->GridPolygonAngle, i);
-            Vec4 col = Vec4_Get(&pool->GridPolygonColor, i);
-            GetGridClass()->SetColor({ col.X,col.Y,col.Z,col.W });
-            GetGridClass()->SetPolygon(VecInt_Get(&pool->GridPolygonSides, i),
-                { pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
-            GetGridClass()->Draw();
+            GetObjectClass()->GetComponent<Grid>(i)->SetColor({ col.X,col.Y,col.Z,col.W });
+			GetObjectClass()->GetComponent<Grid>(i)->SetSides(sides);
+			GetObjectClass()->GetComponent<Grid>(i)->SetGridType((GridType)gridTypeIndex);
+            GetObjectClass()->GetComponent<Grid>(i)->SetPosition(pos.X, pos.Y, pos.Z);
+            GetObjectClass()->GetComponent<Grid>(i)->SetSize(size.X, size.Y, size.Z);
+            GetObjectClass()->GetComponent<Grid>(i)->SetAngle(ang.X, ang.Y, ang.Z);
+            GetObjectClass()->GetComponent<Grid>(i)->SetBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
+            //GetGridClass()->Draw();
+            //カメラ行列を渡す
+            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+                GetObjectClass()->GetComponent<Grid>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+                GetObjectClass()->GetComponent<Grid>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+            }
+            else
+            {
+                MessageBoxA(nullptr, "CameraNotFound", "Grid", MB_OK);
+            }
         }
     }
 
@@ -428,17 +446,11 @@ void NotifyAddObject(IndexType type)
 
     switch (type)
     {
-    case IndexType::GridBox:
-        range.EndIndex_GridBox = idx->GridBoxIndex;
-        break;
-    case IndexType::GridPolygon:
-        range.EndIndex_GridPolygon = idx->GridPolygonIndex;
+    case IndexType::Grid:
+        range.EndIndex_Grid = idx->GridIndex;
         break;
     case IndexType::Camera:
         range.EndIndex_Camera = idx->CameraIndex;
-        break;
-    case IndexType::GridLine:
-        range.EndIndex_Grid = idx->GridLineIndex;
         break;
     }
 }

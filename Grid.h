@@ -10,7 +10,9 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-class Grid : Component
+enum GridType;
+
+class Grid : public Component
 {
 public:
     using Component::Component;

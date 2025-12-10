@@ -404,12 +404,8 @@ void SetSpriteCylinderTextureTop(const char* name, const char* pathName);       
 void SetSpriteCylinderTextureBottom(const char* name, const char* pathName);        //円柱のテクスチャ設定底面
 void SetSpriteCylinderTextureSide(const char* name, const char* pathName);          //円柱のテクスチャ設定周面
 //|| Grid   ||_______________________                                               //
-// Grid Line                                                                        //
-void AddGridLine(const char* name);                                                 //グリッドの追加
-void SetGridLinePos(const char* name, float Start, float End);                      //グリッドの描画範囲指定
-void SetGridLineColor(const char* name, float r, float g, float b, float a);        //グリッドの色設定
 // Grid
-void AddGrid(const char* name);                                                  //箱形グリッドの追加
+void AddGrid(const char* name, GridType type);                                                  //箱形グリッドの追加
 void SetGridPos(const char* name, float x, float y, float z);                    //箱形グリッドの座標設定
 void SetGridSize(const char* name, float x, float y, float z);                   //箱形グリッドのサイズ設定
 void SetGridColor(const char* name, float R, float G, float B, float A);         //箱形グリッドの色設定
