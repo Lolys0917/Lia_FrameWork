@@ -797,7 +797,7 @@ void UpdateDo()
 void DrawDo()
 {
     DrawScene();
-    object->Draw();
+    //object->Draw();
     //object->GetComponent<Model>(0)->Draw();
 }
 

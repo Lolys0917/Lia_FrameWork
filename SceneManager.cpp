@@ -194,37 +194,37 @@ void DrawScene()
     if (!GetGridClass() || !GetObjectClass()) return;
 
 
-    GetGridClass()->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
-    GetGridClass()->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+    //GetGridClass()->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+    //GetGridClass()->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
 
-    // GridBase
-    GetGridClass()->SetColor({ 0,0,0,1 });
-    GetGridClass()->SetGridType(GridType::Grid_Line);
-    for (int i = 0; i < 10; i++)
-    {
-        if (i != 5)
-        {
-            GetGridClass()->SetPosition( i - 5.0f, 0.0f, -5.0f);
-            GetGridClass()->SetSize(i - 5.0f, 0.0f, 5.0f);
-            GetGridClass()->Draw();
-            GetGridClass()->SetPosition( -5.0f, 0.0f, i - 5.0f );
-            GetGridClass()->SetSize( 5.0f, 0.0f, i - 5.0f );
-            GetGridClass()->Draw();
-        }
-    }
+    //// GridBase
+    //GetGridClass()->SetColor({ 0,0,0,1 });
+    //GetGridClass()->SetGridType(GridType::Grid_Line);
+    //for (int i = 0; i < 10; i++)
+    //{
+    //    if (i != 5)
+    //    {
+    //        GetGridClass()->SetPosition( i - 5.0f, 0.0f, -5.0f);
+    //        GetGridClass()->SetSize(i - 5.0f, 0.0f, 5.0f);
+    //        GetGridClass()->Draw();
+    //        GetGridClass()->SetPosition( -5.0f, 0.0f, i - 5.0f );
+    //        GetGridClass()->SetSize( 5.0f, 0.0f, i - 5.0f );
+    //        GetGridClass()->Draw();
+    //    }
+    //}
 
-    GetGridClass()->SetColor({ 1,0,0,1 });
-    GetGridClass()->SetPosition( -5,0,0 ); 
-    GetGridClass()->SetSize( 5,0,0 ); 
-    GetGridClass()->Draw();
-    GetGridClass()->SetColor({ 0,1,0,1 });
-    GetGridClass()->SetPosition( 0,-5,0 );
-    GetGridClass()->SetSize( 0,5,0 );
-    GetGridClass()->Draw();
-    GetGridClass()->SetColor({ 0,0,1,1 });
-    GetGridClass()->SetPosition( 0,0,-5 );
-    GetGridClass()->SetSize( 0,0,5 );
-    GetGridClass()->Draw();
+    //GetGridClass()->SetColor({ 1,0,0,1 });
+    //GetGridClass()->SetPosition( -5,0,0 ); 
+    //GetGridClass()->SetSize( 5,0,0 ); 
+    //GetGridClass()->Draw();
+    //GetGridClass()->SetColor({ 0,1,0,1 });
+    //GetGridClass()->SetPosition( 0,-5,0 );
+    //GetGridClass()->SetSize( 0,5,0 );
+    //GetGridClass()->Draw();
+    //GetGridClass()->SetColor({ 0,0,1,1 });
+    //GetGridClass()->SetPosition( 0,0,-5 );
+    //GetGridClass()->SetSize( 0,0,5 );
+    //GetGridClass()->Draw();
 
      //GridBox
     if (SceneRanges[CurrentSceneIndex].StartIndex_Grid >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_Grid <= (int)pool->GridPos.size) {
@@ -254,6 +254,8 @@ void DrawScene()
             {
                 MessageBoxA(nullptr, "CameraNotFound", "Grid", MB_OK);
             }
+
+			GetObjectClass()->DrawComponent<Grid>(SceneRanges[CurrentSceneIndex].StartIndex_Grid, SceneRanges[CurrentSceneIndex].EndIndex_Grid);
         }
     }
 
