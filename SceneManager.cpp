@@ -20,12 +20,62 @@ typedef struct {
     bool Finalized;
 } SceneRange;
 
-static std::vector<SceneRange> SceneRanges;
+typedef struct {
+    SceneRange* data; size_t size; size_t capacity;
+}SceneRangeVector;
+
+//static std::vector<SceneRange> SceneRanges;
+SceneRangeVector SRVec;
+static IntVector SceneRangeIndex;
 static KeyMap SceneMap;
 static int CurrentSceneIndex = -1;
 static int ActiveSceneIndex = -1;
 void SettingScene();
 void SceneEndPoint();
+
+void SceneRange_Init(SceneRangeVector* vec) {
+    vec->data = NULL;
+    vec->size = 0;
+    vec->capacity = 0;
+}
+//push_back
+void SceneRange_PushBack(SceneRangeVector* vec, SceneRange value) {
+    if (vec->size >= vec->capacity) {
+        size_t new_capacity = (vec->capacity == 0) ? 4 : vec->capacity * 2;
+        SceneRange* new_data = (SceneRange*)realloc(vec->data, new_capacity * sizeof(SceneRange));
+        if (!new_data) {
+            AddMessage("\nerror : SceneRange vector_push_back/メモリの確保に失敗\n");
+            return;
+        }
+        vec->data = new_data;
+        vec->capacity = new_capacity;
+    }
+    vec->data[vec->size] = value;
+    vec->size++;
+}
+//要素の設定
+void SceneRange_Set(SceneRangeVector* vec, size_t index, SceneRange value) {
+    if (index >= vec->size) {
+        AddMessage("\nerror : SceneRange vector_set/インデックス範囲外\n");
+        return;
+    }
+    vec->data[index] = value;
+}
+//要素を取得
+SceneRange SceneRange_Get(SceneRangeVector* vec, size_t index) {
+    if (index >= vec->size) {
+        AddMessage("\nerror : SceneRange vector_get/インデックス範囲外\n");
+        return {};
+    }
+    return vec->data[index];
+}
+//解放
+void SceneRange_Free(SceneRangeVector* vec) {
+    free(vec->data);
+    vec->data = NULL;
+    vec->size = 0;
+    vec->capacity = 0;
+}
 
 //-----------------------------------------
 // Scene操作
@@ -38,7 +88,8 @@ void AddScene(const char* name)
     ActiveSceneIndex = newIndex; // 追加された瞬間アaクティブ化
 
     ObjectIndex* idx = GetObjectIndex();
-    SceneRange range{};
+    SceneRange range;
+
     range.StartIndex_Camera = idx->CameraIndex;
     range.EndIndex_Camera = idx->CameraIndex;
     range.StartIndex_SpriteWorld = idx->SpriteWorldIndex;
@@ -58,14 +109,16 @@ void AddScene(const char* name)
     range.UseCameraIndex = -1;
     range.Finalized = false;
 
-    SceneRanges.push_back(range);
+    SceneRange_PushBack(&SRVec, range);
+
+    //SceneRanges.push_back(range);
 }
 
 void SceneEndPoint()
 {
-    if (SceneRanges.empty()) return;
+    if (SRVec.size < 0) return;
     ObjectIndex* idx = GetObjectIndex();
-    SceneRange& r = SceneRanges[CurrentSceneIndex];
+    SceneRange r = SceneRange_Get(&SRVec, CurrentSceneIndex);
 
     r.EndIndex_Camera = idx->CameraIndex;
     r.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
@@ -76,19 +129,21 @@ void SceneEndPoint()
     r.EndIndex_Model = idx->ModelIndex;
     r.Finalized = true;
 
+    SceneRange_Set(&SRVec, CurrentSceneIndex, r);
+
     ActiveSceneIndex = -1;
 }
 void RefreshSceneRange()
 {
     // ActiveSceneIndex が有効ならそちらを優先して更新する（オブジェクト追加中のシーンを追跡）
     int targetScene = ActiveSceneIndex;
-    if (targetScene < 0 || targetScene >= (int)SceneRanges.size()) {
+    if (targetScene < 0 || targetScene >= (int)SRVec.size) {
         // Active が無効なら Current を参照するが、原則は Active を使う
         targetScene = CurrentSceneIndex;
     }
-    if (targetScene < 0 || targetScene >= (int)SceneRanges.size()) return;
+    if (targetScene < 0 || targetScene >= (int)SRVec.size) return;
 
-    SceneRange& range = SceneRanges[targetScene];
+    SceneRange range = SceneRange_Get(&SRVec, targetScene);
     if (range.Finalized) return; // 確定済みは更新しない
 
     ObjectIndex* idx = GetObjectIndex();
@@ -110,7 +165,7 @@ void InitScene(const char* name)
     int index = KeyMap_GetIndex(&SceneMap, name);
     if (index == -1) { AddMessage(ConcatCStr("InitScene failed: ", name)); return; }
 
-    SceneRange& range = SceneRanges[index];
+    SceneRange range = SceneRange_Get(&SRVec, index);
     CurrentSceneIndex = index;
     ObjectDataPool* pool = GetObjectDataPool();
     //Camera
@@ -152,9 +207,9 @@ void CopyScene(const char* srcScene, const char* newScene)
     if (srcIndex == -1) { AddMessage(ConcatCStr("CopyScene failed: ", srcScene)); return; }
 
     KeyMap_Add(&SceneMap, newScene);
-    SceneRange src = SceneRanges[srcIndex];
+    SceneRange src = SceneRange_Get(&SRVec, srcIndex);
     SceneRange dst = src;
-    SceneRanges.push_back(dst);
+    SceneRange_PushBack(&SRVec, dst);
     AddMessage(ConcatCStr("CopyScene(): ", newScene));
 }
 
@@ -165,8 +220,8 @@ void UpdateScene()
 {
     RefreshSceneRange();
 
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size()) return;
-    SceneRange& range = SceneRanges[CurrentSceneIndex];
+    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SRVec.size) return;
+    SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
     ObjectDataPool* pool = GetObjectDataPool();
 
     int cam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : GetUseCamera();
@@ -184,8 +239,8 @@ void UpdateScene()
 
 void DrawScene()
 {
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneRanges.size()) return;
-    SceneRange& range = SceneRanges[CurrentSceneIndex];
+    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SRVec.size) return;
+    SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
     ObjectDataPool* pool = GetObjectDataPool();
 
     int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : GetUseCamera();
@@ -194,41 +249,41 @@ void DrawScene()
     if (!GetGridClass() || !GetObjectClass()) return;
 
 
-    //GetGridClass()->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
-    //GetGridClass()->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+    GetGridClass()->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+    GetGridClass()->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
 
-    //// GridBase
-    //GetGridClass()->SetColor({ 0,0,0,1 });
-    //GetGridClass()->SetGridType(GridType::Grid_Line);
-    //for (int i = 0; i < 10; i++)
-    //{
-    //    if (i != 5)
-    //    {
-    //        GetGridClass()->SetPosition( i - 5.0f, 0.0f, -5.0f);
-    //        GetGridClass()->SetSize(i - 5.0f, 0.0f, 5.0f);
-    //        GetGridClass()->Draw();
-    //        GetGridClass()->SetPosition( -5.0f, 0.0f, i - 5.0f );
-    //        GetGridClass()->SetSize( 5.0f, 0.0f, i - 5.0f );
-    //        GetGridClass()->Draw();
-    //    }
-    //}
+    // GridBase
+    GetGridClass()->SetColor({ 0,0,0,1 });
+    GetGridClass()->SetGridType(GridType::Grid_Line);
+    for (int i = 0; i < 10; i++)
+    {
+        if (i != 5)
+        {
+            GetGridClass()->SetPosition( i - 5.0f, 0.0f, -5.0f);
+            GetGridClass()->SetSize(i - 5.0f, 0.0f, 5.0f);
+            GetGridClass()->Draw();
+            GetGridClass()->SetPosition( -5.0f, 0.0f, i - 5.0f );
+            GetGridClass()->SetSize( 5.0f, 0.0f, i - 5.0f );
+            GetGridClass()->Draw();
+        }
+    }
 
-    //GetGridClass()->SetColor({ 1,0,0,1 });
-    //GetGridClass()->SetPosition( -5,0,0 ); 
-    //GetGridClass()->SetSize( 5,0,0 ); 
-    //GetGridClass()->Draw();
-    //GetGridClass()->SetColor({ 0,1,0,1 });
-    //GetGridClass()->SetPosition( 0,-5,0 );
-    //GetGridClass()->SetSize( 0,5,0 );
-    //GetGridClass()->Draw();
-    //GetGridClass()->SetColor({ 0,0,1,1 });
-    //GetGridClass()->SetPosition( 0,0,-5 );
-    //GetGridClass()->SetSize( 0,0,5 );
-    //GetGridClass()->Draw();
+    GetGridClass()->SetColor({ 1,0,0,1 });
+    GetGridClass()->SetPosition( -5,0,0 ); 
+    GetGridClass()->SetSize( 5,0,0 ); 
+    GetGridClass()->Draw();
+    GetGridClass()->SetColor({ 0,1,0,1 });
+    GetGridClass()->SetPosition( 0,-5,0 );
+    GetGridClass()->SetSize( 0,5,0 );
+    GetGridClass()->Draw();
+    GetGridClass()->SetColor({ 0,0,1,1 });
+    GetGridClass()->SetPosition( 0,0,-5 );
+    GetGridClass()->SetSize( 0,0,5 );
+    GetGridClass()->Draw();
 
      //GridBox
-    if (SceneRanges[CurrentSceneIndex].StartIndex_Grid >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_Grid <= (int)pool->GridPos.size) {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_Grid; i < SceneRanges[CurrentSceneIndex].EndIndex_Grid; i++) {
+    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid >= 0 && SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid <= (int)pool->GridPos.size) {
+        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid; i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid; i++) {
             if (i < 0 || i >= (int)pool->GridPos.size) continue;
             Vec4 pos = Vec4_Get(&pool->GridPos, i);
             Vec4 size = Vec4_Get(&pool->GridSize, i); 
@@ -255,7 +310,8 @@ void DrawScene()
                 MessageBoxA(nullptr, "CameraNotFound", "Grid", MB_OK);
             }
 
-			GetObjectClass()->DrawComponent<Grid>(SceneRanges[CurrentSceneIndex].StartIndex_Grid, SceneRanges[CurrentSceneIndex].EndIndex_Grid);
+			//GetObjectClass()->DrawComponent<Grid>(SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid, SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid);
+            GetObjectClass()->DrawObject<Grid>(i);
         }
     }
 
@@ -265,9 +321,9 @@ void DrawScene()
     }
 
     //SpriteWorld
-    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteWorld >= 0 && SceneRanges[CurrentSceneIndex].EndIndex_SpriteWorld <= (int)pool->SpriteWorldPos.size)
+    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteWorld >= 0 && SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteWorld <= (int)pool->SpriteWorldPos.size)
     {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteWorld; i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteWorld; i++)
+        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteWorld; i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteWorld; i++)
         {
             if (i < 0 || i >= (int)pool->SpriteWorldPos.size) continue;
             Vec4 v4Pos = Vec4_Get(&pool->SpriteWorldPos, i);
@@ -294,11 +350,11 @@ void DrawScene()
         }
     }
     //SpriteBox
-    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteBox >= 0 &&
-        SceneRanges[CurrentSceneIndex].EndIndex_SpriteBox <= (int)pool->SpriteBoxPos.size)
+    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteBox >= 0 &&
+        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteBox <= (int)pool->SpriteBoxPos.size)
     {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteBox;
-            i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteBox; ++i)
+        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteBox;
+            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteBox; ++i)
         {
             if (i < 0 || i >= (int)pool->SpriteBoxPos.size) continue;
             Vec4 v4Pos = Vec4_Get(&pool->SpriteBoxPos, i);
@@ -323,11 +379,11 @@ void DrawScene()
         }
     }
     //SpriteCylinder
-    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteCylinder >= 0 &&
-        SceneRanges[CurrentSceneIndex].EndIndex_SpriteCylinder <= (int)pool->SpriteCylinderPos.size)
+    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteCylinder >= 0 &&
+        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteCylinder <= (int)pool->SpriteCylinderPos.size)
     {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteCylinder;
-            i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteCylinder; ++i)
+        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteCylinder;
+            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteCylinder; ++i)
         {
             if (i < 0 || i >= (int)pool->SpriteCylinderPos.size) continue;
             Vec4 v4Pos = Vec4_Get(&pool->SpriteCylinderPos, i);
@@ -352,11 +408,11 @@ void DrawScene()
         }
     }
     //SpriteScreen
-    if (SceneRanges[CurrentSceneIndex].StartIndex_SpriteScreen >= 0 &&
-        SceneRanges[CurrentSceneIndex].EndIndex_SpriteScreen <= (int)pool->SpriteScreenPos.size)
+    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteScreen >= 0 &&
+        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteScreen <= (int)pool->SpriteScreenPos.size)
     {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_SpriteScreen;
-            i < SceneRanges[CurrentSceneIndex].EndIndex_SpriteScreen; ++i)
+        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteScreen;
+            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteScreen; ++i)
         {
             if (i < 0 || i >= (int)pool->SpriteScreenPos.size) continue;
             Vec4 v4Pos = Vec4_Get(&pool->SpriteScreenPos, i);
@@ -370,11 +426,11 @@ void DrawScene()
         }
     }
     //Model
-    if (SceneRanges[CurrentSceneIndex].StartIndex_Model >= 0 &&
-        SceneRanges[CurrentSceneIndex].EndIndex_Model <= (int)pool->ModelPos.size)
+    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Model >= 0 &&
+        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Model <= (int)pool->ModelPos.size)
     {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_Model;
-            i < SceneRanges[CurrentSceneIndex].EndIndex_Model; ++i)
+        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Model;
+            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Model; ++i)
         {
             if (i < 0 || i >= (int)pool->ModelPos.size) continue;
             Vec4 v4Pos = Vec4_Get(&pool->ModelPos, i);
@@ -397,11 +453,11 @@ void DrawScene()
         }
     }
     //Collision
-    if (SceneRanges[CurrentSceneIndex].StartIndex_Collision >= 0 &&
-        SceneRanges[CurrentSceneIndex].EndIndex_Collision <= (int)pool->CollisionPos.size)
+    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Collision >= 0 &&
+        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Collision <= (int)pool->CollisionPos.size)
     {
-        for (int i = SceneRanges[CurrentSceneIndex].StartIndex_Collision;
-            i < SceneRanges[CurrentSceneIndex].EndIndex_Collision; ++i)
+        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Collision;
+            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Collision; ++i)
         {
             if (i < 0 || i >= (int)pool->CollisionPos.size) continue;
             Vec4 v4Pos = Vec4_Get(&pool->CollisionPos, i);
@@ -442,8 +498,8 @@ void ChangeScene(const char* name)
 
 void NotifyAddObject(IndexType type)
 {
-    if (ActiveSceneIndex < 0 || ActiveSceneIndex >= (int)SceneRanges.size()) return;
-    SceneRange& range = SceneRanges[ActiveSceneIndex];
+    if (ActiveSceneIndex < 0 || ActiveSceneIndex >= (int)SRVec.size) return;
+    SceneRange range = SceneRange_Get(&SRVec, ActiveSceneIndex);
     ObjectIndex* idx = GetObjectIndex();
 
     switch (type)
@@ -473,7 +529,9 @@ void SetSceneCamera(const char* s, const char* c)
         return;
     }
     // シーンに割当るだけにする（UseCamera を直接変更しない）
-    SceneRanges[si].UseCameraIndex = ci;
+    SceneRange sr = SceneRange_Get(&SRVec, si);
+    sr.UseCameraIndex = ci;
+    SceneRange_Set(&SRVec, si, sr);
     AddMessage(ConcatCStr("SetSceneCamera: scene=", s));
 }
 void DeleteScene(const char* name) { /*元処理保持用ダミー*/ }

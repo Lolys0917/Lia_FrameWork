@@ -83,6 +83,15 @@ public:
 		return nullptr;
     }
     template<typename T = Component>
+    T* DrawObject(int index)
+    {
+        int type = -1;
+        type = GetComponentType<T>();
+        if (type == -1) return nullptr; // –¢’m‚ÌŒ^
+        m_lpComp[type][index]->Draw();
+        return nullptr;
+    }
+    template<typename T = Component>
     T* AddComponent()
     {
         //static_assert(std::is_base_of<Component, T>::value, "T must be a Component");

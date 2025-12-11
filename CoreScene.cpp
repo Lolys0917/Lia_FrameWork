@@ -157,11 +157,16 @@ void CoreStartUp()
     SetGridPos("PolyA", 0, 0, 0);
 	SetGridColor("PolyA", 0, 1, 1, 1);
     SetGridSides("PolyA", 6);
-    AddSpriteWorld("TestSprite03", "asset/est.png");
-    SetSpriteWorldColor("TestSprite03", 1, 1, 1, 1);
-    SetSpriteWorldSize("TestSprite03", 3, 3, 3);
-    SetSpriteWorldPos("TestSprite03", 0, 0, 2);
-    SetSpriteWorldAngle("TestSprite03", 0, 0, 0);
+
+    AddGrid("PolyB", Grid_Polygon);
+    SetGridPos("PolyB", 2, 0, 0);
+    SetGridColor("PolyB", 0, 0, 1, 1);
+    SetGridSides("PolyB", 8);
+    //AddSpriteWorld("TestSprite03", "asset/est.png");
+    //SetSpriteWorldColor("TestSprite03", 1, 1, 1, 1);
+    //SetSpriteWorldSize("TestSprite03", 3, 3, 3);
+    //SetSpriteWorldPos("TestSprite03", 0, 0, 2);
+    //SetSpriteWorldAngle("TestSprite03", 0, 0, 0);
 
     SceneEndPoint();
 
@@ -170,7 +175,7 @@ void CoreStartUp()
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
     // ç≈èâÇÃÉVÅ[Éìê›íË
-    ChangeScene("Scene3");
+    ChangeScene("Scene2");
 
     AddGrid("BoxC", Grid_Box);
     SetGridPos("BoxC", 0, 0, 0);
