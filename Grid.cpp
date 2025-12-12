@@ -223,6 +223,7 @@ void Grid::SetLine(XMFLOAT3 Start, XMFLOAT3 End)
 // DrawBox: push 12 line segments (24 vertices) into pending list
 void Grid::SetBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle)
 {
+    //MessageBoxA(NULL, "Grid", "DRAW", S_OK);
     // create 8 corners in local space
     XMFLOAT3 vlocal[8] = {
         {-0.5f, -0.5f, -0.5f},

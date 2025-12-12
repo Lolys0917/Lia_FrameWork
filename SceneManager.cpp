@@ -145,7 +145,6 @@ void RefreshSceneRange()
 
     SceneRange range = SceneRange_Get(&SRVec, targetScene);
     if (range.Finalized) return; // 確定済みは更新しない
-
     ObjectIndex* idx = GetObjectIndex();
     // すべての EndIndex を現在のプールインデックスに追随させる
     range.EndIndex_Camera = idx->CameraIndex;
@@ -156,6 +155,8 @@ void RefreshSceneRange()
     range.EndIndex_Grid = idx->GridIndex;
     range.EndIndex_Model = idx->ModelIndex;
     range.EndIndex_Collision = idx->CollisionIndex;
+
+    //SceneRange_Set(&SRVec, targetScene, range);
 }
 //-----------------------------------------
 // Scene初期化
@@ -298,7 +299,7 @@ void DrawScene()
             GetObjectClass()->GetComponent<Grid>(i)->SetPosition(pos.X, pos.Y, pos.Z);
             GetObjectClass()->GetComponent<Grid>(i)->SetSize(size.X, size.Y, size.Z);
             GetObjectClass()->GetComponent<Grid>(i)->SetAngle(ang.X, ang.Y, ang.Z);
-            GetObjectClass()->GetComponent<Grid>(i)->SetBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
+            //GetObjectClass()->GetComponent<Grid>(i)->SetBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
             //GetGridClass()->Draw();
             //カメラ行列を渡す
             if (GetObjectClass()->GetComponent<Camera>(useCam)) {
@@ -309,7 +310,6 @@ void DrawScene()
             {
                 MessageBoxA(nullptr, "CameraNotFound", "Grid", MB_OK);
             }
-
 			//GetObjectClass()->DrawComponent<Grid>(SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid, SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid);
             GetObjectClass()->DrawObject<Grid>(i);
         }
@@ -346,7 +346,7 @@ void DrawScene()
             {
                 MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
             }
-
+            GetObjectClass()->DrawObject<SpriteWorld>(i);
         }
     }
     //SpriteBox
@@ -376,6 +376,7 @@ void DrawScene()
             {
                 MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
             }
+            GetObjectClass()->DrawObject<SpriteBox>(i);
         }
     }
     //SpriteCylinder
@@ -405,6 +406,7 @@ void DrawScene()
             {
                 MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
             }
+            GetObjectClass()->DrawObject<SpriteCylinder>(i);
         }
     }
     //SpriteScreen
@@ -423,6 +425,8 @@ void DrawScene()
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPos2D(v4Pos.X, v4Pos.Y);
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize2D(v4Size.X, v4Size.Y);
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
+        
+            GetObjectClass()->DrawObject<SpriteScreen>(i);
         }
     }
     //Model
@@ -450,6 +454,8 @@ void DrawScene()
             {
                 MessageBoxA(nullptr, "CameraNotFound", "Model", MB_OK);
             }
+
+            GetObjectClass()->DrawObject<Model>(i);
         }
     }
     //Collision
@@ -468,17 +474,7 @@ void DrawScene()
             GetObjectClass()->GetComponent<Collision>(i)->SetOffsetSize(v4Size.X, v4Size.Y, v4Size.Z);
             GetObjectClass()->GetComponent<Collision>(i)->SetOffsetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
 
-            //
-
-            //カメラ行列を渡す
-            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
-                GetObjectClass()->GetComponent<Model>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
-                GetObjectClass()->GetComponent<Model>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
-            }
-            else
-            {
-                MessageBoxA(nullptr, "CameraNotFound", "Collision", MB_OK);
-            }
+            GetObjectClass()->DrawObject<Collision>(i);
         }
     }
 }
@@ -498,8 +494,8 @@ void ChangeScene(const char* name)
 
 void NotifyAddObject(IndexType type)
 {
-    if (ActiveSceneIndex < 0 || ActiveSceneIndex >= (int)SRVec.size) return;
-    SceneRange range = SceneRange_Get(&SRVec, ActiveSceneIndex);
+    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SRVec.size) return;
+    SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
     ObjectIndex* idx = GetObjectIndex();
 
     switch (type)
@@ -511,6 +507,8 @@ void NotifyAddObject(IndexType type)
         range.EndIndex_Camera = idx->CameraIndex;
         break;
     }
+
+    //SceneRange_Set(&SRVec, CurrentScene)
 }
 
 const char* GetCurrentSceneName()

@@ -84,6 +84,7 @@ void CoreStartUp()
     AddGrid("BoxA", Grid_Box);
     AddGrid("BoxB", Grid_Box);
     SetGridPos("BoxA", -2, 0, 0);
+    SetGridSize("BoxA", 2, 1, 1);
     SetGridPos("BoxB", 2, 0, 0);
     SetGridColor("BoxA", 1, 0, 1, 1);
 
@@ -175,10 +176,12 @@ void CoreStartUp()
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
     // ç≈èâÇÃÉVÅ[Éìê›íË
-    ChangeScene("Scene2");
+    ChangeScene("Scene1");
 
     AddGrid("BoxC", Grid_Box);
     SetGridPos("BoxC", 0, 0, 0);
+    SetGridSize("BoxC", 3, 2, 1);
+    SetGridColor("BoxC", 1, 0, 1, 1);
 
     AddGrid("BoxD", Grid_Box);
     SetGridPos("BoxD", 2, 0, 0);
@@ -204,7 +207,7 @@ void CoreSceneUpdate()
 
     static float pos = -3.0f;
 	pos += 0.01f;
-    SetGridPos("BoxC", pos, 0, 0);
+    SetGridPos("BoxA", pos, 0, 0);
 
     SetCameraPos("SubCamera", 5, 6, -7);
 
