@@ -198,13 +198,13 @@ void CopyScene(const char* srcScene, const char* newScene)
 //-----------------------------------------
 void UpdateScene()
 {
-    RefreshSceneRange();
+    //RefreshSceneRange();
 
-    if (CurrentSceneIndex < 0) return;
-    //SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
+    //if (CurrentSceneIndex < 0) return;
+    ////SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
     ObjectDataPool* pool = GetObjectDataPool();
 
-    int cam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : GetUseCamera();
+    int cam = /*(range.UseCameraIndex >= 0) ? range.UseCameraIndex : */GetUseCamera();
     if (cam < 0 || cam >= (int)pool->CameraPos.size) return;
 
     // Camera projection + view 更新（安全チェック）
@@ -219,12 +219,12 @@ void UpdateScene()
 
 void DrawScene()
 {
-    if (CurrentSceneIndex < 0) return;
-    //SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
+    //if (CurrentSceneIndex < 0) return;
+    ////SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
     ObjectDataPool* pool = GetObjectDataPool();
 
-    int useCam = (range.UseCameraIndex >= 0) ? range.UseCameraIndex : GetUseCamera();
-    if (useCam < 0 || useCam >= (int)pool->CameraPos.size) return;
+    int useCam = GetUseCamera();
+    //if (useCam < 0 || useCam >= (int)pool->CameraPos.size) return;
 
     if (!GetGridClass() || !GetObjectClass()) return;
 
@@ -261,201 +261,223 @@ void DrawScene()
     GetGridClass()->SetSize( 0,0,5 );
     GetGridClass()->Draw();
 
-     //GridBox
-    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid >= 0 && SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid <= (int)pool->GridPos.size) {
-        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid; i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid; i++) {
-            if (i < 0 || i >= (int)pool->GridPos.size) continue;
-            Vec4 pos = Vec4_Get(&pool->GridPos, i);
-            Vec4 size = Vec4_Get(&pool->GridSize, i); 
-            Vec4 ang = Vec4_Get(&pool->GridAngle, i);
-            Vec4 col = Vec4_Get(&pool->GridColor, i);
-			int sides = (int)VecInt_Get(&pool->GridSides, i);
-			int gridTypeIndex = (int)VecInt_Get(&pool->GridTypeIndex, i);
-
-            GetObjectClass()->GetComponent<Grid>(i)->SetColor({ col.X,col.Y,col.Z,col.W });
-			GetObjectClass()->GetComponent<Grid>(i)->SetSides(sides);
-			GetObjectClass()->GetComponent<Grid>(i)->SetGridType((GridType)gridTypeIndex);
-            GetObjectClass()->GetComponent<Grid>(i)->SetPosition(pos.X, pos.Y, pos.Z);
-            GetObjectClass()->GetComponent<Grid>(i)->SetSize(size.X, size.Y, size.Z);
-            GetObjectClass()->GetComponent<Grid>(i)->SetAngle(ang.X, ang.Y, ang.Z);
-            //GetObjectClass()->GetComponent<Grid>(i)->SetBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
-            //GetGridClass()->Draw();
-            //カメラ行列を渡す
-            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
-                GetObjectClass()->GetComponent<Grid>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
-                GetObjectClass()->GetComponent<Grid>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
-            }
-            else
-            {
-                MessageBoxA(nullptr, "CameraNotFound", "Grid", MB_OK);
-            }
-			//GetObjectClass()->DrawComponent<Grid>(SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid, SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid);
-            GetObjectClass()->DrawObject<Grid>(i);
-        }
-    }
-
-    if (!GetObjectClass())
+    for (int i = 0; i < pool->GridInfo.size; i++)
     {
-        MessageBoxA(nullptr, "ObjectClassNULL", "Error", MB_OK);
-    }
+        if (!(pool->GridInfo.data->X == CurrentSceneIndex)) continue;
 
-    //SpriteWorld
-    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteWorld >= 0 && SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteWorld <= (int)pool->SpriteWorldPos.size)
-    {
-        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteWorld; i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteWorld; i++)
+        MessageBoxA(NULL, ConcatCStr("CurrentSceneData:", std::to_string(pool->GridInfo.data->X).c_str()), "Debug", MB_OK);
+        MessageBoxA(NULL, ConcatCStr("CurrentSceneIndex:", std::to_string(CurrentSceneIndex).c_str()), "Debug", MB_OK);
+
+        if (pool->GridInfo.data->Y == GetObjectClass()->GetComponentType<Grid>())
         {
-            if (i < 0 || i >= (int)pool->SpriteWorldPos.size) continue;
-            Vec4 v4Pos = Vec4_Get(&pool->SpriteWorldPos, i);
-            Vec4 v4Size = Vec4_Get(&pool->SpriteWorldSize, i);
-            Vec4 v4Angle = Vec4_Get(&pool->SpriteWorldAngle, i);
-            Vec4 v4Color = Vec4_Get(&pool->SpriteWorldColor, i);
+			//MessageBoxA(nullptr, "DrawGrid", "Info", MB_OK);
 
-            
-            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetColor({ v4Color.X, v4Color.Y, v4Color.Z, v4Color.W });
-            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
-            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetSize(v4Size.X, v4Size.Y, 0);
-            GetObjectClass()->GetComponent<SpriteWorld>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
 
-            //カメラ行列を渡す
-            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
-                GetObjectClass()->GetComponent<SpriteWorld>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
-                GetObjectClass()->GetComponent<SpriteWorld>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
-            }
-            else
-            {
-                MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
-            }
-            GetObjectClass()->DrawObject<SpriteWorld>(i);
+
+            GetGridClass()->SetGridType(GridType::Grid_Box);
+            Vec4 v4Pos = Vec4_Get(&pool->GridPos, i);
+            GetGridClass()->SetColor({ 1,1,0,1 });
+            GetGridClass()->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
+            GetGridClass()->SetSize(0.5f, 0.5f, 0.5f);
+			GetGridClass()->Draw();
         }
     }
-    //SpriteBox
-    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteBox >= 0 &&
-        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteBox <= (int)pool->SpriteBoxPos.size)
-    {
-        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteBox;
-            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteBox; ++i)
-        {
-            if (i < 0 || i >= (int)pool->SpriteBoxPos.size) continue;
-            Vec4 v4Pos = Vec4_Get(&pool->SpriteBoxPos, i);
-            Vec4 v4Size = Vec4_Get(&pool->SpriteBoxSize, i);
-            Vec4 v4Color = Vec4_Get(&pool->SpriteBoxColor, i);
-            Vec4 v4Angle = Vec4_Get(&pool->SpriteBoxAngle, i);
 
-            GetObjectClass()->GetComponent<SpriteBox>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
-            GetObjectClass()->GetComponent<SpriteBox>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
-            GetObjectClass()->GetComponent<SpriteBox>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
-            GetObjectClass()->GetComponent<SpriteBox>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
+   //  //GridBox
+   // if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid >= 0 && SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid <= (int)pool->GridPos.size) {
+   //     for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid; i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid; i++) {
+   //         if (i < 0 || i >= (int)pool->GridPos.size) continue;
+   //         Vec4 pos = Vec4_Get(&pool->GridPos, i);
+   //         Vec4 size = Vec4_Get(&pool->GridSize, i); 
+   //         Vec4 ang = Vec4_Get(&pool->GridAngle, i);
+   //         Vec4 col = Vec4_Get(&pool->GridColor, i);
+			//int sides = (int)VecInt_Get(&pool->GridSides, i);
+			//int gridTypeIndex = (int)VecInt_Get(&pool->GridTypeIndex, i);
 
-            //カメラ行列を渡す
-            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
-                GetObjectClass()->GetComponent<SpriteBox>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
-                GetObjectClass()->GetComponent<SpriteBox>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
-            }
-            else
-            {
-                MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
-            }
-            GetObjectClass()->DrawObject<SpriteBox>(i);
-        }
-    }
-    //SpriteCylinder
-    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteCylinder >= 0 &&
-        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteCylinder <= (int)pool->SpriteCylinderPos.size)
-    {
-        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteCylinder;
-            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteCylinder; ++i)
-        {
-            if (i < 0 || i >= (int)pool->SpriteCylinderPos.size) continue;
-            Vec4 v4Pos = Vec4_Get(&pool->SpriteCylinderPos, i);
-            Vec4 v4Size = Vec4_Get(&pool->SpriteCylinderSize, i);
-            Vec4 v4Color = Vec4_Get(&pool->SpriteCylinderColor, i);
-            Vec4 v4Angle = Vec4_Get(&pool->SpriteCylinderAngle, i);
+   //         GetObjectClass()->GetComponent<Grid>(i)->SetColor({ col.X,col.Y,col.Z,col.W });
+			//GetObjectClass()->GetComponent<Grid>(i)->SetSides(sides);
+			//GetObjectClass()->GetComponent<Grid>(i)->SetGridType((GridType)gridTypeIndex);
+   //         GetObjectClass()->GetComponent<Grid>(i)->SetPosition(pos.X, pos.Y, pos.Z);
+   //         GetObjectClass()->GetComponent<Grid>(i)->SetSize(size.X, size.Y, size.Z);
+   //         GetObjectClass()->GetComponent<Grid>(i)->SetAngle(ang.X, ang.Y, ang.Z);
+   //         //GetObjectClass()->GetComponent<Grid>(i)->SetBox({ pos.X,pos.Y,pos.Z }, { size.X,size.Y,size.Z }, { ang.X,ang.Y,ang.Z });
+   //         //GetGridClass()->Draw();
+   //         //カメラ行列を渡す
+   //         if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+   //             GetObjectClass()->GetComponent<Grid>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+   //             GetObjectClass()->GetComponent<Grid>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+   //         }
+   //         else
+   //         {
+   //             MessageBoxA(nullptr, "CameraNotFound", "Grid", MB_OK);
+   //         }
+			////GetObjectClass()->DrawComponent<Grid>(SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid, SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid);
+   //         GetObjectClass()->DrawObject<Grid>(i);
+   //     }
+   // }
 
-            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
-            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
-            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
-            GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
+   // if (!GetObjectClass())
+   // {
+   //     MessageBoxA(nullptr, "ObjectClassNULL", "Error", MB_OK);
+   // }
 
-            //カメラ行列を渡す
-            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
-                GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
-                GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
-            }
-            else
-            {
-                MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
-            }
-            GetObjectClass()->DrawObject<SpriteCylinder>(i);
-        }
-    }
-    //SpriteScreen
-    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteScreen >= 0 &&
-        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteScreen <= (int)pool->SpriteScreenPos.size)
-    {
-        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteScreen;
-            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteScreen; ++i)
-        {
-            if (i < 0 || i >= (int)pool->SpriteScreenPos.size) continue;
-            Vec4 v4Pos = Vec4_Get(&pool->SpriteScreenPos, i);
-            Vec4 v4Size = Vec4_Get(&pool->SpriteScreenSize, i);
-            Vec4 v4Color = Vec4_Get(&pool->SpriteScreenColor, i);
-            int vIAngle = VecInt_Get(&pool->SpriteScreenAngle, i);
+   // //SpriteWorld
+   // if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteWorld >= 0 && SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteWorld <= (int)pool->SpriteWorldPos.size)
+   // {
+   //     for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteWorld; i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteWorld; i++)
+   //     {
+   //         if (i < 0 || i >= (int)pool->SpriteWorldPos.size) continue;
+   //         Vec4 v4Pos = Vec4_Get(&pool->SpriteWorldPos, i);
+   //         Vec4 v4Size = Vec4_Get(&pool->SpriteWorldSize, i);
+   //         Vec4 v4Angle = Vec4_Get(&pool->SpriteWorldAngle, i);
+   //         Vec4 v4Color = Vec4_Get(&pool->SpriteWorldColor, i);
 
-            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPos2D(v4Pos.X, v4Pos.Y);
-            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize2D(v4Size.X, v4Size.Y);
-            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
-        
-            GetObjectClass()->DrawObject<SpriteScreen>(i);
-        }
-    }
-    //Model
-    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Model >= 0 &&
-        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Model <= (int)pool->ModelPos.size)
-    {
-        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Model;
-            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Model; ++i)
-        {
-            if (i < 0 || i >= (int)pool->ModelPos.size) continue;
-            Vec4 v4Pos = Vec4_Get(&pool->ModelPos, i);
-            Vec4 v4Size = Vec4_Get(&pool->ModelSize, i);
-            Vec4 v4Angle = Vec4_Get(&pool->ModelAngle, i);
+   //         
+   //         GetObjectClass()->GetComponent<SpriteWorld>(i)->SetColor({ v4Color.X, v4Color.Y, v4Color.Z, v4Color.W });
+   //         GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
+   //         GetObjectClass()->GetComponent<SpriteWorld>(i)->SetSize(v4Size.X, v4Size.Y, 0);
+   //         GetObjectClass()->GetComponent<SpriteWorld>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
 
-            GetObjectClass()->GetComponent<Model>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
-            GetObjectClass()->GetComponent<Model>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
-            GetObjectClass()->GetComponent<Model>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+   //         //カメラ行列を渡す
+   //         if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+   //             GetObjectClass()->GetComponent<SpriteWorld>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+   //             GetObjectClass()->GetComponent<SpriteWorld>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+   //         }
+   //         else
+   //         {
+   //             MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
+   //         }
+   //         GetObjectClass()->DrawObject<SpriteWorld>(i);
+   //     }
+   // }
+   // //SpriteBox
+   // if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteBox >= 0 &&
+   //     SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteBox <= (int)pool->SpriteBoxPos.size)
+   // {
+   //     for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteBox;
+   //         i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteBox; ++i)
+   //     {
+   //         if (i < 0 || i >= (int)pool->SpriteBoxPos.size) continue;
+   //         Vec4 v4Pos = Vec4_Get(&pool->SpriteBoxPos, i);
+   //         Vec4 v4Size = Vec4_Get(&pool->SpriteBoxSize, i);
+   //         Vec4 v4Color = Vec4_Get(&pool->SpriteBoxColor, i);
+   //         Vec4 v4Angle = Vec4_Get(&pool->SpriteBoxAngle, i);
 
-            //カメラ行列を渡す
-            if (GetObjectClass()->GetComponent<Camera>(useCam)) {
-                GetObjectClass()->GetComponent<Model>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
-                GetObjectClass()->GetComponent<Model>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
-            }
-            else
-            {
-                MessageBoxA(nullptr, "CameraNotFound", "Model", MB_OK);
-            }
+   //         GetObjectClass()->GetComponent<SpriteBox>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
+   //         GetObjectClass()->GetComponent<SpriteBox>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
+   //         GetObjectClass()->GetComponent<SpriteBox>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+   //         GetObjectClass()->GetComponent<SpriteBox>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
 
-            GetObjectClass()->DrawObject<Model>(i);
-        }
-    }
-    //Collision
-    if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Collision >= 0 &&
-        SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Collision <= (int)pool->CollisionPos.size)
-    {
-        for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Collision;
-            i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Collision; ++i)
-        {
-            if (i < 0 || i >= (int)pool->CollisionPos.size) continue;
-            Vec4 v4Pos = Vec4_Get(&pool->CollisionPos, i);
-            Vec4 v4Size = Vec4_Get(&pool->CollisionSize, i);
-            Vec4 v4Angle = Vec4_Get(&pool->CollisionAngle, i);
+   //         //カメラ行列を渡す
+   //         if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+   //             GetObjectClass()->GetComponent<SpriteBox>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+   //             GetObjectClass()->GetComponent<SpriteBox>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+   //         }
+   //         else
+   //         {
+   //             MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
+   //         }
+   //         GetObjectClass()->DrawObject<SpriteBox>(i);
+   //     }
+   // }
+   // //SpriteCylinder
+   // if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteCylinder >= 0 &&
+   //     SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteCylinder <= (int)pool->SpriteCylinderPos.size)
+   // {
+   //     for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteCylinder;
+   //         i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteCylinder; ++i)
+   //     {
+   //         if (i < 0 || i >= (int)pool->SpriteCylinderPos.size) continue;
+   //         Vec4 v4Pos = Vec4_Get(&pool->SpriteCylinderPos, i);
+   //         Vec4 v4Size = Vec4_Get(&pool->SpriteCylinderSize, i);
+   //         Vec4 v4Color = Vec4_Get(&pool->SpriteCylinderColor, i);
+   //         Vec4 v4Angle = Vec4_Get(&pool->SpriteCylinderAngle, i);
 
-            GetObjectClass()->GetComponent<Collision>(i)->SetOffsetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
-            GetObjectClass()->GetComponent<Collision>(i)->SetOffsetSize(v4Size.X, v4Size.Y, v4Size.Z);
-            GetObjectClass()->GetComponent<Collision>(i)->SetOffsetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+   //         GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
+   //         GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
+   //         GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+   //         GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
 
-            GetObjectClass()->DrawObject<Collision>(i);
-        }
-    }
+   //         //カメラ行列を渡す
+   //         if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+   //             GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+   //             GetObjectClass()->GetComponent<SpriteCylinder>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+   //         }
+   //         else
+   //         {
+   //             MessageBoxA(nullptr, "CameraNotFound", "SpriteWorld", MB_OK);
+   //         }
+   //         GetObjectClass()->DrawObject<SpriteCylinder>(i);
+   //     }
+   // }
+   // //SpriteScreen
+   // if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteScreen >= 0 &&
+   //     SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteScreen <= (int)pool->SpriteScreenPos.size)
+   // {
+   //     for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_SpriteScreen;
+   //         i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_SpriteScreen; ++i)
+   //     {
+   //         if (i < 0 || i >= (int)pool->SpriteScreenPos.size) continue;
+   //         Vec4 v4Pos = Vec4_Get(&pool->SpriteScreenPos, i);
+   //         Vec4 v4Size = Vec4_Get(&pool->SpriteScreenSize, i);
+   //         Vec4 v4Color = Vec4_Get(&pool->SpriteScreenColor, i);
+   //         int vIAngle = VecInt_Get(&pool->SpriteScreenAngle, i);
+
+   //         GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPos2D(v4Pos.X, v4Pos.Y);
+   //         GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize2D(v4Size.X, v4Size.Y);
+   //         GetObjectClass()->GetComponent<SpriteScreen>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
+   //     
+   //         GetObjectClass()->DrawObject<SpriteScreen>(i);
+   //     }
+   // }
+   // //Model
+   // if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Model >= 0 &&
+   //     SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Model <= (int)pool->ModelPos.size)
+   // {
+   //     for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Model;
+   //         i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Model; ++i)
+   //     {
+   //         if (i < 0 || i >= (int)pool->ModelPos.size) continue;
+   //         Vec4 v4Pos = Vec4_Get(&pool->ModelPos, i);
+   //         Vec4 v4Size = Vec4_Get(&pool->ModelSize, i);
+   //         Vec4 v4Angle = Vec4_Get(&pool->ModelAngle, i);
+
+   //         GetObjectClass()->GetComponent<Model>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
+   //         GetObjectClass()->GetComponent<Model>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
+   //         GetObjectClass()->GetComponent<Model>(i)->SetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+
+   //         //カメラ行列を渡す
+   //         if (GetObjectClass()->GetComponent<Camera>(useCam)) {
+   //             GetObjectClass()->GetComponent<Model>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+   //             GetObjectClass()->GetComponent<Model>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+   //         }
+   //         else
+   //         {
+   //             MessageBoxA(nullptr, "CameraNotFound", "Model", MB_OK);
+   //         }
+
+   //         GetObjectClass()->DrawObject<Model>(i);
+   //     }
+   // }
+   // //Collision
+   // if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Collision >= 0 &&
+   //     SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Collision <= (int)pool->CollisionPos.size)
+   // {
+   //     for (int i = SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Collision;
+   //         i < SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Collision; ++i)
+   //     {
+   //         if (i < 0 || i >= (int)pool->CollisionPos.size) continue;
+   //         Vec4 v4Pos = Vec4_Get(&pool->CollisionPos, i);
+   //         Vec4 v4Size = Vec4_Get(&pool->CollisionSize, i);
+   //         Vec4 v4Angle = Vec4_Get(&pool->CollisionAngle, i);
+
+   //         GetObjectClass()->GetComponent<Collision>(i)->SetOffsetPos(v4Pos.X, v4Pos.Y, v4Pos.Z);
+   //         GetObjectClass()->GetComponent<Collision>(i)->SetOffsetSize(v4Size.X, v4Size.Y, v4Size.Z);
+   //         GetObjectClass()->GetComponent<Collision>(i)->SetOffsetAngle(v4Angle.X, v4Angle.Y, v4Angle.Z);
+
+   //         GetObjectClass()->DrawObject<Collision>(i);
+   //     }
+   // }
 }
 
 //-----------------------------------------
@@ -465,50 +487,50 @@ void ChangeScene(const char* name)
 {
     int index = KeyMap_GetIndex(&SceneMap, name);
     if (index == -1) return;
-
-    AddMessage(ConcatCStr("ChangeScene: ", name));
+//
+//    AddMessage(ConcatCStr("ChangeScene: ", name));
     CurrentSceneIndex = index;
-    ActiveSceneIndex = index;
+//    ActiveSceneIndex = index;
 }
 
 void NotifyAddObject(IndexType type)
 {
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SRVec.size) return;
-    SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
-    ObjectIndex* idx = GetObjectIndex();
-
-    switch (type)
-    {
-    case IndexType::Grid:
-        range.EndIndex_Grid = idx->GridIndex;
-        break;
-    case IndexType::Camera:
-        range.EndIndex_Camera = idx->CameraIndex;
-        break;
-    }
-
-    //SceneRange_Set(&SRVec, CurrentScene)
+//    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SRVec.size) return;
+//    SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
+//    ObjectIndex* idx = GetObjectIndex();
+//
+//    switch (type)
+//    {
+//    case IndexType::Grid:
+//        range.EndIndex_Grid = idx->GridIndex;
+//        break;
+//    case IndexType::Camera:
+//        range.EndIndex_Camera = idx->CameraIndex;
+//        break;
+//    }
+//
+//    //SceneRange_Set(&SRVec, CurrentScene)
 }
 
-const char* GetCurrentSceneName()
-{
-    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneMap.size)
-        return "None";
-    return KeyMap_GetKey(&SceneMap, CurrentSceneIndex);
-}
+//const char* GetCurrentSceneName()
+//{
+//    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneMap.size)
+//        return "None";
+//    return KeyMap_GetKey(&SceneMap, CurrentSceneIndex);
+//}
 
 void SetSceneCamera(const char* s, const char* c)
 {
-    int si = KeyMap_GetIndex(&SceneMap, s);
-    int ci = KeyMap_GetIndex(GetCameraKeyMap(), c);
-    if (ci < 0 || si < 0) {
-        AddMessage(ConcatCStr("SetSceneCamera failed: ", (ci < 0) ? c : s));
-        return;
-    }
-    // シーンに割当るだけにする（UseCamera を直接変更しない）
-    SceneRange sr = SceneRange_Get(&SRVec, si);
-    sr.UseCameraIndex = ci;
-    SceneRange_Set(&SRVec, si, sr);
-    AddMessage(ConcatCStr("SetSceneCamera: scene=", s));
+//    int si = KeyMap_GetIndex(&SceneMap, s);
+//    int ci = KeyMap_GetIndex(GetCameraKeyMap(), c);
+//    if (ci < 0 || si < 0) {
+//        AddMessage(ConcatCStr("SetSceneCamera failed: ", (ci < 0) ? c : s));
+//        return;
+//    }
+//    // シーンに割当るだけにする（UseCamera を直接変更しない）
+//    SceneRange sr = SceneRange_Get(&SRVec, si);
+//    sr.UseCameraIndex = ci;
+//    SceneRange_Set(&SRVec, si, sr);
+//    AddMessage(ConcatCStr("SetSceneCamera: scene=", s));
 }
-void DeleteScene(const char* name) { /*元処理保持用ダミー*/ }
+//void DeleteScene(const char* name) { /*元処理保持用ダミー*/ }

@@ -310,6 +310,7 @@ struct ObjectDataPool {
     IntVector  CollisionType;
     BoolVector CollisionHit;
     // Grid(Box / Polygon)
+    Vec4Vector GridInfo;
     Vec4Vector GridPos;
     Vec4Vector GridSize;
     Vec4Vector GridAngle;
@@ -476,6 +477,8 @@ void UpdateScene();
 void DrawScene();
 const char* GetCurrentSceneName();
 void NotifyAddObject(IndexType type);
+
+int GetCurrentSceneIndex();
 
   //////////////////
  // AssetManager //

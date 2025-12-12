@@ -155,12 +155,12 @@ void CoreStartUp()
     // --- Scene2 ---
     AddScene("Scene2");
     AddGrid("PolyA", Grid_Polygon);
-    SetGridPos("PolyA", 0, 0, 0);
+    SetGridPos("PolyA", 0, 1, 0);
 	SetGridColor("PolyA", 0, 1, 1, 1);
     SetGridSides("PolyA", 6);
 
     AddGrid("PolyB", Grid_Polygon);
-    SetGridPos("PolyB", 2, 0, 0);
+    SetGridPos("PolyB", 2, 0, 3);
     SetGridColor("PolyB", 0, 0, 1, 1);
     SetGridSides("PolyB", 8);
     //AddSpriteWorld("TestSprite03", "asset/est.png");
@@ -184,7 +184,7 @@ void CoreStartUp()
     SetGridColor("BoxC", 1, 0, 1, 1);
 
     AddGrid("BoxD", Grid_Box);
-    SetGridPos("BoxD", 2, 0, 0);
+    SetGridPos("BoxD", 3, 0, 0);
 
     AddCollision("player", "playerTag");
     AddCollision("enemy", "enemyTag");
