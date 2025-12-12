@@ -47,9 +47,11 @@
 typedef struct { float X, Y, Z, W; } Vec4;
 // Char2構造体
 typedef struct { const char* First; const char* End; } Char2;
+typedef struct { int One; int Second; } Int2;
 // ベクター型構造体
 typedef struct { Vec4*  data; size_t size; size_t capacity; } Vec4Vector;
 typedef struct { Char2* data; size_t size; size_t capacity; } Char2Vector;
+typedef struct { Int2*  data; size_t size; size_t capacity; } Int2Vector;
 typedef struct { char** data; size_t size; size_t capacity; } CharVector;
 typedef struct { int*   data; size_t size; size_t capacity; } IntVector;
 typedef struct { float* data; size_t size; size_t capacity; } FloatVector;
@@ -565,6 +567,13 @@ void Char2_Set(Char2Vector* vec, size_t index, Char2 str);
 Char2 Char2_Get(Char2Vector* vec, size_t index);
 int Char2_GetIndex(Char2Vector* vec, const char* FirstName);
 void Char2_Free(Char2Vector* vec);
+//|| Int2 ||__________________________
+void Int2_Init(Int2Vector* vec);
+void Int2_PushBack(Int2Vector* vec, Int2 str);
+void Int2_Set(Int2Vector* vec, size_t index, Int2 str);
+Int2 Int2_Get(Int2Vector* vec, size_t index);
+int  Int2_GetIndex(Int2Vector* vec, int OneIndex);
+void Int2_Free(Int2Vector* vec);
 //|| Char 系 ||_______________________
 void VecC_Init(CharVector* vec);
 void VecC_PushBack(CharVector* vec, const char* str);
