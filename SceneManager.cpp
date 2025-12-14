@@ -263,23 +263,34 @@ void DrawScene()
 
     for (int i = 0; i < pool->GridInfo.size; i++)
     {
-        if (!(pool->GridInfo.data->X == CurrentSceneIndex)) continue;
+        if (!(Vec4_Get(&pool->GridInfo, i).X == CurrentSceneIndex)) continue;
 
-        MessageBoxA(NULL, ConcatCStr("CurrentSceneData:", std::to_string(pool->GridInfo.data->X).c_str()), "Debug", MB_OK);
-        MessageBoxA(NULL, ConcatCStr("CurrentSceneIndex:", std::to_string(CurrentSceneIndex).c_str()), "Debug", MB_OK);
+        //MessageBoxA(NULL, ConcatCStr("CurrentSceneData:", std::to_string(pool->GridInfo.data->X).c_str()), "Debug", MB_OK);
+        //MessageBoxA(NULL, ConcatCStr("CurrentSceneIndex:", std::to_string(CurrentSceneIndex).c_str()), "Debug", MB_OK);
 
-        if (pool->GridInfo.data->Y == GetObjectClass()->GetComponentType<Grid>())
+        if (Vec4_Get(&pool->GridInfo, i).Y == GetObjectClass()->GetComponentType<Grid>())
         {
 			//MessageBoxA(nullptr, "DrawGrid", "Info", MB_OK);
-
-
-
-            GetGridClass()->SetGridType(GridType::Grid_Box);
-            Vec4 v4Pos = Vec4_Get(&pool->GridPos, i);
-            GetGridClass()->SetColor({ 1,1,0,1 });
-            GetGridClass()->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
-            GetGridClass()->SetSize(0.5f, 0.5f, 0.5f);
-			GetGridClass()->Draw();
+            
+			//カメラ行列を渡す
+            GetObjectClass()->GetComponent<Grid>(i)->SetProj(GetObjectClass()->GetComponent<Camera>(useCam)->GetProjection());
+            GetObjectClass()->GetComponent<Grid>(i)->SetView(GetObjectClass()->GetComponent<Camera>(useCam)->GetView());
+            //グリッドの種類を指定
+            GridType GridTypeIndex = static_cast<GridType>(VecInt_Get(&pool->GridTypeIndex, i));
+			GetObjectClass()->GetComponent<Grid>(i)->SetGridType(GridTypeIndex);
+            //数値設定
+			Vec4 v4Pos = Vec4_Get(&pool->GridPos, i);
+			Vec4 v4Size = Vec4_Get(&pool->GridSize, i);
+			Vec4 v4Ang = Vec4_Get(&pool->GridAngle, i);
+			Vec4 v4Col = Vec4_Get(&pool->GridColor, i);
+			int sides = (int)VecInt_Get(&pool->GridSides, i);
+			GetObjectClass()->GetComponent<Grid>(i)->SetColor({ v4Col.X,v4Col.Y,v4Col.Z,v4Col.W });
+			GetObjectClass()->GetComponent<Grid>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
+			GetObjectClass()->GetComponent<Grid>(i)->SetSize(v4Size.X, v4Size.Y, v4Size.Z);
+			GetObjectClass()->GetComponent<Grid>(i)->SetAngle(v4Ang.X, v4Ang.Y, v4Ang.Z);
+			GetObjectClass()->GetComponent<Grid>(i)->SetSides(sides);
+			//描画
+            GetObjectClass()->DrawObject<Grid>(i);
         }
     }
 
