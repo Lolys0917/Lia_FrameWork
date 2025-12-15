@@ -278,32 +278,38 @@ struct ObjectDataPool {
     Vec4Vector UIAngle;
     Vec4Vector UIColor;
     // SpriteWorld
+    Vec4Vector SpriteWoeldInfo;
     Vec4Vector SpriteWorldPos;
     Vec4Vector SpriteWorldSize;
     Vec4Vector SpriteWorldAngle;
     Vec4Vector SpriteWorldColor;
     // SpriteScreen
+	Vec4Vector SpriteScreenInfo;
     Vec4Vector SpriteScreenPos;
     Vec4Vector SpriteScreenSize;
     Vec4Vector SpriteScreenColor;
     IntVector  SpriteScreenAngle;
     //SpriteBox
+	Vec4Vector SpriteBoxInfo;
     Vec4Vector SpriteBoxPos;
     Vec4Vector SpriteBoxSize;
     Vec4Vector SpriteBoxAngle;
     Vec4Vector SpriteBoxColor;
     //SpriteCylinder
+	Vec4Vector SpriteCylinderInfo;
     Vec4Vector SpriteCylinderPos;
     Vec4Vector SpriteCylinderSize;
     Vec4Vector SpriteCylinderAngle;
     Vec4Vector SpriteCylinderColor;
     IntVector  SpriteCylinderSegment;
     // Model
+	Vec4Vector ModelInfo;
     Vec4Vector ModelPos;
     Vec4Vector ModelSize;
     Vec4Vector ModelAngle;
     BoolVector ModelUseTexture;
     // Collision
+	Vec4Vector CollisionInfo;
     Vec4Vector CollisionPos;
     Vec4Vector CollisionSize;
     Vec4Vector CollisionAngle;
@@ -351,6 +357,8 @@ struct ObjectDataPool {
     KeyMap SpriteCylinderSideTexturePathMap;
 };
 ObjectDataPool* GetObjectDataPool();
+
+
 
   ///////////////////
  // ObjectManager //
@@ -467,7 +475,7 @@ KeyMap* GetCameraKeyMap();
  // SceneManager //
 //////////////////
 void AddScene(const char* name);
-void SceneEndPoint();
+//void SceneEndPoint();
 void ChangeScene(const char* name);
 void InitScene(const char* name);
 void DeleteScene(const char* name);
@@ -476,7 +484,7 @@ void SetSceneCamera(const char* scene, const char* camera);
 void UpdateScene();
 void DrawScene();
 const char* GetCurrentSceneName();
-void NotifyAddObject(IndexType type);
+//void NotifyAddObject(IndexType type);
 
 int GetCurrentSceneIndex();
 

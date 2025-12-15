@@ -10,77 +10,13 @@
 #include "Component.h"
 #include <vector>
 
-// Scene範囲構造体（元通り）
-//typedef struct {
-//    int StartIndex_Grid, EndIndex_Grid;
-//    int StartIndex_Camera, EndIndex_Camera;
-//    int StartIndex_SpriteWorld, EndIndex_SpriteWorld;
-//    int StartIndex_SpriteScreen, EndIndex_SpriteScreen;
-//    int StartIndex_SpriteBox, EndIndex_SpriteBox;
-//    int StartIndex_SpriteCylinder, EndIndex_SpriteCylinder;
-//    int StartIndex_Model, EndIndex_Model;
-//    int StartIndex_Collision, EndIndex_Collision;
-//    int UseCameraIndex;
-//    bool Finalized;
-//} SceneRange;
-
-//typedef struct {
-//    SceneRange* data; size_t size; size_t capacity;
-//}SceneRangeVector;
-
-//static std::vector<SceneRange> SceneRanges;
-//SceneRangeVector SRVec;
 static Int2Vector SceneRangeIndex;
 static Vec4Vector SceneUtilIndex;
 static KeyMap SceneMap;
 static int CurrentSceneIndex = -1;
 //static int ActiveSceneIndex = -1;
-void SettingScene();
-void SceneEndPoint();
-
-//void SceneRange_Init(SceneRangeVector* vec) {
-//    vec->data = NULL;
-//    vec->size = 0;
-//    vec->capacity = 0;
-//}
-////push_back
-//void SceneRange_PushBack(SceneRangeVector* vec, SceneRange value) {
-//    if (vec->size >= vec->capacity) {
-//        size_t new_capacity = (vec->capacity == 0) ? 4 : vec->capacity * 2;
-//        SceneRange* new_data = (SceneRange*)realloc(vec->data, new_capacity * sizeof(SceneRange));
-//        if (!new_data) {
-//            AddMessage("\nerror : SceneRange vector_push_back/メモリの確保に失敗\n");
-//            return;
-//        }
-//        vec->data = new_data;
-//        vec->capacity = new_capacity;
-//    }
-//    vec->data[vec->size] = value;
-//    vec->size++;
-//}
-////要素の設定
-//void SceneRange_Set(SceneRangeVector* vec, size_t index, SceneRange value) {
-//    if (index >= vec->size) {
-//        AddMessage("\nerror : SceneRange vector_set/インデックス範囲外\n");
-//        return;
-//    }
-//    vec->data[index] = value;
-//}
-////要素を取得
-//SceneRange SceneRange_Get(SceneRangeVector* vec, size_t index) {
-//    if (index >= vec->size) {
-//        AddMessage("\nerror : SceneRange vector_get/インデックス範囲外\n");
-//        return {};
-//    }
-//    return vec->data[index];
-//}
-////解放
-//void SceneRange_Free(SceneRangeVector* vec) {
-//    free(vec->data);
-//    vec->data = NULL;
-//    vec->size = 0;
-//    vec->capacity = 0;
-//}
+//void SettingScene();
+//void SceneEndPoint();
 
 //-----------------------------------------
 // Scene操作
@@ -99,72 +35,12 @@ int GetCurrentSceneIndex()
 {
     return CurrentSceneIndex;
 }
-
-void SceneEndPoint()
-{
-}
-void RefreshSceneRange()
-{
-    //// ActiveSceneIndex が有効ならそちらを優先して更新する（オブジェクト追加中のシーンを追跡）
-    //int targetScene = ActiveSceneIndex;
-    //if (targetScene < 0 || targetScene >= (int)SRVec.size) {
-    //    // Active が無効なら Current を参照するが、原則は Active を使う
-    //    targetScene = CurrentSceneIndex;
-    //}
-    //if (targetScene < 0 || targetScene >= (int)SRVec.size) return;
-    //
-    //SceneRange range = SceneRange_Get(&SRVec, targetScene);
-    //if (range.Finalized) return; // 確定済みは更新しない
-    //ObjectIndex* idx = GetObjectIndex();
-    //// すべての EndIndex を現在のプールインデックスに追随させる
-    //range.EndIndex_Camera = idx->CameraIndex;
-    //range.EndIndex_SpriteWorld = idx->SpriteWorldIndex;
-    //range.EndIndex_SpriteScreen = idx->SpriteScreenIndex;
-    //range.EndIndex_SpriteBox = idx->SpriteBoxIndex;
-    //range.EndIndex_SpriteCylinder = idx->SpriteCylinderIndex;
-    //range.EndIndex_Grid = idx->GridIndex;
-    //range.EndIndex_Model = idx->ModelIndex;
-    //range.EndIndex_Collision = idx->CollisionIndex;
-    //
-    ////SceneRange_Set(&SRVec, targetScene, range);
-}
 //-----------------------------------------
 // Scene初期化
 //-----------------------------------------
 void InitScene(const char* name)
 {
-    //int index = KeyMap_GetIndex(&SceneMap, name);
-    //if (index == -1) { AddMessage(ConcatCStr("InitScene failed: ", name)); return; }
-    //
-    //SceneRange range = SceneRange_Get(&SRVec, index);
-    //CurrentSceneIndex = index;
-    //ObjectDataPool* pool = GetObjectDataPool();
-    ////Camera
-    //int useCam = range.UseCameraIndex >= 0 ? range.UseCameraIndex : GetUseCamera();
-    //if (useCam >= 0 && useCam < (int)pool->CameraPos.size) {
-    //    Vec4 pos = Vec4_Get(&pool->CameraPos, useCam);
-    //    Vec4 look = Vec4_Get(&pool->CameraLook, useCam);
-    //    // safety: object and component count
-    //    if (GetObjectClass() && useCam >= 0) {
-    //        GetObjectClass()->GetComponent<Camera>(useCam)->SetCameraView({ pos.X,pos.Y,pos.Z,0 }, { look.X,look.Y,look.Z,0 });
-    //    }
-    //}
-    ////SpriteWorld
-    //for (int i = range.StartIndex_SpriteWorld; i < range.EndIndex_SpriteWorld; i++)
-    //{
-    //    if (i < 0 || i >= (int)pool->GridPos.size) continue;
-    //    Vec4 v4Pos = Vec4_Get(&pool->SpriteWorldPos, i);
-    //    GetObjectClass()->GetComponent<SpriteWorld>(i)->SetPosition(v4Pos.X, v4Pos.Y, v4Pos.Z);
-    //}
-    //// Grid の初期化（ここでは色のみ復帰）
-    ///*for (int i = range.StartIndex_Grid; i < range.EndIndex_Grid; ++i)
-    //{
-    //    if (i < 0 || i >= (int)pool->GridColor.size) continue;
-    //    Vec4 col = Vec4_Get(&pool->GridColor, i);
-    //    GetGridClass()->SetColor({ col.X, col.Y, col.Z, col.W });
-    //}*/
-    //
-    //AddMessage(ConcatCStr("InitScene(): ", name));
+
 }
 
 //-----------------------------------------
@@ -174,14 +50,6 @@ void InitScene(const char* name)
    簡略版として SceneRange の複製で対応。 */
 void CopyScene(const char* srcScene, const char* newScene)
 {
-    //int srcIndex = KeyMap_GetIndex(&SceneMap, srcScene);
-    //if (srcIndex == -1) { AddMessage(ConcatCStr("CopyScene failed: ", srcScene)); return; }
-    //
-    //KeyMap_Add(&SceneMap, newScene);
-    //SceneRange src = SceneRange_Get(&SRVec, srcIndex);
-    //SceneRange dst = src;
-    //SceneRange_PushBack(&SRVec, dst);
-    //AddMessage(ConcatCStr("CopyScene(): ", newScene));
 
 }
 
@@ -293,6 +161,8 @@ void DrawScene()
             GetObjectClass()->DrawObject<Grid>(i);
         }
     }
+
+
 
    //  //GridBox
    // if (SceneRange_Get(&SRVec, CurrentSceneIndex).StartIndex_Grid >= 0 && SceneRange_Get(&SRVec, CurrentSceneIndex).EndIndex_Grid <= (int)pool->GridPos.size) {
@@ -504,44 +374,16 @@ void ChangeScene(const char* name)
 //    ActiveSceneIndex = index;
 }
 
-void NotifyAddObject(IndexType type)
-{
-//    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SRVec.size) return;
-//    SceneRange range = SceneRange_Get(&SRVec, CurrentSceneIndex);
-//    ObjectIndex* idx = GetObjectIndex();
-//
-//    switch (type)
-//    {
-//    case IndexType::Grid:
-//        range.EndIndex_Grid = idx->GridIndex;
-//        break;
-//    case IndexType::Camera:
-//        range.EndIndex_Camera = idx->CameraIndex;
-//        break;
-//    }
-//
-//    //SceneRange_Set(&SRVec, CurrentScene)
-}
-
-//const char* GetCurrentSceneName()
-//{
-//    if (CurrentSceneIndex < 0 || CurrentSceneIndex >= (int)SceneMap.size)
-//        return "None";
-//    return KeyMap_GetKey(&SceneMap, CurrentSceneIndex);
-//}
-
 void SetSceneCamera(const char* s, const char* c)
 {
-//    int si = KeyMap_GetIndex(&SceneMap, s);
-//    int ci = KeyMap_GetIndex(GetCameraKeyMap(), c);
-//    if (ci < 0 || si < 0) {
-//        AddMessage(ConcatCStr("SetSceneCamera failed: ", (ci < 0) ? c : s));
-//        return;
-//    }
-//    // シーンに割当るだけにする（UseCamera を直接変更しない）
-//    SceneRange sr = SceneRange_Get(&SRVec, si);
-//    sr.UseCameraIndex = ci;
-//    SceneRange_Set(&SRVec, si, sr);
-//    AddMessage(ConcatCStr("SetSceneCamera: scene=", s));
+    int si = KeyMap_GetIndex(&SceneMap, s);
+    int ci = KeyMap_GetIndex(GetCameraKeyMap(), c);
+    if (ci < 0 || si < 0) {
+        AddMessage(ConcatCStr("SetSceneCamera failed: ", (ci < 0) ? c : s));
+        return;
+    }
+    
+    
+    AddMessage(ConcatCStr("SetSceneCamera: scene=", s));
 }
 //void DeleteScene(const char* name) { /*元処理保持用ダミー*/ }

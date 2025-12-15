@@ -98,7 +98,7 @@ void CoreStartUp()
     SetSpriteBoxSize("Box00", 2, 2, 2);
     SetSpriteBoxColor("Box00", 1, 1, 1, 1);*/
 
-    SceneEndPoint();
+    //SceneEndPoint();
 
 
     AddScene("Scene3");
@@ -150,7 +150,7 @@ void CoreStartUp()
 	SetModelAngle("Model01", -3.14f/2, 3.14f, 0);
 	//ModelTexture("Model01", "asset/AFK_Snowman.png");
 
-	SceneEndPoint();
+	//SceneEndPoint();
 
     // --- Scene2 ---
     AddScene("Scene2");
@@ -169,7 +169,7 @@ void CoreStartUp()
     //SetSpriteWorldPos("TestSprite03", 0, 0, 2);
     //SetSpriteWorldAngle("TestSprite03", 0, 0, 0);
 
-    SceneEndPoint();
+    //SceneEndPoint();
 
     // --- ÉVÅ[ÉìÇ≤Ç∆ÇÃÉJÉÅÉâäÑìñ ---
     SetSceneCamera("Scene3", "SubCamera");

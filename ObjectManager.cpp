@@ -27,6 +27,7 @@ static Grid* grid = nullptr;
 static Object* object = nullptr;
 static ObjectIndex ObjectIdx;
 static ObjectDataPool g_ObjectPool; // 実体
+static KeyMap g_ClassTypeMap; // クラスタイプマップ
 
 //-----------------------------------------
 // Index管理（保持は ObjectIdx と同期）
@@ -199,6 +200,7 @@ void SetSpriteScreenColor(const char* name, float r, float g, float b, float a)
 //-----------------------------------------
 void AddSpriteBox(const char* name, const char* pathName)
 {
+
     Vec4_PushBack(&g_ObjectPool.SpriteBoxPos, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteBoxSize, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteBoxAngle, { 0,0,0,0 });
@@ -288,6 +290,13 @@ void SetSpriteBoxTexture(const char* name, const char* pathName)
 //-----------------------------------------
 void AddSpriteCylinder(const char* name, const char* pathName)
 {
+    int typeIdx = object->GetComponentType<SpriteCylinder>();
+    Vec4_PushBack(
+        &g_ObjectPool.SpriteCylinderInfo, {
+            (float)GetCurrentSceneIndex(),
+            (float)typeIdx,
+            (float)SpriteCylinderOldIndex, 0 });
+
     Vec4_PushBack(&g_ObjectPool.SpriteCylinderPos,   { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteCylinderSize,  { 1,1,1,1 });
     Vec4_PushBack(&g_ObjectPool.SpriteCylinderAngle, { 0,0,0,0 });
@@ -370,7 +379,7 @@ void AddGrid(const char* name, GridType type)
     GridIndex++;
     ObjectIdx.GridIndex = GridIndex;
 
-    NotifyAddObject(IndexType::Grid);
+    //NotifyAddObject(IndexType::Grid);
 }
 void SetGridPos(const char* Name, float x, float y, float z)
 {
@@ -729,6 +738,10 @@ void InitDo()
 
     // Vec4Init（Pool 全部） --- ここを必ずすべて列挙することが重要
     ObjectDataPool* p = &g_ObjectPool;
+
+    //クラスタイプを禁書目録共有
+	KeyMap_Add(&g_ClassTypeMap, "Grid");
+	KeyMap_SetKey(&g_ClassTypeMap, object->GetComponentType<Grid>(), "Grid");
 
     // Camera
     Vec4_Init(&p->CameraPos);
