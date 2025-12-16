@@ -187,6 +187,19 @@ enum Input
     Pad_D_UP,
     Pad_D_DOWN,
 };
+
+struct ComponentType
+{
+    const int CT_Camera         = GetObjectClass()->GetComponentType<Camera>();
+    const int CT_Grid           = GetObjectClass()->GetComponentType<Grid>();
+    const int CT_SpriteScreen   = GetObjectClass()->GetComponentType<SpriteScreen>();
+    const int CT_SpriteWorld    = GetObjectClass()->GetComponentType<SpriteWorld>();
+    const int CT_SpriteBox      = GetObjectClass()->GetComponentType<SpriteBox>();
+    const int CT_SpriteCylinder = GetObjectClass()->GetComponentType<SpriteCylinder>();
+    const int CT_Sound          = GetObjectClass()->GetComponentType<Sound>();
+    const int CT_Model          = GetObjectClass()->GetComponentType<Model>();
+    const int CT_Collision      = GetObjectClass()->GetComponentType<Collision>();
+};
 //モデル用マトリクスバッファ
 struct MatrixBuffer
 {
@@ -346,8 +359,6 @@ struct ObjectDataPool {
     KeyMap SpriteCylinderSideTexturePathMap;
 };
 ObjectDataPool* GetObjectDataPool();
-
-
 
   ///////////////////
  // ObjectManager //

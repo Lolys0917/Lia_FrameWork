@@ -763,9 +763,10 @@ void InitDo()
     KeyMap_Init(&p->SpriteWorldTexturePathMap);
     KeyMap_Init(&p->SpriteScreenTexturePathMap);
 
+    
+
     ShaderManager_Init();
     InitInput();
-
 
     // クラス取得
     grid = new Grid(nullptr);
