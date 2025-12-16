@@ -149,6 +149,62 @@ void Char2_Free(Char2Vector* vec)
     vec->capacity = 0;
 }
 
+//=============================
+// Int2 系
+//=============================
+void Int2_Init(Int2Vector* vec)
+{
+    vec->data = NULL;
+    vec->size = 0;
+    vec->capacity = 0;
+}
+void Int2_PushBack(Int2Vector* vec, Int2 str)
+{
+    if (vec->size >= vec->capacity) {
+        size_t new_capacity = (vec->capacity == 0) ? 4 : vec->capacity * 2;
+        Int2* new_data = (Int2*)realloc(vec->data, new_capacity * sizeof(Int2));
+        if (!new_data) {
+            AddMessage("\nerror : Int2vector_push_back/メモリの確保に失敗\n");
+            return;
+        }
+        vec->data = new_data;
+        vec->capacity = new_capacity;
+    }
+    vec->data[vec->size] = str;
+    vec->size++;
+}
+void Int2_Set(Int2Vector* vec, size_t index, Int2 str)
+{
+    if (index >= vec->size) {
+        AddMessage("\nerror : Int2vector_set/インデックス範囲外\n");
+        return;
+    }
+    vec->data[index] = str;
+}
+Int2 Int2_Get(Int2Vector* vec, size_t index)
+{
+    if (index >= vec->size) {
+        AddMessage("\nerror : char2vector_get/インデックス範囲外\n");
+        return { 0,0 };
+    }
+    return vec->data[index];
+}
+int Int2_GetIndex(Int2Vector* vec, int OneIndex)
+{
+    for (size_t i = 0; i < vec->size; i++) {
+        if (vec->data[i].One == OneIndex) {
+            return (int)i; // 見つかった
+        }
+    }
+    return -1; // 見つからなかった
+}
+void Int2_Free(Int2Vector* vec)
+{
+    free(vec->data);
+    vec->data = NULL;
+    vec->size = 0;
+    vec->capacity = 0;
+}
 
 //===============================
 // Char 系

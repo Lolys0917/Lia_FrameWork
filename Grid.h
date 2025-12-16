@@ -10,10 +10,12 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-class Grid
+enum GridType;
+
+class Grid : public Component
 {
 public:
-    Grid() {}
+    using Component::Component;
     ~Grid() {}
 
     void Init();
@@ -21,16 +23,26 @@ public:
 
     void SetView(const XMMATRIX& View);
     void SetProj(const XMMATRIX& Proj);
-    void SetColor(const XMFLOAT4& color);
-    void SetPos(XMFLOAT3 Start, XMFLOAT3 End); // push a single line
 
-    void DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle);
-    void DrawGridPolygonGrid(
+    void SetColor(const XMFLOAT4& color);
+    
+    void SetLine(XMFLOAT3 Start, XMFLOAT3 End); // push a single line
+    void SetBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle);
+    void SetGridPolygonGrid(
         int cols, int rows,
         float spacing, int sides,
         float radius,
         const XMFLOAT3& origin, const XMFLOAT3& Angle);
-    void DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle);
+    void SetPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle);
+
+    void SetGridType(GridType type)
+    {
+        m_gridType = type;
+    }
+    void SetSides(int side)
+    {
+        m_sides = side;
+    }
 
 private:
     struct Vertex {
@@ -57,6 +69,10 @@ private:
     ComPtr<ID3D11VertexShader> m_vertexShader;
     ComPtr<ID3D11PixelShader> m_pixelShader;
     ComPtr<ID3D11InputLayout> m_inputLayout;
+
+    GridType m_gridType;
+
+    int m_sides;
 
     // CPU-side accumulation list: each pair of vertices forms a line (line-list)
     std::vector<Vertex> m_pendingVertices;

@@ -55,16 +55,9 @@ public:
     }
 
     template<typename T = Component>
-    T* AddComponent()
+    int GetComponentType()
     {
-        //static_assert(std::is_base_of<Component, T>::value, "T must be a Component");
-
-        static_assert(std::is_base_of<Component, T>::value, "T must inherit Component");
-
-        if (m_lpComp.size() < 8) m_lpComp.resize(8);
-
         int type = -1;
-
         if constexpr (std::is_same_v<T, class Camera>) type = 0;
         else if constexpr (std::is_same_v<T, class Grid>) type = 1;
         else if constexpr (std::is_same_v<T, class Model>) type = 2;
@@ -75,7 +68,41 @@ public:
         else if constexpr (std::is_same_v<T, class Sound>) type = 7;
         else if constexpr (std::is_same_v<T, class Collision>) type = 8;
         else type = -1;
+        return type;
+	}
+    template<typename T = Component>
+    T* DrawComponent(int Start, int End)
+    {
+		int type = -1;
+		type = GetComponentType<T>();
+        if (type == -1) return nullptr; // –¢’m‚ÌŒ^
+        for (int i = Start; i < End; i++)
+        {
+            m_lpComp[type][i]->Draw();
+		}
+		return nullptr;
+    }
+    template<typename T = Component>
+    T* DrawObject(int index)
+    {
+        int type = -1;
+        type = GetComponentType<T>();
+        if (type == -1) return nullptr; // –¢’m‚ÌŒ^
+        m_lpComp[type][index]->Draw();
+        return nullptr;
+    }
+    template<typename T = Component>
+    T* AddComponent()
+    {
+        //static_assert(std::is_base_of<Component, T>::value, "T must be a Component");
 
+        static_assert(std::is_base_of<Component, T>::value, "T must inherit Component");
+
+        if (m_lpComp.size() < 8) m_lpComp.resize(8);
+
+        int type = -1;
+
+		type = GetComponentType<T>();
 
         if (type == -1) return nullptr; // –¢’m‚ÌŒ^
 
@@ -89,17 +116,7 @@ public:
     {
         int type = -1;
 
-        if constexpr (std::is_same_v<T, class Camera>) type = 0;
-        else if constexpr (std::is_same_v<T, class Grid>) type = 1;
-        else if constexpr (std::is_same_v<T, class Model>) type = 2;
-        else if constexpr (std::is_same_v<T, class SpriteWorld>) type = 3;
-        else if constexpr (std::is_same_v<T, class SpriteScreen>) type = 4;
-        else if constexpr (std::is_same_v<T, class SpriteBox>) type = 5;
-        else if constexpr (std::is_same_v<T, class SpriteCylinder>) type = 6;
-        else if constexpr (std::is_same_v<T, class Sound>) type = 7;
-        else if constexpr (std::is_same_v<T, class Collision>) type = 8;
-        else type = -1;
-
+        type = GetComponentType<T>();
 
         if (type == -1) return nullptr; // –¢’m‚ÌŒ^
 
@@ -113,17 +130,7 @@ public:
     {
         int type = -1;
 
-        if constexpr (std::is_same_v<T, class Camera>) type = 0;
-        else if constexpr (std::is_same_v<T, class Grid>) type = 1;
-        else if constexpr (std::is_same_v<T, class Model>) type = 2;
-        else if constexpr (std::is_same_v<T, class SpriteWorld>) type = 3;
-        else if constexpr (std::is_same_v<T, class SpriteScreen>) type = 4;
-        else if constexpr (std::is_same_v<T, class SpriteBox>) type = 5;
-        else if constexpr (std::is_same_v<T, class SpriteCylinder>) type = 6;
-        else if constexpr (std::is_same_v<T, class Sound>) type = 7;
-        else if constexpr (std::is_same_v<T, class Collision>) type = 8;
-        else type = -1;
-
+        type = GetComponentType<T>();
 
         if (type == -1) return -1; // –¢’m‚ÌŒ^
 

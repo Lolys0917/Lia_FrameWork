@@ -47,9 +47,11 @@
 typedef struct { float X, Y, Z, W; } Vec4;
 // Char2構造体
 typedef struct { const char* First; const char* End; } Char2;
+typedef struct { int One; int Second; } Int2;
 // ベクター型構造体
 typedef struct { Vec4*  data; size_t size; size_t capacity; } Vec4Vector;
 typedef struct { Char2* data; size_t size; size_t capacity; } Char2Vector;
+typedef struct { Int2*  data; size_t size; size_t capacity; } Int2Vector;
 typedef struct { char** data; size_t size; size_t capacity; } CharVector;
 typedef struct { int*   data; size_t size; size_t capacity; } IntVector;
 typedef struct { float* data; size_t size; size_t capacity; } FloatVector;
@@ -64,27 +66,15 @@ typedef struct {
     int SpriteCylinderIndex;
 	int ModelIndex;			//Model__________
 	int CollisionIndex; 	//Collider_______
-	int GridLineIndex;      //Grid___________
-	int GridBoxIndex;
-	int GridPolygonIndex;
-	int GridSphereIndex;
-	int GridCapsuleIndex;
+	int GridIndex;      //Grid___________
 	int EffectIndex;		//Effect_________
 } ObjectIndex;
-enum class IndexType {
-	Camera,
-	SpriteWorld,
-	SpriteScreen,
-	Model,
-	BoxCollider,
-	SphereCollider,
-	CapsuleCollider,
-	GridLine,
-	GridBox,
-	GridPolygon,
-	GridSphere,
-	GridCapsule,
-	Effect
+enum GridType
+{
+    Grid_Line,
+    Grid_Box,
+    Grid_Polygon,
+    Grid_GridPolygon,
 };
 enum LightType
 {
@@ -197,6 +187,19 @@ enum Input
     Pad_D_UP,
     Pad_D_DOWN,
 };
+
+struct ComponentType
+{
+    const int CT_Camera         = GetObjectClass()->GetComponentType<Camera>();
+    const int CT_Grid           = GetObjectClass()->GetComponentType<Grid>();
+    const int CT_SpriteScreen   = GetObjectClass()->GetComponentType<SpriteScreen>();
+    const int CT_SpriteWorld    = GetObjectClass()->GetComponentType<SpriteWorld>();
+    const int CT_SpriteBox      = GetObjectClass()->GetComponentType<SpriteBox>();
+    const int CT_SpriteCylinder = GetObjectClass()->GetComponentType<SpriteCylinder>();
+    const int CT_Sound          = GetObjectClass()->GetComponentType<Sound>();
+    const int CT_Model          = GetObjectClass()->GetComponentType<Model>();
+    const int CT_Collision      = GetObjectClass()->GetComponentType<Collision>();
+};
 //モデル用マトリクスバッファ
 struct MatrixBuffer
 {
@@ -277,48 +280,52 @@ struct ObjectDataPool {
     Vec4Vector UIAngle;
     Vec4Vector UIColor;
     // SpriteWorld
+    Vec4Vector SpriteWoeldInfo;
     Vec4Vector SpriteWorldPos;
     Vec4Vector SpriteWorldSize;
     Vec4Vector SpriteWorldAngle;
     Vec4Vector SpriteWorldColor;
     // SpriteScreen
+	Vec4Vector SpriteScreenInfo;
     Vec4Vector SpriteScreenPos;
     Vec4Vector SpriteScreenSize;
     Vec4Vector SpriteScreenColor;
     IntVector  SpriteScreenAngle;
     //SpriteBox
+	Vec4Vector SpriteBoxInfo;
     Vec4Vector SpriteBoxPos;
     Vec4Vector SpriteBoxSize;
     Vec4Vector SpriteBoxAngle;
     Vec4Vector SpriteBoxColor;
     //SpriteCylinder
+	Vec4Vector SpriteCylinderInfo;
     Vec4Vector SpriteCylinderPos;
     Vec4Vector SpriteCylinderSize;
     Vec4Vector SpriteCylinderAngle;
     Vec4Vector SpriteCylinderColor;
     IntVector  SpriteCylinderSegment;
     // Model
+	Vec4Vector ModelInfo;
     Vec4Vector ModelPos;
     Vec4Vector ModelSize;
     Vec4Vector ModelAngle;
     BoolVector ModelUseTexture;
     // Collision
+	Vec4Vector CollisionInfo;
     Vec4Vector CollisionPos;
     Vec4Vector CollisionSize;
     Vec4Vector CollisionAngle;
     IntVector  CollisionType;
     BoolVector CollisionHit;
     // Grid(Box / Polygon)
-    Vec4Vector GridBoxPos;
-    Vec4Vector GridBoxSize;
-    Vec4Vector GridBoxAngle;
-    Vec4Vector GridBoxColor;
-    Vec4Vector GridPolygonPos;
-    Vec4Vector GridPolygonSize;
-    Vec4Vector GridPolygonAngle;
-    Vec4Vector GridPolygonColor;
+    Vec4Vector GridInfo;
+    Vec4Vector GridPos;
+    Vec4Vector GridSize;
+    Vec4Vector GridAngle;
+    Vec4Vector GridColor;
+    IntVector  GridSides;
+    IntVector  GridTypeIndex;
     // Int / Bool / Char Vec
-    IntVector GridPolygonSides;
     CharVector TexturePath;
     CharVector ModelPath;
     IntVector NumberOfScenes;
@@ -338,8 +345,7 @@ struct ObjectDataPool {
     KeyMap CollisionMap;
     KeyMap CollisionTagMap;
     KeyMap CollisionParentMap;
-    KeyMap GridBoxMap;
-    KeyMap GridPolygonMap;
+    KeyMap GridMap;
     KeyMap SpriteWorldTexturePathMap;
     KeyMap SpriteScreenTexturePathMap;
     KeyMap SpriteBoxTopTexturePathMap;
@@ -409,22 +415,12 @@ void SetSpriteCylinderTextureTop(const char* name, const char* pathName);       
 void SetSpriteCylinderTextureBottom(const char* name, const char* pathName);        //円柱のテクスチャ設定底面
 void SetSpriteCylinderTextureSide(const char* name, const char* pathName);          //円柱のテクスチャ設定周面
 //|| Grid   ||_______________________                                               //
-// Grid Line                                                                        //
-void AddGridLine(const char* name);                                                 //グリッドの追加
-void SetGridLinePos(const char* name, float Start, float End);                      //グリッドの描画範囲指定
-void SetGridLineColor(const char* name, float r, float g, float b, float a);        //グリッドの色設定
-// Grid Box                                                                         //
-void AddGridBox(const char* name);                                                  //箱形グリッドの追加
-void SetGridBoxPos(const char* name, float x, float y, float z);                    //箱形グリッドの座標設定
-void SetGridBoxSize(const char* name, float x, float y, float z);                   //箱形グリッドのサイズ設定
-void SetGridBoxColor(const char* name, float R, float G, float B, float A);         //箱形グリッドの色設定
-// Grid Polygon                                                                     //
-void AddGridPolygon(const char* name);                                              //多角グリッドの追加
-void SetGridPolygonPos(const char* name, float x, float y, float z);                //多角グリッドの座標設定
-void SetGridPolygonSize(const char* name, float x, float y, float z);               //多角グリッドのサイズ設定
-void SetGridPolygonAngle(const char* name, float x, float y, float z);              //多角グリッドの角度設定
-void SetGridPolygonColor(const char* name, float R, float G, float B, float A);     //多角グリッドの色設定
-void SetGridPolygonSides(const char* name, int sides);                              //多角グリッドの角数設定
+// Grid
+void AddGrid(const char* name, GridType type);                                                  //箱形グリッドの追加
+void SetGridPos(const char* name, float x, float y, float z);                    //箱形グリッドの座標設定
+void SetGridSize(const char* name, float x, float y, float z);                   //箱形グリッドのサイズ設定
+void SetGridColor(const char* name, float R, float G, float B, float A);         //箱形グリッドの色設定
+void SetGridSides(const char* name, int sides);                              //多角グリッドの角数設定
 //|| Sound ||_______________________ 
 //World
 void AddSpeaker(const char* name, const char* pathName);                            //スピーカーの追加音源指定
@@ -479,7 +475,7 @@ KeyMap* GetCameraKeyMap();
  // SceneManager //
 //////////////////
 void AddScene(const char* name);
-void SceneEndPoint();
+//void SceneEndPoint();
 void ChangeScene(const char* name);
 void InitScene(const char* name);
 void DeleteScene(const char* name);
@@ -488,7 +484,9 @@ void SetSceneCamera(const char* scene, const char* camera);
 void UpdateScene();
 void DrawScene();
 const char* GetCurrentSceneName();
-void NotifyAddObject(IndexType type);
+//void NotifyAddObject(IndexType type);
+
+int GetCurrentSceneIndex();
 
   //////////////////
  // AssetManager //
@@ -580,6 +578,13 @@ void Char2_Set(Char2Vector* vec, size_t index, Char2 str);
 Char2 Char2_Get(Char2Vector* vec, size_t index);
 int Char2_GetIndex(Char2Vector* vec, const char* FirstName);
 void Char2_Free(Char2Vector* vec);
+//|| Int2 ||__________________________
+void Int2_Init(Int2Vector* vec);
+void Int2_PushBack(Int2Vector* vec, Int2 str);
+void Int2_Set(Int2Vector* vec, size_t index, Int2 str);
+Int2 Int2_Get(Int2Vector* vec, size_t index);
+int  Int2_GetIndex(Int2Vector* vec, int OneIndex);
+void Int2_Free(Int2Vector* vec);
 //|| Char 系 ||_______________________
 void VecC_Init(CharVector* vec);
 void VecC_PushBack(CharVector* vec, const char* str);

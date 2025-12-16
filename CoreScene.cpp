@@ -76,16 +76,17 @@ void CoreStartUp()
     SetCameraLook("SubCamera", 0.0f, 0.0f, 0.0f);
 
     AddCamera("SideCamera");
-    SetCameraPos("SideCamera", 0.0f, 5.0f, -5.0f);
+    SetCameraPos("SideCamera", 1.0f, 5.0f, -5.0f);
     SetCameraLook("SideCamera", 0.0f, 0.0f, 0.0f);
 
     // --- Scene1 ---
     AddScene("Scene1");
-    AddGridBox("BoxA");
-    AddGridBox("BoxB");
-    SetGridBoxPos("BoxA", -2, 0, 0);
-    SetGridBoxPos("BoxB", 2, 0, 0);
-    SetGridBoxColor("BoxA", 1, 0, 1, 1);
+    AddGrid("BoxA", Grid_Box);
+    AddGrid("BoxB", Grid_Box);
+    SetGridPos("BoxA", -2, 0, 0);
+    SetGridSize("BoxA", 2, 1, 1);
+    SetGridPos("BoxB", 2, 0, 0);
+    SetGridColor("BoxA", 1, 0, 1, 1);
 
     //AddSpriteWorld("TestSprite00", "asset/test.png");
     //SetSpriteWorldColor("TestSprite00", 1, 1, 1, 1);
@@ -97,7 +98,7 @@ void CoreStartUp()
     SetSpriteBoxSize("Box00", 2, 2, 2);
     SetSpriteBoxColor("Box00", 1, 1, 1, 1);*/
 
-    SceneEndPoint();
+    //SceneEndPoint();
 
 
     AddScene("Scene3");
@@ -149,28 +150,41 @@ void CoreStartUp()
 	SetModelAngle("Model01", -3.14f/2, 3.14f, 0);
 	//ModelTexture("Model01", "asset/AFK_Snowman.png");
 
-	SceneEndPoint();
+	//SceneEndPoint();
 
     // --- Scene2 ---
     AddScene("Scene2");
-    AddGridPolygon("PolyA");
-    SetGridPolygonPos("PolyA", 0, 0, 0);
-	SetGridPolygonColor("PolyA", 0, 1, 1, 1);
-    SetGridPolygonSides("PolyA", 6);
-    SceneEndPoint();
+    AddGrid("PolyA", Grid_Polygon);
+    SetGridPos("PolyA", 0, 1, 0);
+	SetGridColor("PolyA", 0, 1, 1, 1);
+    SetGridSides("PolyA", 6);
+
+    AddGrid("PolyB", Grid_Polygon);
+    SetGridPos("PolyB", 2, 0, 3);
+    SetGridColor("PolyB", 0, 0, 1, 1);
+    SetGridSides("PolyB", 8);
+    //AddSpriteWorld("TestSprite03", "asset/est.png");
+    //SetSpriteWorldColor("TestSprite03", 1, 1, 1, 1);
+    //SetSpriteWorldSize("TestSprite03", 3, 3, 3);
+    //SetSpriteWorldPos("TestSprite03", 0, 0, 2);
+    //SetSpriteWorldAngle("TestSprite03", 0, 0, 0);
+
+    //SceneEndPoint();
 
     // --- シーンごとのカメラ割当 ---
     SetSceneCamera("Scene3", "SubCamera");
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
     // 最初のシーン設定
-    ChangeScene("Scene3");
+    ChangeScene("Scene1");
 
-    AddGridBox("BoxC");
-    SetGridBoxPos("BoxC", 0, 0, 0);
+    AddGrid("BoxC", Grid_Box);
+    SetGridPos("BoxC", 0, 0, 0);
+    SetGridSize("BoxC", 3, 2, 1);
+    SetGridColor("BoxC", 1, 0, 1, 1);
 
-    AddGridBox("BoxD");
-    SetGridBoxPos("BoxD", 2, 0, 0);
+    AddGrid("BoxD", Grid_Box);
+    SetGridPos("BoxD", 3, 0, 0);
 
     AddCollision("player", "playerTag");
     AddCollision("enemy", "enemyTag");
@@ -193,7 +207,7 @@ void CoreSceneUpdate()
 
     static float pos = -3.0f;
 	pos += 0.01f;
-    SetGridBoxPos("BoxC", pos, 0, 0);
+    SetGridPos("BoxA", pos, 0, 0);
 
     SetCameraPos("SubCamera", 5, 6, -7);
 

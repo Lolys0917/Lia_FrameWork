@@ -165,6 +165,32 @@ void Grid::FlushPendingToGPUAndDraw()
 
 void Grid::Draw()
 {
+    switch (m_gridType)
+    {
+    case Grid_Line:
+        SetLine(
+            { GetPosition().x, GetPosition().y, GetPosition().z },
+            { GetSize().x, GetSize().y, GetSize().z });
+        break;
+    case Grid_Box:
+        SetBox(
+            { GetPosition().x, GetPosition().y, GetPosition().z },
+            { GetSize().x, GetSize().y, GetSize().z },
+            { GetAngle().x, GetAngle().y, GetAngle().z });
+        break;
+    case Grid_Polygon:
+        SetPolygon(
+            m_sides,
+            { GetPosition().x, GetPosition().y, GetPosition().z },
+            { GetSize().x, GetSize().y, GetSize().z },
+            { GetAngle().x, GetAngle().y, GetAngle().z });
+        break;
+    case Grid_GridPolygon:
+        break;
+    default:
+        break;
+    }
+
     // Flush pending geometries into GPU and draw them
     FlushPendingToGPUAndDraw();
 }
@@ -186,7 +212,7 @@ void Grid::SetColor(const XMFLOAT4& color)
 
 // SetPos: instead of creating a new VB each call, we push two vertices into pending list.
 // Caller expects SetPos to set the one-line geometry; keep behavior: push that line.
-void Grid::SetPos(XMFLOAT3 Start, XMFLOAT3 End)
+void Grid::SetLine(XMFLOAT3 Start, XMFLOAT3 End)
 {
     Vertex a{ Start };
     Vertex b{ End };
@@ -195,8 +221,9 @@ void Grid::SetPos(XMFLOAT3 Start, XMFLOAT3 End)
 }
 
 // DrawBox: push 12 line segments (24 vertices) into pending list
-void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle)
+void Grid::SetBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle)
 {
+    //MessageBoxA(NULL, "Grid", "DRAW", S_OK);
     // create 8 corners in local space
     XMFLOAT3 vlocal[8] = {
         {-0.5f, -0.5f, -0.5f},
@@ -237,7 +264,7 @@ void Grid::DrawBox(const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& An
 }
 
 // DrawPolygonGrid: draw many polygons by calling DrawPolygonGrid per cell
-void Grid::DrawGridPolygonGrid(
+void Grid::SetGridPolygonGrid(
     int cols, int rows,
     float spacing, int sides,
     float radius,
@@ -258,7 +285,7 @@ void Grid::DrawGridPolygonGrid(
 }
 
 // DrawGridPolygon: push line segments for polygon (edges)
-void Grid::DrawGridPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle)
+void Grid::SetPolygon(int sides, const XMFLOAT3& pos, const XMFLOAT3& size, const XMFLOAT3& Angle)
 {
     if (sides < 3) sides = 3;
 
