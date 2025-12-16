@@ -69,17 +69,6 @@ typedef struct {
 	int GridIndex;      //Grid___________
 	int EffectIndex;		//Effect_________
 } ObjectIndex;
-enum class IndexType {
-	Camera,
-	SpriteWorld,
-	SpriteScreen,
-	Model,
-	BoxCollider,
-	SphereCollider,
-	CapsuleCollider,
-	Grid,
-	Effect
-};
 enum GridType
 {
     Grid_Line,

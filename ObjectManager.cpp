@@ -55,33 +55,6 @@ KeyMap* GetCameraKeyMap() { return &g_ObjectPool.CameraMap; }
 int GetUseCamera() { return UseCamera; }
 
 //-----------------------------------------
-// 汎用Vec4アクセスラッパ（保持は残す）
-//-----------------------------------------
-Vec4 GetVec4FromPool(IndexType type, int index)
-{
-    ObjectDataPool* p = GetObjectDataPool();
-    switch (type)
-    {
-    case IndexType::Camera: return Vec4_Get(&p->CameraPos, index);
-    case IndexType::Grid: return Vec4_Get(&p->GridPos, index);
-    case IndexType::Model: return Vec4_Get(&p->ModelPos, index);
-    default: return { 0,0,0,0 };
-    }
-}
-
-void SetVec4ToPool(IndexType type, int index, Vec4 v)
-{
-    ObjectDataPool* p = GetObjectDataPool();
-    switch (type)
-    {
-    case IndexType::Camera: Vec4_Set(&p->CameraPos, index, v); break;
-    case IndexType::Grid: Vec4_Set(&p->GridPos, index, v); break;
-    case IndexType::Model: Vec4_Set(&p->ModelPos, index, v); break;
-    default: break;
-    }
-}
-
-//-----------------------------------------
 // Camera管理
 //-----------------------------------------
 void AddCamera(const char* name) {
@@ -200,7 +173,6 @@ void SetSpriteScreenColor(const char* name, float r, float g, float b, float a)
 //-----------------------------------------
 void AddSpriteBox(const char* name, const char* pathName)
 {
-
     Vec4_PushBack(&g_ObjectPool.SpriteBoxPos, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteBoxSize, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteBoxAngle, { 0,0,0,0 });
