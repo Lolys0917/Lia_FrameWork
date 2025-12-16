@@ -39,7 +39,7 @@
 
 #pragma comment (lib, "d3dcompiler.lib")
 
-// Define_________________________
+Object* GetObjectClass();
 
 // 構造体定義_____________________
 
@@ -187,19 +187,6 @@ enum Input
     Pad_D_UP,
     Pad_D_DOWN,
 };
-
-struct ComponentType
-{
-    const int CT_Camera         = GetObjectClass()->GetComponentType<Camera>();
-    const int CT_Grid           = GetObjectClass()->GetComponentType<Grid>();
-    const int CT_SpriteScreen   = GetObjectClass()->GetComponentType<SpriteScreen>();
-    const int CT_SpriteWorld    = GetObjectClass()->GetComponentType<SpriteWorld>();
-    const int CT_SpriteBox      = GetObjectClass()->GetComponentType<SpriteBox>();
-    const int CT_SpriteCylinder = GetObjectClass()->GetComponentType<SpriteCylinder>();
-    const int CT_Sound          = GetObjectClass()->GetComponentType<Sound>();
-    const int CT_Model          = GetObjectClass()->GetComponentType<Model>();
-    const int CT_Collision      = GetObjectClass()->GetComponentType<Collision>();
-};
 //モデル用マトリクスバッファ
 struct MatrixBuffer
 {
@@ -268,7 +255,18 @@ struct MotionPackage {
     // OBJ にモーフアニメ等があれば追加
     // std::vector<MotionChannel_Vertex> vertexChannels;
 };
-
+struct ComponentType
+{
+    const int CT_Camera = GetObjectClass()->GetComponentType<class Camera>();
+    const int CT_Grid = GetObjectClass()->GetComponentType<class Grid>();
+    const int CT_SpriteScreen = GetObjectClass()->GetComponentType<class SpriteScreen>();
+    const int CT_SpriteWorld = GetObjectClass()->GetComponentType<class SpriteWorld>();
+    const int CT_SpriteBox = GetObjectClass()->GetComponentType<class SpriteBox>();
+    const int CT_SpriteCylinder = GetObjectClass()->GetComponentType<class SpriteCylinder>();
+    const int CT_Sound = GetObjectClass()->GetComponentType<class Sound>();
+    const int CT_Model = GetObjectClass()->GetComponentType<class Model>();
+    const int CT_Collision = GetObjectClass()->GetComponentType<class Collision>();
+};
 //-----------------------------------------
 // Vec4管理用データプール構造体
 struct ObjectDataPool {
@@ -363,7 +361,6 @@ ObjectDataPool* GetObjectDataPool();
   ///////////////////
  // ObjectManager //
 ///////////////////
-
 //↓API用関数 //////////////////////
 //
 //|| 管理   ||_______________________
@@ -464,8 +461,6 @@ void SetCollisionAngle(const char* name, float x, float y, float z);
 
 void OutObjectIndex(ObjectIndex* out);
 ObjectIndex* GetObjectIndex();
-
-Object* GetObjectClass();
 Grid* GetGridClass();
 
 KeyMap* GetCameraKeyMap();

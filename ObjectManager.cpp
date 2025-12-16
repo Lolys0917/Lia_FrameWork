@@ -262,7 +262,8 @@ void SetSpriteBoxTexture(const char* name, const char* pathName)
 //-----------------------------------------
 void AddSpriteCylinder(const char* name, const char* pathName)
 {
-    int typeIdx = object->GetComponentType<SpriteCylinder>();
+    ComponentType ct;
+    int typeIdx = ct.CT_SpriteCylinder;
     Vec4_PushBack(
         &g_ObjectPool.SpriteCylinderInfo, {
             (float)GetCurrentSceneIndex(),
@@ -335,8 +336,12 @@ void SetSpriteCylinderTextureBottom(const char* name, const char* pathName){
 //-----------------------------------------
 void AddGrid(const char* name, GridType type)
 {
-    int typeIdx = object->GetComponentType<Grid>();
-    Vec4_PushBack(&g_ObjectPool.GridInfo, { (float)GetCurrentSceneIndex(), (float)typeIdx, (float)GridOldIndex, 0 });
+    ComponentType ct;
+    int typeIdx = ct.CT_Grid;
+    Vec4_PushBack(&g_ObjectPool.GridInfo, { 
+        (float)GetCurrentSceneIndex(),
+        (float)typeIdx,
+        (float)GridOldIndex, 0 });
 
     //CurrentSceneをデバッグ表示
 	//MessageBoxA(NULL, ConcatCStr("CurrentSceneIndex:", std::to_string(GetCurrentSceneIndex()).c_str()), "Debug", MB_OK);
