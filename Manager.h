@@ -255,22 +255,24 @@ struct MotionPackage {
     // OBJ にモーフアニメ等があれば追加
     // std::vector<MotionChannel_Vertex> vertexChannels;
 };
+//API&インデックス共通用
 struct ComponentType
 {
-    const int CT_Camera = GetObjectClass()->GetComponentType<class Camera>();
-    const int CT_Grid = GetObjectClass()->GetComponentType<class Grid>();
-    const int CT_SpriteScreen = GetObjectClass()->GetComponentType<class SpriteScreen>();
-    const int CT_SpriteWorld = GetObjectClass()->GetComponentType<class SpriteWorld>();
-    const int CT_SpriteBox = GetObjectClass()->GetComponentType<class SpriteBox>();
+    const int CT_Camera         = GetObjectClass()->GetComponentType<class Camera>();
+    const int CT_Grid           = GetObjectClass()->GetComponentType<class Grid>();
+    const int CT_SpriteScreen   = GetObjectClass()->GetComponentType<class SpriteScreen>();
+    const int CT_SpriteWorld    = GetObjectClass()->GetComponentType<class SpriteWorld>();
+    const int CT_SpriteBox      = GetObjectClass()->GetComponentType<class SpriteBox>();
     const int CT_SpriteCylinder = GetObjectClass()->GetComponentType<class SpriteCylinder>();
-    const int CT_Sound = GetObjectClass()->GetComponentType<class Sound>();
-    const int CT_Model = GetObjectClass()->GetComponentType<class Model>();
-    const int CT_Collision = GetObjectClass()->GetComponentType<class Collision>();
+    const int CT_Sound          = GetObjectClass()->GetComponentType<class Sound>();
+    const int CT_Model          = GetObjectClass()->GetComponentType<class Model>();
+    const int CT_Collision      = GetObjectClass()->GetComponentType<class Collision>();
 };
 //-----------------------------------------
 // Vec4管理用データプール構造体
 struct ObjectDataPool {
     // Camera
+	Vec4Vector CameraInfo;
     Vec4Vector CameraPos;
     Vec4Vector CameraLook;
     // UI
@@ -278,7 +280,7 @@ struct ObjectDataPool {
     Vec4Vector UIAngle;
     Vec4Vector UIColor;
     // SpriteWorld
-    Vec4Vector SpriteWoeldInfo;
+    Vec4Vector SpriteWorldInfo;
     Vec4Vector SpriteWorldPos;
     Vec4Vector SpriteWorldSize;
     Vec4Vector SpriteWorldAngle;
