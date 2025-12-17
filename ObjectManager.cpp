@@ -28,12 +28,13 @@ static Object* object = nullptr;
 static ObjectIndex ObjectIdx;
 static ObjectDataPool g_ObjectPool; // 実体
 static KeyMap g_ClassTypeMap; // クラスタイプマップ
+ComponentType ct;
 
 //-----------------------------------------
 // Index管理（保持は ObjectIdx と同期）
 //-----------------------------------------
 static int UseCamera = -1;
-static int CameraIndex = 0, CameraOldIdx = 0;
+static int CameraIndex = 0, CameraOldIndex = 0;
 static int UIIndex = 0, UIOldIndex = 0;
 static int SpriteWorldIndex = 0, SpriteWorldOldIndex = 0;
 static int SpriteScreenIndex = 0, SpriteScreenOldIndex = 0;
@@ -58,6 +59,14 @@ int GetUseCamera() { return UseCamera; }
 // Camera管理
 //-----------------------------------------
 void AddCamera(const char* name) {
+    int typeIdx = ct.CT_Camera;
+    Vec4_PushBack(&g_ObjectPool.CameraInfo, {
+        (float)GetCurrentSceneIndex(),
+        (float)typeIdx,
+        (float)CameraOldIndex, 0 });
+
+	//MessageBoxA(NULL, ConcatCStr("AddCamera:", std::to_string(typeIdx).c_str()), "Info", MB_OK);
+
     Vec4_PushBack(&g_ObjectPool.CameraPos, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.CameraLook, { 0,0,1,0 });
     KeyMap_Add(&g_ObjectPool.CameraMap, name);
@@ -95,6 +104,12 @@ void SetUseCamera(int index) {
 //-----------------------------------------
 void AddSpriteWorld(const char* name, const char* pathName)
 {
+    int typeIdx = ct.CT_SpriteWorld;
+    Vec4_PushBack(&g_ObjectPool.SpriteWorldInfo, {
+        (float)GetCurrentSceneIndex(),
+        (float)typeIdx,
+        (float)SpriteWorldOldIndex, 0 });
+
     Vec4_PushBack(&g_ObjectPool.SpriteWorldPos, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteWorldSize, { 1,1,1,1 });
     Vec4_PushBack(&g_ObjectPool.SpriteWorldAngle, { 0,0,0,0 });
@@ -134,6 +149,12 @@ void SetSpriteWorldColor(const char* name, float r, float g, float b, float a)
 //-----------------------------------------
 void AddSpriteScreen(const char* name, const char* pathName)
 {
+    int typeIdx = ct.CT_SpriteScreen;
+    Vec4_PushBack(&g_ObjectPool.SpriteScreenInfo, {
+        (float)GetCurrentSceneIndex(),
+        (float)typeIdx,
+        (float)SpriteScreenOldIndex, 0 });
+
     Vec4_PushBack(&g_ObjectPool.SpriteScreenPos, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteScreenSize, { 100, 100, 100, 100 });
     Vec4_PushBack(&g_ObjectPool.SpriteScreenColor, { 1,1,1,1 });
@@ -173,6 +194,12 @@ void SetSpriteScreenColor(const char* name, float r, float g, float b, float a)
 //-----------------------------------------
 void AddSpriteBox(const char* name, const char* pathName)
 {
+    int typeIdx = ct.CT_SpriteBox;
+    Vec4_PushBack(&g_ObjectPool.SpriteBoxInfo, {
+        (float)GetCurrentSceneIndex(),
+        (float)typeIdx,
+        (float)SpriteBoxOldIndex, 0 });
+
     Vec4_PushBack(&g_ObjectPool.SpriteBoxPos, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteBoxSize, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.SpriteBoxAngle, { 0,0,0,0 });
@@ -262,7 +289,7 @@ void SetSpriteBoxTexture(const char* name, const char* pathName)
 //-----------------------------------------
 void AddSpriteCylinder(const char* name, const char* pathName)
 {
-    int typeIdx = object->GetComponentType<SpriteCylinder>();
+    int typeIdx = ct.CT_SpriteCylinder;
     Vec4_PushBack(
         &g_ObjectPool.SpriteCylinderInfo, {
             (float)GetCurrentSceneIndex(),
@@ -335,8 +362,11 @@ void SetSpriteCylinderTextureBottom(const char* name, const char* pathName){
 //-----------------------------------------
 void AddGrid(const char* name, GridType type)
 {
-    int typeIdx = object->GetComponentType<Grid>();
-    Vec4_PushBack(&g_ObjectPool.GridInfo, { (float)GetCurrentSceneIndex(), (float)typeIdx, (float)GridOldIndex, 0 });
+    int typeIdx = ct.CT_Grid;
+    Vec4_PushBack(&g_ObjectPool.GridInfo, { 
+        (float)GetCurrentSceneIndex(),
+        (float)typeIdx,
+        (float)GridOldIndex, 0 });
 
     //CurrentSceneをデバッグ表示
 	//MessageBoxA(NULL, ConcatCStr("CurrentSceneIndex:", std::to_string(GetCurrentSceneIndex()).c_str()), "Debug", MB_OK);
@@ -389,6 +419,12 @@ void SetGridSides(const char* Name, int sides)
 //==================================
 void AddModel(const char* name, const char* pathName)
 {
+    int typeIdx = ct.CT_Model;
+    Vec4_PushBack(&g_ObjectPool.ModelInfo, {
+        (float)GetCurrentSceneIndex(),
+        (float)typeIdx,
+        (float)ModelOldIndex, 0 });
+
     Vec4_PushBack(&g_ObjectPool.ModelPos, { 0,0,0,0 });
     Vec4_PushBack(&g_ObjectPool.ModelSize, { 1,1,1,1 });
     Vec4_PushBack(&g_ObjectPool.ModelAngle, { 0,0,0,0 });
@@ -619,10 +655,10 @@ void CreateObject()
     if (!object) return;
 
 	// Camera
-    while (CameraOldIdx < CameraIndex) 
+    while (CameraOldIndex < CameraIndex) 
     {
         object->AddComponent<Camera>();
-        CameraOldIdx++;
+        CameraOldIndex++;
     }
     //SpriteWorld
     while (SpriteWorldOldIndex < SpriteWorldIndex)
@@ -698,7 +734,7 @@ void InitDo()
     // インデックス初期化・ObjectIdx リセット
     UseCamera = -1;
     CameraIndex = UIIndex = SpriteWorldIndex = ModelIndex = BoxColliderIndex = GridIndex = 0;
-    CameraOldIdx = UIOldIndex = SpriteWorldOldIndex = ModelOldIndex = BoxColliderOldIndex = GridOldIndex = 0;
+    CameraOldIndex = UIOldIndex = SpriteWorldOldIndex = ModelOldIndex = BoxColliderOldIndex = GridOldIndex = 0;
 
     ObjectIdx.CameraIndex = 0;
     ObjectIdx.SpriteWorldIndex = 0;
