@@ -11,6 +11,7 @@ using namespace DirectX;
 // -----------------------------------------------------------
 void SpriteScreen::Init()
 {
+    //
     // === エンジンのシェーダー管理から取得 ===
     m_vs = GetVertexShader2D();
     m_ps = GetPixelShader2D();
