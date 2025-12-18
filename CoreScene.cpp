@@ -13,25 +13,26 @@ void CoreStartUp()
 {
     //AL_Init(); // AssetLoad 初期化
     //// 読み込み予定のアセット登録
-    //AL_RegisterAssetToBatch("asset/test.png");
-    //AL_RegisterAssetToBatch("asset/est.png");
-    //AL_RegisterAssetToBatch("asset/DiscUR_Reel1.png");
-    //AL_RegisterAssetToBatch("asset/hamu.png");
-    //AL_RegisterAssetToBatch("asset/boy_model4.fbx");
-    //AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
+    AL_RegisterAssetToBatch("asset/test.png");
+    AL_RegisterAssetToBatch("asset/est.png");
+    AL_RegisterAssetToBatch("asset/Title.png");
+    AL_RegisterAssetToBatch("asset/DiscUR_Reel1.png");
+    AL_RegisterAssetToBatch("asset/hamu.png");
+    AL_RegisterAssetToBatch("asset/boy_model4.fbx");
+    AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
 
-    AL_Init();
+    //AL_Init();
     /*int registered = AL_RegisterFolderRecursive("asset/");
     char buf[128];
     sprintf_s(buf, "Registered %d files from asset folder", registered);
 	MessageBoxA(nullptr, buf, "CoreStartUp", MB_OK);*/
-    AL_SaveAllPackages("saved/pkg/");
+    //AL_SaveAllPackages("saved/pkg/");
 
     //AL_RegisterAssetToBatch("asset/model/player.fbx");
     //AL_RegisterAssetToBatch("asset/model/ground.obj");
     
  
-    AL_LoadAllPackages("saved/pkg/");
+    //AL_LoadAllPackages("saved/pkg/");
 
     //// 実行時は逆に pkg 読み込み（アセットをまだ展開しない）
     /*AL_LoadPackageIndex("png", "saved/pkg/Assetpng.pkg");
@@ -41,9 +42,10 @@ void CoreStartUp()
     //// .pkgからインデックスで読み込み（DirectXリソース生成）
     AL_LoadFromPackageByName("test.png");
     AL_LoadFromPackageByName("est.png");
+    AL_LoadFromPackageByName("Test.png");
     AL_LoadFromPackageByName("DiscUR_Reel1.png");
     AL_LoadFromPackageByName("hamu.png");
-    AL_LoadFromPackageByName("Title.png");
+    AL_LoadFromPackageByName("asset/Title.png");
     AL_LoadFromPackageByName("boy_model4.fbx");
     AL_LoadFromPackageByName("asset/Alicia_solid_Unity.FBX");
     //AL_LoadFromPackageByName("asset/AFK_Snowman.fbx");
@@ -80,6 +82,10 @@ void CoreStartUp()
     SetCameraPos("SideCamera", 1.0f, 5.0f, -5.0f);
     SetCameraLook("SideCamera", 0.0f, 0.0f, 0.0f);
 
+    AddCamera("GYCamera");
+    SetCameraPos("GYCamera", 1.0f, 5.0f, -5.0f);
+    SetCameraLook("GYCamera", 0.0f, 0.0f, 0.0f);
+
     // --- Scene1 ---
     AddScene("Scene1");
     AddGrid("BoxA", Grid_Box);
@@ -114,7 +120,7 @@ void CoreStartUp()
     SetSpriteWorldPos("TestSprite02", -2, 0, 0);
     SetSpriteWorldAngle("TestSprite02", 0, 0.6f, 0);
 
-    AddSpriteScreen("TestUI01", "asset/test.png");
+    AddSpriteScreen("TestUI01", "asset/Title.png");
     SetSpriteScreenPos("TestUI01", 0, 0);
     SetSpriteScreenSize("TestUI01", 200, 200);
     SetSpriteScreenColor("TestUI01", 1, 1, 1, 1);
@@ -172,16 +178,22 @@ void CoreStartUp()
 
     //SceneEndPoint();
 
-    AddScene("GY_Scene");
+    AddScene("SceneGY");
 
+    //AddSpriteWorld("TestSpriteGY", "asset/est.png");
 
+    AddSpriteScreen("TestUI02", "asset/Title.png");
+    SetSpriteScreenPos("TestUI02", 100, 100);
+    SetSpriteScreenSize("TestUI02", 200, 200);
+    SetSpriteScreenColor("TestUI02", 1, 1, 1, 1);
 
     // --- シーンごとのカメラ割当 ---
     SetSceneCamera("Scene3", "SubCamera");
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
+    SetSceneCamera("SceneGY","GYCamera");
     // 最初のシーン設定
-    ChangeScene("Scene3");
+    ChangeScene("SceneGY");
 
     AddGrid("BoxC", Grid_Box);
     SetGridPos("BoxC", 0, 0, 0);

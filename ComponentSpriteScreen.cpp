@@ -74,14 +74,6 @@ void SpriteScreen::SetTexture(const char* path)
 // -----------------------------------------------------------
 // 各種パラメータ設定
 // -----------------------------------------------------------
-void SpriteScreen::SetPos2D(float x, float y)
-{
-    m_pos = { x, y, 0 };
-}
-void SpriteScreen::SetSize2D(float w, float h)
-{
-    m_size = { w, h, 1 };
-}
 void SpriteScreen::SetColor(float r, float g, float b, float a)
 {
     m_color = { r, g, b, a };
@@ -95,11 +87,14 @@ void SpriteScreen::Draw()
 
     if (!m_visible || !m_srv) return;
 
+    SetPosition(0, 0, 0.5f);
+    SetSize(100, 100, 100);
+
     // --- 頂点データ作成 ---
-    float x = m_pos.x;
-    float y = m_pos.y;
-    float w = m_size.x;
-    float h = m_size.y;
+    float x = GetPosition().x;
+    float y = GetPosition().y;
+    float w = GetSize().x;
+    float h = GetSize().y;
 
     VertexScreen verts[6] = {
         {{x,     y,     0}, {0,0}},
@@ -126,11 +121,12 @@ void SpriteScreen::Draw()
     // --- 射影行列（スクリーン座標）---
     float width = (float)800;
     float height = (float)600;
-    XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(0.0f, width, height, 0.0f, 0.0f, 1.0f);
+    XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(0.0f, width, height, 0.0f, -1.0f, 1.0f);
 
     MatrixBuffer mb;
     mb.mvp = XMMatrixTranspose(ortho);
-    mb.color = m_color;
+    mb.diffuseColor = XMFLOAT4(1, 1, 1, 1); // 必要なら変更
+    mb.useTexture = XMFLOAT4(1, 1, 1, 1);
     GetContext()->UpdateSubresource(m_matrixBuf.Get(), 0, nullptr, &mb, 0, 0);
 
     // --- 深度ステンシル無効化 ---

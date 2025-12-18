@@ -274,15 +274,19 @@ void DrawScene()
     {
         if (!(Vec4_Get(&pool->SpriteScreenInfo, i).X == CurrentSceneIndex)) continue;
 
+        MessageBoxA(nullptr, "ScreenUI", std::to_string(CurrentSceneIndex).c_str(), MB_OK);
+
         if (Vec4_Get(&pool->SpriteScreenInfo, i).Y == GetObjectClass()->GetComponentType<SpriteScreen>())
         {
+            //MessageBoxA(nullptr, "ScreenUI", std::to_string(i).c_str(), MB_OK);
+
             Vec4 v4Pos = Vec4_Get(&pool->SpriteScreenPos, i);
             Vec4 v4Size = Vec4_Get(&pool->SpriteScreenSize, i);
             Vec4 v4Color = Vec4_Get(&pool->SpriteScreenColor, i);
             int vIAngle = VecInt_Get(&pool->SpriteScreenAngle, i);
 
-            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPos2D(v4Pos.X, v4Pos.Y);
-            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize2D(v4Size.X, v4Size.Y);
+            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetPosition(v4Pos.X, v4Pos.Y, 0);
+            GetObjectClass()->GetComponent<SpriteScreen>(i)->SetSize(v4Size.X, v4Size.Y, 1.0f);
             GetObjectClass()->GetComponent<SpriteScreen>(i)->SetColor(v4Color.X, v4Color.Y, v4Color.Z, v4Color.W);
 
             GetObjectClass()->DrawObject<SpriteScreen>(i);

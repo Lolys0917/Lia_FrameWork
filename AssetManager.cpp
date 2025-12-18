@@ -819,7 +819,7 @@ bool AL_SaveAllPackages(const char* outFolder) {
 
     std::lock_guard<std::mutex> lg(g_packageMutex);
     for (auto& pkg : g_packages) {
-        std::string outPath = (outDir / ("Asset" + pkg.ext + ".pkg")).string();
+        std::string outPath = (outDir / ("asset" + pkg.ext + ".pkg")).string();
         std::ofstream out(outPath, std::ios::binary | std::ios::trunc);
         if (!out.is_open()) return false;
 

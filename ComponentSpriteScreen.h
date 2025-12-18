@@ -28,11 +28,14 @@ private:
         XMFLOAT2 uv;
     };
 
-    struct MatrixBuffer {
-        XMMATRIX mvp;
+    //struct MatrixBuffer {
+    //    XMMATRIX mvp;
+    //    XMFLOAT4 color;
+    //};
+
+    struct ColorBuffer {
         XMFLOAT4 color;
     };
-
 
     FLOAT3 m_pos{ 0, 0, 0 };
     FLOAT3 m_size{ 100, 100, 1 };
@@ -40,6 +43,14 @@ private:
     bool m_visible = true;
 
     ID3D11ShaderResourceView* m_srv = nullptr;
+
+    ComPtr<ID3D11Buffer> m_colorBuf;
+
+    ID3D11SamplerState* m_samplerState = nullptr;
+    ID3D11BlendState* m_blendState = nullptr;
+
+    ID3D11DepthStencilState* m_depthState = nullptr;
+    ID3D11DepthStencilState* m_noDepthState = nullptr;
 
     ComPtr<ID3D11Buffer> m_vb;
     ComPtr<ID3D11Buffer> m_matrixBuf;

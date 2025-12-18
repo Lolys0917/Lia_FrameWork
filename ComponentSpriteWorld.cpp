@@ -133,7 +133,6 @@ void SpriteWorld::Draw()
     init.pSysMem = verts;
     GetDevice()->CreateBuffer(&bd, &init, &m_vb);
 
-    // Billboard処理（カメラ向き）
     XMMATRIX world = XMMatrixRotationRollPitchYaw(m_angle.x, m_angle.y, m_angle.z)
         * XMMatrixTranslation(m_pos.x, m_pos.y, m_pos.z);
 
