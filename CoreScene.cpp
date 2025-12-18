@@ -13,25 +13,34 @@ void CoreStartUp()
 {
     //AL_Init(); // AssetLoad 初期化
     //// 読み込み予定のアセット登録
-    //AL_RegisterAssetToBatch("asset/test.png");
-    //AL_RegisterAssetToBatch("asset/est.png");
-    //AL_RegisterAssetToBatch("asset/DiscUR_Reel1.png");
-    //AL_RegisterAssetToBatch("asset/hamu.png");
-    //AL_RegisterAssetToBatch("asset/boy_model4.fbx");
-    //AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
+    AL_RegisterAssetToBatch("asset/test.png");
+    AL_RegisterAssetToBatch("asset/est.png");
+    AL_RegisterAssetToBatch("asset/UIDemo.png");
+    AL_RegisterAssetToBatch("asset/DiscUR_Reel1.png");
+    AL_RegisterAssetToBatch("asset/hamu.png");
+    AL_RegisterAssetToBatch("asset/boy_model4.fbx");
+    AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
 
-    AL_Init();
+    //AL_Init();
+
+
     /*int registered = AL_RegisterFolderRecursive("asset/");
     char buf[128];
     sprintf_s(buf, "Registered %d files from asset folder", registered);
 	MessageBoxA(nullptr, buf, "CoreStartUp", MB_OK);*/
-    AL_SaveAllPackages("saved/pkg/");
+
+
+    //AL_SaveAllPackages("saved/pkg/");
+
+
 
     //AL_RegisterAssetToBatch("asset/model/player.fbx");
     //AL_RegisterAssetToBatch("asset/model/ground.obj");
     
  
-    AL_LoadAllPackages("saved/pkg/");
+    //AL_LoadAllPackages("saved/pkg/");
+
+
 
     //// 実行時は逆に pkg 読み込み（アセットをまだ展開しない）
     /*AL_LoadPackageIndex("png", "saved/pkg/Assetpng.pkg");
@@ -41,6 +50,7 @@ void CoreStartUp()
     //// .pkgからインデックスで読み込み（DirectXリソース生成）
     AL_LoadFromPackageByName("test.png");
     AL_LoadFromPackageByName("est.png");
+    AL_LoadFromPackageByName("asset/UIDemo.png");
     AL_LoadFromPackageByName("DiscUR_Reel1.png");
     AL_LoadFromPackageByName("hamu.png");
     AL_LoadFromPackageByName("Title.png");
@@ -172,24 +182,43 @@ void CoreStartUp()
 
     //SceneEndPoint();
 
-    AddScene("GY_Scene");
+    AddScene("SceneTest");
 
+    AddGrid("GridBoxTest", GridType::Grid_Box);
+    SetGridPos("GridBoxTest", 0, 0, 0);
 
+    AddGrid("GridTest", GridType::Grid_Polygon);
+    SetGridPos("GridTest", 2, 0, 0);
+    SetGridSides("GridTest", 6);
+
+    AddSpriteWorld("SwTest", "asset/test.png");
+    SetSpriteWorldPos("SwTest", 4, 0, 0);
+    SetSpriteWorldAngle("SwTest", 0, 0, 3.14f);
+    SetSpriteWorldSize("SwTest", 2, 2, 2);
+    
+    AddSpriteScreen("SsTest", "asset/UIDemo.png");
+    SetSpriteScreenSize("SsTest", 150, 150);
+
+    AddModel("ModelTest", "asset/Alicia_solid_Unity.FBX");
+    SetModelPos("ModelTest", -2.0f, 0, -2);
+    SetModelSize("ModelTest", 0.022f, 0.022f, 0.022f);
+    SetModelAngle("ModelTest", -3.14f / 2, 3.14f, 0);
 
     // --- シーンごとのカメラ割当 ---
     SetSceneCamera("Scene3", "SubCamera");
     SetSceneCamera("Scene1", "MainCamera");
     SetSceneCamera("Scene2", "SideCamera");
+    SetSceneCamera("SceneTest", "MainCamera");
     // 最初のシーン設定
-    ChangeScene("Scene3");
+    ChangeScene("SceneTest");
 
-    AddGrid("BoxC", Grid_Box);
-    SetGridPos("BoxC", 0, 0, 0);
-    SetGridSize("BoxC", 3, 2, 1);
-    SetGridColor("BoxC", 1, 0, 1, 1);
-
-    AddGrid("BoxD", Grid_Box);
-    SetGridPos("BoxD", 3, 0, 0);
+    //AddGrid("BoxC", Grid_Box);
+    //SetGridPos("BoxC", 0, 0, 0);
+    //SetGridSize("BoxC", 3, 2, 1);
+    //SetGridColor("BoxC", 1, 0, 1, 1);
+    //
+    //AddGrid("BoxD", Grid_Box);
+    //SetGridPos("BoxD", 3, 0, 0);
 
     AddCollision("player", "playerTag");
     AddCollision("enemy", "enemyTag");
