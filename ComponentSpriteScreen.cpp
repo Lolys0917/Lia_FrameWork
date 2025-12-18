@@ -87,8 +87,6 @@ void SpriteScreen::Draw()
 
     if (!m_visible || !m_srv) return;
 
-    SetPosition(0, 0, 0.5f);
-    SetSize(100, 100, 100);
 
     // --- 頂点データ作成 ---
     float x = GetPosition().x;
@@ -121,13 +119,16 @@ void SpriteScreen::Draw()
     // --- 射影行列（スクリーン座標）---
     float width = (float)800;
     float height = (float)600;
-    XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(0.0f, width, height, 0.0f, -1.0f, 1.0f);
+    XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(0.0f, width, height, 0.0f, 0.0f, 1.0f);
 
     MatrixBuffer mb;
     mb.mvp = XMMatrixTranspose(ortho);
     mb.diffuseColor = XMFLOAT4(1, 1, 1, 1); // 必要なら変更
     mb.useTexture = XMFLOAT4(1, 1, 1, 1);
     GetContext()->UpdateSubresource(m_matrixBuf.Get(), 0, nullptr, &mb, 0, 0);
+
+    //XMFLOAT4 colorb = m_color;
+    GetContext()->UpdateSubresource(m_colorBuf.Get(), 0, nullptr, &m_color, 0, 0);
 
     // --- 深度ステンシル無効化 ---
     ID3D11DepthStencilState* prevDepth = nullptr;
@@ -145,8 +146,13 @@ void SpriteScreen::Draw()
     GetContext()->VSSetConstantBuffers(0, 1, m_matrixBuf.GetAddressOf());
 
     GetContext()->PSSetShader(GetPixelShader2D(), nullptr, 0);
+    GetContext()->PSSetConstantBuffers(1, 1, m_colorBuf.GetAddressOf());
     GetContext()->PSSetShaderResources(0, 1, &m_srv);
     GetContext()->PSSetSamplers(0, 1, m_sampler.GetAddressOf()); // ← UI専用サンプラー設定
+
+    float blendFactor[4] = { 0,0,0,0 };
+    GetContext()->OMSetBlendState(m_blendState, blendFactor, 0xffffffff);
+    GetContext()->OMSetDepthStencilState(m_depthState, 0);
 
     // --- 描画 ---
     GetContext()->Draw(6, 0);

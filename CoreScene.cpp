@@ -184,7 +184,7 @@ void CoreStartUp()
 
     AddSpriteScreen("TestUI02", "asset/Title.png");
     SetSpriteScreenPos("TestUI02", 100, 100);
-    SetSpriteScreenSize("TestUI02", 200, 200);
+    SetSpriteScreenSize("TestUI02", 200, 100);
     SetSpriteScreenColor("TestUI02", 1, 1, 1, 1);
 
     // --- ƒV[ƒ“‚²‚Æ‚ÌƒJƒƒ‰Š„“– ---

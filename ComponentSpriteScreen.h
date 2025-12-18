@@ -28,6 +28,11 @@ private:
         XMFLOAT2 uv;
     };
 
+    //struct VertexS {
+    //    XMFLOAT3 pos;
+    //    XMFLOAT2 uv;
+    //};
+
     //struct MatrixBuffer {
     //    XMMATRIX mvp;
     //    XMFLOAT4 color;
