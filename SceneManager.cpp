@@ -347,9 +347,6 @@ void ChangeScene(const char* name)
 //
 //    AddMessage(ConcatCStr("ChangeScene: ", name));
     CurrentSceneIndex = index;
-
-
-
 //    ActiveSceneIndex = index;
 }
 

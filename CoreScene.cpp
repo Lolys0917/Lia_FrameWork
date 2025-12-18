@@ -43,6 +43,7 @@ void CoreStartUp()
     AL_LoadFromPackageByName("est.png");
     AL_LoadFromPackageByName("DiscUR_Reel1.png");
     AL_LoadFromPackageByName("hamu.png");
+    AL_LoadFromPackageByName("Title.png");
     AL_LoadFromPackageByName("boy_model4.fbx");
     AL_LoadFromPackageByName("asset/Alicia_solid_Unity.FBX");
     //AL_LoadFromPackageByName("asset/AFK_Snowman.fbx");
@@ -115,7 +116,7 @@ void CoreStartUp()
 
     AddSpriteScreen("TestUI01", "asset/test.png");
     SetSpriteScreenPos("TestUI01", 0, 0);
-    SetSpriteScreenSize("TestUI01", 100, 100);
+    SetSpriteScreenSize("TestUI01", 200, 200);
     SetSpriteScreenColor("TestUI01", 1, 1, 1, 1);
 
     AddSpriteCylinder("Cylinder01", "asset/DiscUR_Reel1.png");
@@ -170,6 +171,10 @@ void CoreStartUp()
     //SetSpriteWorldAngle("TestSprite03", 0, 0, 0);
 
     //SceneEndPoint();
+
+    AddScene("GY_Scene");
+
+
 
     // --- ÉVÅ[ÉìÇ≤Ç∆ÇÃÉJÉÅÉâäÑìñ ---
     SetSceneCamera("Scene3", "SubCamera");
