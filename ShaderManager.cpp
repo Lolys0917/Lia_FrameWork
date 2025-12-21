@@ -249,8 +249,7 @@ void InitShaderDefault()
         {
             matrix mvp; // 64バイト
             float4 diffuseColor; // 16バイト
-            int useTexture; // 4バイト
-            float3 pad; // 12バイト（アライメント調整）
+            float4 useTexture; // 16バイト
         };
         
         struct VS_INPUT

@@ -191,10 +191,10 @@ void CoreStartUp()
     SetGridPos("GridTest", 2, 0, 0);
     SetGridSides("GridTest", 6);
 
-    AddSpriteWorld("SwTest", "asset/test.png");
-    SetSpriteWorldPos("SwTest", 4, 0, 0);
-    SetSpriteWorldAngle("SwTest", 0, 0, 3.14f);
-    SetSpriteWorldSize("SwTest", 2, 2, 2);
+    //AddSpriteCylinder("SwTest", "asset/test.png");
+    SetSpriteCylinderPos("SwTest", 4, 0, 0);
+    SetSpriteCylinderAngle("SwTest", 0, 0, 3.14f);
+    SetSpriteCylinderSize("SwTest", 2, 2, 2);
     
     AddSpriteScreen("SsTest", "asset/UIDemo.png");
     SetSpriteScreenSize("SsTest", 150, 150);

@@ -28,7 +28,12 @@ void SpriteWorld::Init()
         {"POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,0, D3D11_INPUT_PER_VERTEX_DATA,0},
         {"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,0,12, D3D11_INPUT_PER_VERTEX_DATA,0},
     };
-    HRESULT hr = GetDevice()->CreateInputLayout(layout, 2, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &m_layout);
+    HRESULT hr = GetDevice()->CreateInputLayout(
+        layout, 
+        2,
+        vsBlob->GetBufferPointer(),
+        vsBlob->GetBufferSize(), 
+        &m_layout);
     if (FAILED(hr)) {
         char buf[128]; sprintf_s(buf, "CreateInputLayout failed 0x%08X", (unsigned)hr);
         MessageBoxA(nullptr, buf, "Error", MB_OK);
@@ -133,7 +138,6 @@ void SpriteWorld::Draw()
     init.pSysMem = verts;
     GetDevice()->CreateBuffer(&bd, &init, &m_vb);
 
-    // Billboard処理（カメラ向き）
     XMMATRIX world = XMMatrixRotationRollPitchYaw(m_angle.x, m_angle.y, m_angle.z)
         * XMMatrixTranslation(m_pos.x, m_pos.y, m_pos.z);
 

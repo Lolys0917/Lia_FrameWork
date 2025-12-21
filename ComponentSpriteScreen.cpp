@@ -23,7 +23,7 @@ void SpriteScreen::Init()
 
     // === 入力レイアウトを作成 ===
     // ♠ 必要なのは「VS のバイトコード」だが、ShaderManager では g_Default2DVSBlob を保持している
-    
+
     ID3DBlob* vsBlob = GetCurrent2DVSBlob();
     if (!vsBlob)
     {
@@ -51,11 +51,27 @@ void SpriteScreen::Init()
     bd.ByteWidth = sizeof(MatrixBuffer);
     GetDevice()->CreateBuffer(&bd, nullptr, &m_matrixBuf);
 
+	// --- カラーバッファ ---
+    bd.ByteWidth = sizeof(ColorBuffer);
+    GetDevice()->CreateBuffer(&bd, nullptr, &m_colorBuf);
+
     // --- サンプラー ---
     D3D11_SAMPLER_DESC samp{};
     samp.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    samp.AddressU = samp.AddressV = samp.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    samp.AddressU = samp.AddressV = samp.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
     GetDevice()->CreateSamplerState(&samp, &m_sampler);
+
+    // Blend
+    D3D11_BLEND_DESC blendDesc = {};
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    GetDevice()->CreateBlendState(&blendDesc, &m_blendState);
 }
 
 
@@ -112,9 +128,9 @@ void SpriteScreen::Draw()
 
     // --- 頂点バッファ作成 ---
     D3D11_BUFFER_DESC vbd{};
-    vbd.Usage = D3D11_USAGE_DYNAMIC;
+    vbd.Usage = D3D11_USAGE_IMMUTABLE;
     vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    vbd.CPUAccessFlags = 0;
     vbd.ByteWidth = sizeof(verts);
 
     D3D11_SUBRESOURCE_DATA initData{};
@@ -130,15 +146,12 @@ void SpriteScreen::Draw()
 
     MatrixBuffer mb;
     mb.mvp = XMMatrixTranspose(ortho);
-    mb.color = m_color;
+    mb.diffuseColor = m_color;
+    mb.useTexture = XMFLOAT4(1, 0, 0, 0);
     GetContext()->UpdateSubresource(m_matrixBuf.Get(), 0, nullptr, &mb, 0, 0);
-
-    // --- 深度ステンシル無効化 ---
-    ID3D11DepthStencilState* prevDepth = nullptr;
-    UINT stencilRef = 0;
-    GetContext()->OMGetDepthStencilState(&prevDepth, &stencilRef);
-    GetContext()->OMSetDepthStencilState(nullptr, 0);
-
+    
+    ColorBuffer cb{ m_color };
+    GetContext()->UpdateSubresource(m_colorBuf.Get(), 0, nullptr, &cb, 0, 0);
     // --- バインド設定 ---
     UINT stride = sizeof(VertexScreen), offset = 0;
     GetContext()->IASetVertexBuffers(0, 1, m_vb.GetAddressOf(), &stride, &offset);
@@ -149,8 +162,18 @@ void SpriteScreen::Draw()
     GetContext()->VSSetConstantBuffers(0, 1, m_matrixBuf.GetAddressOf());
 
     GetContext()->PSSetShader(GetPixelShader2D(), nullptr, 0);
+    GetContext()->PSSetConstantBuffers(1, 1, m_colorBuf.GetAddressOf());
     GetContext()->PSSetShaderResources(0, 1, &m_srv);
     GetContext()->PSSetSamplers(0, 1, m_sampler.GetAddressOf()); // ← UI専用サンプラー設定
+    float blendFactor[4] = { 0,0,0,0 };
+    GetContext()->OMSetBlendState(m_blendState, blendFactor, 0xffffffff);
+
+    // --- 深度ステンシル無効化 ---
+    ID3D11DepthStencilState* prevDepth = nullptr;
+    UINT stencilRef = 0;
+    GetContext()->OMGetDepthStencilState(&prevDepth, &stencilRef);
+    GetContext()->OMSetDepthStencilState(nullptr, 0);
+
 
     // --- 描画 ---
     GetContext()->Draw(6, 0);
@@ -158,9 +181,6 @@ void SpriteScreen::Draw()
     // --- 深度を復帰 ---
     GetContext()->OMSetDepthStencilState(prevDepth, stencilRef);
     if (prevDepth) prevDepth->Release();
-
-    /*ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
-    GetContext()->PSSetShaderResources(0, 1, nullSRV);*/
 }
 
 // -----------------------------------------------------------
@@ -170,6 +190,7 @@ void SpriteScreen::Release()
 {
     m_vb.Reset();
     m_matrixBuf.Reset();
+	m_colorBuf.Reset();
     m_layout.Reset();
     m_vs.Reset();
     m_ps.Reset();

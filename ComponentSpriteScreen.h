@@ -1,4 +1,4 @@
-#pragma once
+Ôªø#pragma once
 #include "Manager.h"
 #include <d3d11.h>
 #include <wrl/client.h>
@@ -27,10 +27,13 @@ private:
         XMFLOAT3 pos;
         XMFLOAT2 uv;
     };
-
+    struct ColorBuffer {
+        XMFLOAT4 color;
+    };
     struct MatrixBuffer {
         XMMATRIX mvp;
-        XMFLOAT4 color;
+        XMFLOAT4 diffuseColor;
+        XMFLOAT4 useTexture;
     };
 
 
@@ -41,10 +44,14 @@ private:
 
     ID3D11ShaderResourceView* m_srv = nullptr;
 
+    //ID3D11SamplerState* m_samplerState = nullptr;
+    ID3D11BlendState* m_blendState = nullptr;
+
     ComPtr<ID3D11Buffer> m_vb;
     ComPtr<ID3D11Buffer> m_matrixBuf;
+    ComPtr<ID3D11Buffer> m_colorBuf;
     ComPtr<ID3D11InputLayout> m_layout;
     ComPtr<ID3D11VertexShader> m_vs;
     ComPtr<ID3D11PixelShader> m_ps;
-    ComPtr<ID3D11SamplerState> m_sampler; // Å© SpriteScreenêÍóp
+    ComPtr<ID3D11SamplerState> m_sampler; // ¬Å¬© SpriteScreen¬ê√™‚Äîp
 };
