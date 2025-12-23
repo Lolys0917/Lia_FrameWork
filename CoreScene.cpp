@@ -191,7 +191,7 @@ void CoreStartUp()
     SetGridPos("GridTest", 2, 0, 0);
     SetGridSides("GridTest", 6);
 
-    //AddSpriteCylinder("SwTest", "asset/test.png");
+    AddSpriteCylinder("SwTest", "asset/test.png");
     SetSpriteCylinderPos("SwTest", 4, 0, 0);
     SetSpriteCylinderAngle("SwTest", 0, 0, 3.14f);
     SetSpriteCylinderSize("SwTest", 2, 2, 2);
