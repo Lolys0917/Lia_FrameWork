@@ -45,6 +45,7 @@ void CoreStartUp()
     AL_LoadFromPackageByName("hamu.png");
     AL_LoadFromPackageByName("boy_model4.fbx");
     AL_LoadFromPackageByName("asset/Alicia_solid_Unity.FBX");
+    AL_LoadFromPackageByName("asset/001.wav");
     //AL_LoadFromPackageByName("asset/AFK_Snowman.fbx");
     AL_LoadFromPackageByName("asset/AFK_SnowmanNmap.png");
     AL_LoadFromPackageByName("asset/AFK_Snowman.png");
@@ -170,6 +171,28 @@ void CoreStartUp()
     //SetSpriteWorldAngle("TestSprite03", 0, 0, 0);
 
     //SceneEndPoint();
+
+    AddScene("SceneTest");
+
+    AddGrid("GridBoxTest", GridType::Grid_Box);
+    SetGridPos("GridBoxTest", 0, 0, 0);
+
+    AddGrid("GridTest", GridType::Grid_Polygon);
+    SetGridPos("GridTest", 2, 0, 0);
+    SetGridSides("GridTest", 6);
+
+    AddSpriteCylinder("SwTest", "asset/test.png");
+    SetSpriteCylinderPos("SwTest", 4, 0, 0);
+    SetSpriteCylinderAngle("SwTest", 0, 0, 3.14f);
+    SetSpriteCylinderSize("SwTest", 2, 2, 2);
+    
+    AddSpriteScreen("SsTest", "asset/UIDemo.png");
+    SetSpriteScreenSize("SsTest", 150, 150);
+
+    AddModel("ModelTest", "asset/Alicia_solid_Unity.FBX");
+    SetModelPos("ModelTest", -2.0f, 0, -2);
+    SetModelSize("ModelTest", 0.022f, 0.022f, 0.022f);
+    SetModelAngle("ModelTest", -3.14f / 2, 3.14f, 0);
 
     // --- ÉVÅ[ÉìÇ≤Ç∆ÇÃÉJÉÅÉâäÑìñ ---
     SetSceneCamera("Scene3", "SubCamera");
