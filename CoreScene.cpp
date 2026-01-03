@@ -20,6 +20,7 @@ void CoreStartUp()
     AL_RegisterAssetToBatch("asset/hamu.png");
     AL_RegisterAssetToBatch("asset/boy_model4.fbx");
     AL_RegisterAssetToBatch("asset/Alicia_solid_Unity.FBX");
+    AL_RegisterAssetToBatch("asset/001.wav");
 
     //AL_Init();
 
@@ -56,6 +57,7 @@ void CoreStartUp()
     AL_LoadFromPackageByName("Title.png");
     AL_LoadFromPackageByName("boy_model4.fbx");
     AL_LoadFromPackageByName("asset/Alicia_solid_Unity.FBX");
+    AL_LoadFromPackageByName("asset/001.wav");
     //AL_LoadFromPackageByName("asset/AFK_Snowman.fbx");
     AL_LoadFromPackageByName("asset/AFK_SnowmanNmap.png");
     AL_LoadFromPackageByName("asset/AFK_Snowman.png");

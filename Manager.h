@@ -241,7 +241,6 @@ struct MotionChannel_Bone {
     std::vector<aiQuatKey> rotKeys;
     std::vector<aiVectorKey> scaleKeys;
 };
-
 struct MotionPackage {
     std::string name;
 
@@ -254,6 +253,10 @@ struct MotionPackage {
 
     // OBJ にモーフアニメ等があれば追加
     // std::vector<MotionChannel_Vertex> vertexChannels;
+};
+struct WavData {
+    std::vector<BYTE> buffer;
+    WAVEFORMATEX format = {};
 };
 //API&インデックス共通用
 struct ComponentType
@@ -490,7 +493,7 @@ int GetCurrentSceneIndex();
 //////////////////
 const std::vector<ModelVertex>* GetModelVertices(const char* modelName);
 ID3D11ShaderResourceView* GetTextureSRV(const char* textureName);
-
+const WavData* GetWavData(const char* name);
 bool RegisterAndLoadFileToPackage(const std::string& filepath);
 
 bool IN_LoadTexture_Memory(const char* name, const unsigned char* data, size_t size);

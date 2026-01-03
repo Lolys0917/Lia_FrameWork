@@ -815,6 +815,17 @@ void InitDo()
 
 void UpdateDo()
 {
+    static bool first = true;
+    if (first)
+    {
+        Sound* s = new Sound(nullptr);
+        s->Init();
+        s->SetAudioName("asset/001.wav");
+        s->Play();
+        first = false;
+    }
+
+
     ShaderManager_Update();
     UpdateInput();
 
