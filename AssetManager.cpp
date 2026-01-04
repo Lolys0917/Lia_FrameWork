@@ -621,10 +621,6 @@ bool IN_LoadModelObj_Memory(const char* name, const unsigned char* data, size_t 
 // ------------------------------
 // WAV loader
 // ------------------------------
-struct WavData {
-    std::vector<BYTE> buffer;
-    WAVEFORMATEX format = {};
-};
 static std::vector<WavData> g_wavData;
 
 const WavData* GetWavData(const char* name) {
