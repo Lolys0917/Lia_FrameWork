@@ -70,11 +70,64 @@ void Sound::Play()
     if (!m_SourceVoice || !m_WavData)
         return;
 
+    // 再生中なら何もしない
+    if (m_IsPlaying)
+        return;
+
     XAUDIO2_BUFFER buffer{};
-    buffer.pAudioData = m_WavData->buffer.data();
-    buffer.AudioBytes = static_cast<UINT32>(m_WavData->buffer.size());
+    buffer.pAudioData =
+        m_WavData->buffer.data() + m_StopOffsetBytes;
+    buffer.AudioBytes =
+        static_cast<UINT32>(m_WavData->buffer.size() - m_StopOffsetBytes);
     buffer.Flags = XAUDIO2_END_OF_STREAM;
 
     m_SourceVoice->SubmitSourceBuffer(&buffer);
     m_SourceVoice->Start();
+
+    m_IsPlaying = true;
+}
+
+void Sound::Stop()
+{
+    if (!m_SourceVoice || !m_IsPlaying)
+        return;
+
+    XAUDIO2_VOICE_STATE state{};
+    m_SourceVoice->GetState(&state);
+
+    // 再生済みサンプル → バイト変換
+    m_StopOffsetBytes =
+        state.SamplesPlayed * m_WavData->format.nBlockAlign;
+
+    // 安全対策（バッファ範囲超過防止）
+    UINT32 maxBytes = static_cast<UINT32>(m_WavData->buffer.size());
+    if (m_StopOffsetBytes > maxBytes)
+        m_StopOffsetBytes = maxBytes;
+
+    m_SourceVoice->Stop();
+    m_SourceVoice->FlushSourceBuffers();
+
+    m_IsPlaying = false;
+}
+
+void Sound::ReStart()
+{
+    if (!m_SourceVoice || !m_WavData)
+        return;
+
+    m_SourceVoice->Stop();
+    m_SourceVoice->FlushSourceBuffers();
+
+    m_StopOffsetBytes = 0;
+
+    XAUDIO2_BUFFER buffer{};
+    buffer.pAudioData = m_WavData->buffer.data();
+    buffer.AudioBytes =
+        static_cast<UINT32>(m_WavData->buffer.size());
+    buffer.Flags = XAUDIO2_END_OF_STREAM;
+
+    m_SourceVoice->SubmitSourceBuffer(&buffer);
+    m_SourceVoice->Start();
+
+    m_IsPlaying = true;
 }

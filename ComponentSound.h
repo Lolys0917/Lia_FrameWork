@@ -18,7 +18,8 @@ public:
     // Audio
     void SetAudioName(const char* name);
     void Play();
-
+	void Stop();
+	void ReStart();
 private:
     // shared audio systemÅiébíËÅj
     static IXAudio2* s_XAudio;
@@ -28,4 +29,7 @@ private:
     // per sound
     IXAudio2SourceVoice* m_SourceVoice = nullptr;
     const WavData* m_WavData = nullptr;
+
+	bool m_IsPlaying = false;
+	UINT32 m_StopOffsetBytes = 0;
 };

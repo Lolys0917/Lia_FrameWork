@@ -813,18 +813,34 @@ void InitDo()
     //object->AddComponent<Sound>();
 }
 
+Sound* s;
+
 void UpdateDo()
 {
     static bool first = true;
     if (first)
     {
-        Sound* s = new Sound(nullptr);
+        s = new Sound(nullptr);
         s->Init();
         s->SetAudioName("asset/001.wav");
         s->Play();
         first = false;
     }
 
+    if (GetInputState(Input::Key_2, 0))
+    {
+        s->Stop();
+		MessageBox(NULL, "Stop", "Debug", MB_OK);
+    }
+    if (GetInputState(Input::Key_1, 0))
+    {
+        s->Play();
+    }
+    if (GetInputState(Input::Key_0, 0))
+    {
+        MessageBox(NULL, "ReStart", "Debug", MB_OK);
+        s->ReStart();
+    }
 
     ShaderManager_Update();
     UpdateInput();
