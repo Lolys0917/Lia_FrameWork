@@ -219,7 +219,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
             vp.MaxDepth = 1;
             g_Context->RSSetViewports(1, &vp);
 
-            float c[4] = { 0.2f,0.2f,0.4f,1 };
+            float c[4] = { 0.2f,0.2f,0.6f,1 };
             g_Context->ClearRenderTargetView(rtv, c);
             g_Context->ClearDepthStencilView(g_GameViewDSV.Get(), D3D11_CLEAR_DEPTH, 1, 0);
         }
