@@ -60,9 +60,31 @@ HWND GetHwnd()
 //====================================================
 // WndProc（完全版）
 //====================================================
-extern LRESULT ImGui_ImplWin32_WndProcHandler(
-    HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
-);
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
+    HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+void OnResize(UINT width, UINT height)
+{
+    if (!g_SwapChain) return;
+
+    g_Context->OMSetRenderTargets(0, nullptr, nullptr);
+
+    g_BackBufferRTV.Reset();
+    g_BackBuffer.Reset();
+
+    g_SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+
+    g_SwapChain->GetBuffer(0, IID_PPV_ARGS(&g_BackBuffer));
+    g_Device->CreateRenderTargetView(g_BackBuffer.Get(), nullptr, &g_BackBufferRTV);
+
+    // ★ Viewport 更新
+    D3D11_VIEWPORT vp{};
+    vp.Width = (float)width;
+    vp.Height = (float)height;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    g_Context->RSSetViewports(1, &vp);
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -72,30 +94,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_SIZE:
-        if (g_SwapChain && wParam != SIZE_MINIMIZED)
+        if (wParam != SIZE_MINIMIZED)
         {
-            g_BackBufferRTV.Reset();
-            g_BackBufferDSV.Reset();
-
-            g_Context->OMSetRenderTargets(0, nullptr, nullptr);
-            g_SwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
-
-            g_SwapChain->GetBuffer(0, IID_PPV_ARGS(&g_BackBuffer));
-            g_Device->CreateRenderTargetView(g_BackBuffer.Get(), nullptr, &g_BackBufferRTV);
-
-            D3D11_TEXTURE2D_DESC depthDesc{};
-            g_BackBuffer->GetDesc(&depthDesc);
-            depthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-            depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-
-            ComPtr<ID3D11Texture2D> depth;
-            g_Device->CreateTexture2D(&depthDesc, nullptr, &depth);
-            g_Device->CreateDepthStencilView(depth.Get(), nullptr, &g_BackBufferDSV);
+            UINT w = LOWORD(lParam);
+            UINT h = HIWORD(lParam);
+            OnResize(w, h);
         }
-        return 0;
-
-    case WM_DESTROY:
-        PostQuitMessage(0);
         return 0;
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
@@ -159,6 +163,7 @@ bool InitD3D(HWND hWnd)
 //====================================================
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
 {
+
     WNDCLASSEX wc{
         sizeof(WNDCLASSEX),
         CS_CLASSDC,
@@ -169,6 +174,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
         "DX11Window",
         nullptr
     };
+    // 1. Win32 Window 作成
     RegisterClassEx(&wc);
 
     g_hwnd = CreateWindow(
@@ -185,7 +191,10 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
     ShowWindow(g_hwnd, SW_SHOWDEFAULT);
     UpdateWindow(g_hwnd);
 
+    // 2. DX 初期化（HWND 必須）
     InitD3D(g_hwnd);
+
+    // 3. ImGui 初期化（HWND + Device 必須）
     GUIInit();
 
     MSG msg{};
@@ -198,31 +207,46 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
             continue;
         }
 
-        //========================
-        // GameView 描画
-        //========================
-        ID3D11RenderTargetView* gvRTV = g_GameViewRTV.Get();
-        g_Context->OMSetRenderTargets(1, &gvRTV, g_GameViewDSV.Get());
+        // ===== GameView =====
+        {
+            ID3D11RenderTargetView* rtv = g_GameViewRTV.Get();
+            g_Context->OMSetRenderTargets(1, &rtv, g_GameViewDSV.Get());
 
-        float clearGame[4] = { 0.2f, 0.2f, 0.4f, 1 };
-        g_Context->ClearRenderTargetView(gvRTV, clearGame);
-        g_Context->ClearDepthStencilView(g_GameViewDSV.Get(), D3D11_CLEAR_DEPTH, 1, 0);
+            D3D11_VIEWPORT vp{};
+            vp.Width = (float)1280;
+            vp.Height = (float)720;
+            vp.MinDepth = 0;
+            vp.MaxDepth = 1;
+            g_Context->RSSetViewports(1, &vp);
 
-        //========================
-        // GUI
-        //========================
+            float c[4] = { 0.2f,0.2f,0.4f,1 };
+            g_Context->ClearRenderTargetView(rtv, c);
+            g_Context->ClearDepthStencilView(g_GameViewDSV.Get(), D3D11_CLEAR_DEPTH, 1, 0);
+        }
+
+        // ===== BackBuffer =====
+        {
+            ID3D11RenderTargetView* bb = g_BackBufferRTV.Get();
+            g_Context->OMSetRenderTargets(1, &bb, nullptr);
+
+            RECT rc;
+            GetClientRect(g_hwnd, &rc);
+
+            D3D11_VIEWPORT vp{};
+            vp.Width = (float)(rc.right - rc.left);
+            vp.Height = (float)(rc.bottom - rc.top);
+            vp.MinDepth = 0;
+            vp.MaxDepth = 1;
+            g_Context->RSSetViewports(1, &vp);
+
+            float c[4] = { 0,0,0,1 };
+            g_Context->ClearRenderTargetView(bb, c);
+        }
+
+        // ===== ImGui =====
         GUIUpdate();
-
-        //========================
-        // BackBuffer
-        //========================
-        ID3D11RenderTargetView* bb = g_BackBufferRTV.Get();
-        g_Context->OMSetRenderTargets(1, &bb, nullptr);
-
-        float clearBB[4] = { 0,0,0,1 };
-        g_Context->ClearRenderTargetView(bb, clearBB);
-
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
         g_SwapChain->Present(1, 0);
     }
 
