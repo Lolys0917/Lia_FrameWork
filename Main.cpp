@@ -6,6 +6,8 @@
 #include "Main.h"
 #include "GUI.h"
 
+#include "CoreScene.h"
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d11.h>
@@ -101,6 +103,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             OnResize(w, h);
         }
         return 0;
+    case WM_CLOSE:
+        DestroyWindow(hWnd);
+        return 0;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
@@ -154,7 +162,7 @@ bool InitD3D(HWND hWnd)
     g_SwapChain->GetBuffer(0, IID_PPV_ARGS(&g_BackBuffer));
     g_Device->CreateRenderTargetView(g_BackBuffer.Get(), nullptr, &g_BackBufferRTV);
 
-    CreateGameView(1280, 720);
+    CreateGameView(1920, 1080);
     return true;
 }
 
@@ -196,6 +204,10 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
 
     // 3. ImGui 初期化（HWND + Device 必須）
     GUIInit();
+    
+    InitDo();
+
+	CoreStartUp();
 
     MSG msg{};
     while (msg.message != WM_QUIT)
@@ -213,8 +225,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
             g_Context->OMSetRenderTargets(1, &rtv, g_GameViewDSV.Get());
 
             D3D11_VIEWPORT vp{};
-            vp.Width = (float)1280;
-            vp.Height = (float)720;
+            vp.Width = (float)1920;
+            vp.Height = (float)1080;
             vp.MinDepth = 0;
             vp.MaxDepth = 1;
             g_Context->RSSetViewports(1, &vp);
@@ -222,6 +234,12 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
             float c[4] = { 0.2f,0.2f,0.6f,1 };
             g_Context->ClearRenderTargetView(rtv, c);
             g_Context->ClearDepthStencilView(g_GameViewDSV.Get(), D3D11_CLEAR_DEPTH, 1, 0);
+        
+            CoreSceneUpdate();
+            CoreSceneDraw();
+
+            UpdateDo();
+            DrawDo();
         }
 
         // ===== BackBuffer =====
@@ -251,6 +269,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
     }
 
     GUIRelease();
+    ReleaseDo();
+    CoreSceneEnd();
     UnregisterClass(wc.lpszClassName, hInst);
     return 0;
 }

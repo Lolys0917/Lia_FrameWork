@@ -826,7 +826,6 @@ void UpdateDo()
         s->Play();
         first = false;
     }
-
     if (GetInputState(Input::Key_2, 0))
     {
         s->Stop();
