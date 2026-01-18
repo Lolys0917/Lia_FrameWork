@@ -11,3 +11,9 @@ struct CodeFile
     Type type;                       // ファイルタイプ
     std::string content;             // ファイル内容（テキスト）
 };
+
+void ShowCodeEditorUI();
+void LoadAllSavedFiles();
+void OpenAddNewFileWindow(CodeFile::Type type);
+void DrawAddNewFileWindow();
+void DrawFileList();

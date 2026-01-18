@@ -33,6 +33,9 @@ bool GUIInit()
 
     ImGui_ImplWin32_Init(GetHwnd());
     ImGui_ImplDX11_Init(GetDevice(), GetContext());
+
+    LoadAllSavedFiles();
+	MessageBoxA(nullptr, "GUI Initialized", "Info", MB_OK);
     return true;
 }
 
@@ -49,11 +52,15 @@ void GUIRelease()
 //====================================================
 // ポップアップ
 //====================================================
-static void ShowSolutionExplorer()
+static void ShowSolutionExplorer(int WindowPosX, int WindowPosY)
 {
     if (!g_ShowSolution) return;
 
-    ImGui::SetNextWindowSize(ImVec2(400, 120), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(
+        ImVec2(WindowPosX, WindowPosY),
+        ImGuiCond_Always
+	);
 
     if (ImGui::Begin(
         "AddNewFile",
@@ -61,12 +68,13 @@ static void ShowSolutionExplorer()
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoCollapse))
     {
-        ImGui::Text("Add New File");
-        if (ImGui::Button("Close"))
-            g_ShowSolution = false;
+        DrawFileList();
+        if(ImGui::Button("Add CPP")) OpenAddNewFileWindow(CodeFile::Type::Cpp);
+		if (ImGui::Button("Add Header")) OpenAddNewFileWindow(CodeFile::Type::Header);
     }
     ImGui::End();
 }
+
 
 //====================================================
 // 更新
@@ -166,14 +174,16 @@ bool GUIUpdate()
     //========================
     ImGui::BeginChild("RightArea", ImVec2(rightWidth, avail.y), true);
 
-    if (ImGui::Button("Text Save")) {}
+    /*if (ImGui::Button("Text Save")) {}
     ImGui::SameLine();
     if (ImGui::Button("Compile")) {}
     ImGui::SameLine();
     if (ImGui::Button("Start")) {}
 
     ImGui::Separator();
-    ImGui::Text("Code Editor");
+    ImGui::Text("Code Editor");*/
+
+    ShowCodeEditorUI();
 
     ImGui::EndChild();
 
@@ -183,14 +193,15 @@ bool GUIUpdate()
     ImGui::SameLine(0, 0);
     ImGui::BeginChild("RightTabs", ImVec2(40.0f, avail.y), true);
 
-    if (ImGui::Button("S", ImVec2(30, 30)))
+    if (ImGui::Button("S", ImVec2(20, 30)))
         g_ShowSolution = !g_ShowSolution;
 
     ImGui::EndChild();
 
     ImGui::End(); // MainWindow
 
-    ShowSolutionExplorer();
+    ShowSolutionExplorer(vp->Size.x - 450, 50);
+    DrawAddNewFileWindow();
 
     ImGui::Render();
     return true;

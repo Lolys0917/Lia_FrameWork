@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "FileSystem.h"
+#include "Manager.h"
 
 #include <Windows.h>
 // ImGui
@@ -51,6 +52,9 @@ static const std::string g_SaveDir = "saved/";          // ƒtƒ@ƒCƒ‹•Û‘¶æƒfƒBƒŒƒ
 static const std::string g_DllSaveDir = "saved/dll/";   // DLL•Û‘¶æƒfƒBƒŒƒNƒgƒŠ
 static std::string g_LastLoadedFileName;                // ÅŒã‚Éƒ[ƒh‚µ‚½ƒtƒ@ƒCƒ‹–¼iÄƒ[ƒh–h~—pj
 static std::string g_CompaileOut = "CompaileFiled";     // ƒRƒ“ƒpƒCƒ‹Œ‹‰Ê•¶š—ñ
+
+static bool g_StopDLL;
+static bool g_GameRunning;
 
 // Šî–{“I‚ÈƒL[ƒ[ƒh‚È‚Ç‚ğŠÜ‚ŞƒTƒWƒFƒXƒg—p’PŒêƒŠƒXƒg
 static std::vector<std::string> g_IntelliSenseWords =
@@ -296,4 +300,735 @@ std::string ExecCommand(const std::string& command)
     _pclose(pipe);
     return result;
 }
+
+//DLLƒRƒ“ƒpƒCƒ‹—p‚ÌƒrƒWƒ…ƒAƒ‹ƒXƒ^ƒWƒIƒpƒX‚ğæ“¾
+std::string g_VcVarsAllPath;
+bool ResolveVcVarsAll()
+{
+    const char* vswhere =
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe";
+
+    if (!fs::exists(vswhere))
+        return false;
+
+    // installationPath ‚ğæ“¾
+    std::string cmd =
+        std::string("\"") + vswhere +
+        "\" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 "
+        "-property installationPath";
+
+    std::string installPath = ExecCommand(cmd);
+
+    // ‰üsœ‹
+    installPath.erase(
+        std::remove(installPath.begin(), installPath.end(), '\r'),
+        installPath.end());
+    installPath.erase(
+        std::remove(installPath.begin(), installPath.end(), '\n'),
+        installPath.end());
+
+    if (installPath.empty())
+        return false;
+
+    fs::path vcvars =
+        fs::path(installPath) /
+        "VC" / "Auxiliary" / "Build" / "vcvarsall.bat";
+
+    if (!fs::exists(vcvars))
+        return false;
+
+    g_VcVarsAllPath = "\"" + vcvars.string() + "\"";
+
+    //MessageBoxA(nullptr, g_VcVarsAllPath.c_str(), "VS_Path", NULL);
+
+    return true;
+}
+
+
 //DLLƒRƒ“ƒpƒCƒ‰[
+// ‚Ü‚Æ‚ßƒrƒ‹ƒh: saved/*.cpp ‚ğ‘S•”ƒŠƒ“ƒN‚µ‚Ä 1 ‚Â‚Ì DLL ‚ğì‚é
+bool CompileAllToSingleDll(const std::string& dllFileName)
+{
+    ResolveVcVarsAll();
+
+    const std::string vcvarsall_path = g_VcVarsAllPath;
+
+    // •Û‘¶æ‚ÌŠm•Û
+    if (!fs::exists(g_SaveDir))    fs::create_directories(g_SaveDir);
+    if (!fs::exists(g_DllSaveDir)) fs::create_directories(g_DllSaveDir);
+
+    // ‡@ saved/ ”z‰º‚Ì .cpp ‚ğûW
+    std::vector<std::string> sources;
+    for (const auto& entry : fs::directory_iterator(g_SaveDir))
+    {
+        if (!entry.is_regular_file()) continue;
+        if (entry.path().extension() == ".cpp")
+            sources.push_back(entry.path().string());
+    }
+
+    if (sources.empty())
+    {
+        MessageBoxA(nullptr, "saved/ ‚É .cpp ‚ª‚ ‚è‚Ü‚¹‚ñB", "Build All", MB_OK | MB_ICONWARNING);
+        return false;
+    }
+
+    // ‡A ƒŒƒXƒ|ƒ“ƒXƒtƒ@ƒCƒ‹i@filej‚É .cpp ‚Ìˆê——‚ğ‘‚«o‚µiƒpƒX‚ÉƒXƒy[ƒX‚ª‚ ‚Á‚Ä‚à OKj
+    //    ¦ response file ‚ÌƒpƒX©‘Ì‚ÍƒXƒy[ƒX–³‚µ‚É‚µ‚Ä‚¨‚­
+    std::string rspPath = g_SaveDir + "__all_sources.rsp"; // —á: saved/__all_sources.rsp
+    {
+        std::ofstream rsp(rspPath, std::ios::binary);
+        for (const auto& s : sources)
+        {
+            rsp << '\"' << s << '\"' << "\r\n";
+        }
+    }
+
+    // ‡B o—Í DLL ƒpƒX
+    std::string outDll = g_DllSaveDir + dllFileName;
+
+    // ‡C cl.exe ƒRƒ}ƒ“ƒh‚ğì¬
+    //  - /LD              : DLL ‚ğ¶¬
+    //  - /EHsc            : —áŠOƒnƒ“ƒhƒŠƒ“ƒO
+    //  - /utf-8           : UTF-8 ƒ\[ƒXi“ú–{ŒêƒRƒƒ“ƒg‘Îôj
+    //  - /I saved         : saved ‚ğƒCƒ“ƒNƒ‹[ƒhŒŸõƒpƒX‚É’Ç‰Áiƒwƒbƒ_[QÆ—pj
+    //  - @saved\*.rsp     : ûW‚µ‚½ .cpp ‚ğˆêŠ‡w’è
+    //  - /Fe:...          : DLL o—Í–¼
+    //  - /link ...        : ƒŠƒ“ƒJƒIƒvƒVƒ‡ƒ“
+    std::ostringstream oss;
+    oss << "cmd /c \"call " << vcvarsall_path << " x64 && "
+        << "cl /nologo /LD /EHsc /utf-8 "
+        << "/I\"" << g_SaveDir << "\" "
+        << "@\"" << rspPath << "\" "
+        << "/Fe:\"" << outDll << "\" "
+        << "/link /INCREMENTAL:NO "
+        << "\"saved/dll/LiaEngine_v1.01.lib\"\"";
+
+    std::string command = oss.str();
+
+    // ‡D Às & ƒƒOæ“¾i¡‚Ìd‘g‚İ‚É‡‚í‚¹‚éj
+    g_CompaileOut = ExecCommand(command);
+
+    if (!g_DebugMode)
+    {
+        // ¸”sƒƒO‚àE‚¦‚é‚æ‚¤‚Éƒtƒ@ƒCƒ‹‚É‚à“f‚¢‚Ä‚¨‚­
+        std::string redirectCmd = command + " > saved\\__compile_log_all.txt 2>&1";
+        STARTUPINFOA si = {};
+        PROCESS_INFORMATION pi = {};
+        si.cb = sizeof(si);
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_HIDE;
+
+        std::string cmdLine = "cmd /C " + redirectCmd;
+        BOOL ok = CreateProcessA(nullptr, cmdLine.data(), nullptr, nullptr, FALSE,
+            CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
+        if (ok)
+        {
+            WaitForSingleObject(pi.hProcess, INFINITE);
+            DWORD exitCode = 0;
+            GetExitCodeProcess(pi.hProcess, &exitCode);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+
+            if (exitCode != 0)
+            {
+                std::ifstream log("saved\\__compile_log_all.txt");
+                std::ostringstream oss2; oss2 << log.rdbuf();
+                g_CompaileOut = oss2.str();
+                MessageBoxA(nullptr, "‚Ü‚Æ‚ßƒrƒ‹ƒh‚É¸”s‚µ‚Ü‚µ‚½BƒƒO‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B", "Build All", MB_OK | MB_ICONERROR);
+                return false;
+            }
+        }
+    }
+
+    return fs::exists(outDll);
+}
+
+bool LoadGameDll(const std::string& dllName)
+{
+    if (g_LastLoadedFileName == dllName) return true; // “¯‚¶DLL‚È‚çÄƒ[ƒh‚µ‚È‚¢
+    g_LastLoadedFileName = dllName;
+    if (DLL_Module)
+    {
+        FreeLibrary(DLL_Module);
+        DLL_Module = nullptr;
+    }
+    DLL_Module = LoadLibraryA(dllName.c_str());
+    if (!DLL_Module)
+    {
+        MessageBoxA(nullptr, "DLL‚Ìƒ[ƒh‚É¸”s‚µ‚Ü‚µ‚½", "Error", MB_OK | MB_ICONERROR);
+        return false;
+    }
+    return true;
+}
+bool DeleteGameDll()
+{
+    if (DLL_Module)
+    {
+        FreeLibrary(DLL_Module);
+        DLL_Module = nullptr;
+    }
+    return true;
+}
+bool RunGameRelease(const std::string& dllName)
+{
+    //ReleaseDo();
+    Func = (FuncType)GetProcAddress(DLL_Module, "Release");
+    if (Func)
+    {
+        Func(); // Às
+    }
+    FreeLibrary(DLL_Module);
+    return true;
+}
+bool RunGameInit(const std::string& dllName)
+{
+    //InitDo();
+    Func = (FuncType)GetProcAddress(DLL_Module, "Init");
+    if (Func)
+    {
+        Func(); // Às
+    }
+    return true;
+}
+bool RunGameUpdate(const std::string& dllName)
+{
+    MSG msg = {};
+
+    if (GetKeyState(VK_ESCAPE) < 0 || g_StopDLL)
+    {
+        DeleteGameDll();
+
+        g_StopDLL = false;
+        g_GameRunning = false;
+        return false;
+    }
+    /*if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }*/
+    else
+    {
+        Func = (FuncType)GetProcAddress(DLL_Module, "Update");
+        if (Func)
+        {
+            Func(); // Às
+        }
+    }
+
+    return true;
+}
+//ƒQ[ƒ€‚ÌÅ‰‚ÌƒtƒŒ[ƒ€‚¾‚¯Às
+void GameStartDraw()
+{
+    //bool done = false;
+    //RunGameInit("saved/dll/user.dll");
+
+    //DLL_Module = LoadLibraryA("saved/dll/user.dll");
+    //if (!DLL_Module)
+    //{
+    //    done = true;
+    //    MessageBoxA(nullptr, "DLL‚Ìƒ[ƒh‚É¸”s‚µ‚Ü‚µ‚½", "Error", MB_OK | MB_ICONERROR);
+    //    return;
+    //}
+    //MSG msg = {};
+    //if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+    //    TranslateMessage(&msg);
+    //    DispatchMessage(&msg);
+    //}
+    //if (!done)
+    //{
+    //    for (int i = 0; i < 2; i++)
+    //    {
+    //        MSG msg = {};
+
+    //        AddMessage("Test");
+
+    //        // ‰æ–ÊƒNƒŠƒAiÂFj
+    //        float clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
+
+    //        GetContext()->ClearRenderTargetView(GetRenderTargetView(), clearColor);
+    //        GetContext()->ClearDepthStencilView(GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+    //        Func = (FuncType)GetProcAddress(DLL_Module, "Draw");
+    //        if (Func)
+    //        {
+    //            Func(); // Às
+    //        }
+
+    //        //DrawDo();
+    //        GetSwapChain()->Present(1, 0);
+    //    }
+    //}
+
+    //FreeLibrary(DLL_Module);
+
+    ////RunGameRelease("saved/dll/user.dll");
+
+}
+
+
+
+// ƒOƒ[ƒoƒ‹/ƒtƒ@ƒCƒ‹“ª‚Å’è‹`
+static bool g_ShowNewFileWindow = false;
+static CodeFile::Type g_NewFileType;
+static char g_NewFileName[128] = "";
+
+
+// V‚µ‚¢ƒtƒ@ƒCƒ‹’Ç‰Á‚ÌŒÄ‚Ño‚µiƒ{ƒ^ƒ“‚È‚Ç‚©‚çŒÄ‚Ôj
+void OpenAddNewFileWindow(CodeFile::Type type)
+{
+    g_ShowNewFileWindow = true;
+    g_NewFileType = type;
+    g_NewFileName[0] = '\0';
+}
+
+// ƒtƒ@ƒCƒ‹•Û‘¶ŠÖ”
+bool SaveFileContent(const std::string& fileName, const std::string& content)
+{
+    namespace fs = std::filesystem;
+
+    // •Û‘¶ƒfƒBƒŒƒNƒgƒŠ‚ğ—pˆÓ
+    std::string cppDir = g_SaveDir;             // cpp—p
+    std::string headerDir = g_SaveDir + "/dll";      // h—p
+
+    if (!fs::exists(cppDir)) fs::create_directory(cppDir);
+    if (!fs::exists(headerDir)) fs::create_directory(headerDir);
+
+    fs::path path(fileName);
+    std::string ext = path.extension().string();
+
+    // •Û‘¶æ‚ğŠg’£q‚ÅØ‚è‘Ö‚¦
+    std::string savePath;
+    if (ext == ".h")
+    {
+        savePath = headerDir + "/" + path.filename().string();
+    }
+    else if (ext == ".cpp")
+    {
+        savePath = cppDir + "/" + path.filename().string();
+    }
+    else
+    {
+        // ‘Î‰‚µ‚Ä‚¢‚È‚¢Šg’£q‚Í cppDir ‚É•Û‘¶
+        savePath = cppDir + "/" + path.filename().string();
+    }
+
+    std::cout << savePath << " : Save" << std::endl;
+
+    std::ofstream file(savePath);
+    if (!file.is_open()) return false;
+
+    file.write(content.c_str(), content.size());
+    return true;
+}
+// ===============================
+// ƒtƒ@ƒCƒ‹“Ç‚İ‚İŠÖ”
+bool LoadFileContent(const std::string& path, std::string& outContent)
+{
+    std::ifstream file(path);
+    if (!file.is_open()) return false; // ƒtƒ@ƒCƒ‹ƒI[ƒvƒ“¸”s‚Ífalse‚ğ•Ô‚·
+
+    // ƒXƒgƒŠ[ƒ€ƒCƒeƒŒ[ƒ^‚ğg‚Á‚Äˆê‹C‚Éƒtƒ@ƒCƒ‹‘S‘Ì‚ğ•¶š—ñ‚É“Ç‚İ‚İ
+    outContent.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    return true;
+}
+void DrawAddNewFileWindow()
+{
+    if (!g_ShowNewFileWindow)
+        return;
+
+    ImGui::SetNextWindowSize(ImVec2(400, 120), ImGuiCond_Appearing);
+    if (ImGui::Begin("AddNewFile", &g_ShowNewFileWindow, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("NewFileNameSetting / No filetype setting required");
+        ImGui::InputText("##FileName", g_NewFileName, IM_ARRAYSIZE(g_NewFileName));
+
+        if (ImGui::Button("OK"))
+        {
+            std::string fileNameStr = g_NewFileName;
+            if (fileNameStr.empty())
+                fileNameStr = "NewFile";
+
+            std::string ext = (g_NewFileType == CodeFile::Type::Header) ? ".h" : ".cpp";
+            int count = 0;
+
+            std::string finalName;
+            do {
+                finalName = fileNameStr + ((count > 0) ? std::to_string(count) : "") + ext;
+                count++;
+            } while (std::any_of(g_Files.begin(), g_Files.end(),
+                [&](const CodeFile& f) { return f.fileName == finalName; }));
+
+            CodeFile newFile;
+            newFile.fileName = finalName;
+            newFile.type = g_NewFileType;
+
+            if (g_NewFileType == CodeFile::Type::Header)
+                newFile.content = "#pragma once\n\n";
+            else
+                newFile.content =
+                "A project should have only one Init, Update, Draw, and Release.";
+
+            if (!fs::exists(g_SaveDir))
+                fs::create_directory(g_SaveDir);
+
+            std::string savePath = (g_NewFileType == CodeFile::Type::Header) ? "saved/dll/" + finalName : g_SaveDir + finalName;
+            SaveFileContent(savePath, newFile.content);
+
+            g_Files.push_back(newFile);
+            g_SelectedFileIndex = static_cast<int>(g_Files.size()) - 1;
+
+            g_ShowNewFileWindow = false; // ƒEƒBƒ“ƒhƒE•Â‚¶‚é
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel"))
+        {
+            g_ShowNewFileWindow = false;
+        }
+
+        ImGui::End();
+    }
+}
+void LoadAllSavedFiles()
+{
+    g_Files.clear();
+
+    // •Û‘¶ƒfƒBƒŒƒNƒgƒŠ
+    std::string cppDir = g_SaveDir;             // cpp—p (—á: ./saved)
+    std::string headerDir = g_SaveDir + "dll/";   // ƒwƒbƒ_—p (—á: ./saved/h)
+
+    // ƒfƒBƒŒƒNƒgƒŠ‚ª‚È‚¯‚ê‚Îì¬
+    if (!fs::exists(cppDir)) fs::create_directory(cppDir);
+    if (!fs::exists(headerDir)) fs::create_directory(headerDir);
+
+    // cppDir ‚ğ’Tõ
+    for (const auto& entry : fs::directory_iterator(cppDir))
+    {
+        if (!entry.is_regular_file()) continue;
+        if (entry.path().extension() != ".cpp") continue; // cpp‚Ì‚İ
+
+        CodeFile file;
+        file.fileName = entry.path().filename().string();
+        file.type = CodeFile::Type::Cpp;
+        LoadFileContent(entry.path().string(), file.content);
+        g_Files.push_back(file);
+    }
+
+    // headerDir ‚ğ’Tõ
+    for (const auto& entry : fs::directory_iterator(headerDir))
+    {
+        if (!entry.is_regular_file()) continue;
+        if (entry.path().extension() != ".h") continue; // h‚Ì‚İ
+
+        CodeFile file;
+        file.fileName = entry.path().filename().string();
+        file.type = CodeFile::Type::Header;
+        LoadFileContent(entry.path().string(), file.content);
+        g_Files.push_back(file);
+    }
+
+    if (!g_Files.empty())
+        g_SelectedFileIndex = 0;
+}
+
+
+// ƒoƒbƒtƒ@‚ÌƒJ[ƒ\ƒ‹ˆÊ’u‚©‚çŒ»İ‚Ì’PŒê‚ğ’Šo‚·‚éŠÖ”
+std::string ExtractWordAtCursor(const char* buf, int cursorPos)
+{
+    if (!buf || cursorPos <= 0) return "";
+
+    // ƒJ[ƒ\ƒ‹ˆÊ’u‚©‚ç¶‚É’PŒê‚ÌŠJnˆÊ’u‚ğ’T‚·
+    int start = cursorPos - 1;
+    while (start >= 0 && (isalnum((unsigned char)buf[start]) || buf[start] == '_')) start--;
+    start++; // ŠJnˆÊ’u‚Í’PŒê‚ÌÅ‰‚É–ß‚·
+
+    // ƒJ[ƒ\ƒ‹ˆÊ’u‚©‚ç‰E‚É’PŒê‚ÌI—¹ˆÊ’u‚ğ’T‚·
+    int end = cursorPos;
+    while (buf[end] && (isalnum((unsigned char)buf[end]) || buf[end] == '_')) end++;
+
+    return std::string(buf + start, buf + end);
+}
+// ƒTƒWƒFƒXƒgŒó•â‚ğXV‚·‚éŠÖ”
+void UpdateSuggestions(const std::string& input)
+{
+    g_CurrentSuggestions.clear();
+    if (input.empty()) return;
+
+    auto ToLower = [](const std::string& str) -> std::string {
+        std::string lower = str;
+        std::transform(lower.begin(), lower.end(), lower.begin(),
+            [](unsigned char c) { return std::tolower(c); });
+        return lower;
+        };
+
+    std::string lowerInput = ToLower(input);
+    std::set<std::string> uniqueSuggestions;
+
+    // ‡@ ƒL[ƒ[ƒhˆê——‚©‚ç
+    for (const auto& word : g_IntelliSenseWords)
+    {
+        if (ToLower(word).find(lowerInput) == 0)
+        {
+            uniqueSuggestions.insert(word);
+            if (uniqueSuggestions.size() >= 10) break;
+        }
+    }
+
+    // ‡A buffer“à‚©‚çŠÖ”E•Ï”‚ğ’Šo
+    std::string source(buffer);
+    std::regex re(R"(\b([a-zA-Z_][a-zA-Z0-9_]*)[ \t]+([a-zA-Z_][a-zA-Z0-9_]*)(\s*\([^;{]*\))?)");
+    std::smatch match;
+    auto it = source.cbegin();
+
+    static const std::vector<std::string> keywords = { "if", "for", "while", "switch", "return", "else" };
+
+    while (std::regex_search(it, source.cend(), match, re))
+    {
+        std::string type = match[1].str();
+        std::string name = match[2].str();
+        std::string args = match[3].str();
+
+        if (std::find(keywords.begin(), keywords.end(), type) != keywords.end())
+        {
+            it = match.suffix().first;
+            continue;
+        }
+
+        std::string suggestion = (!args.empty()) ? (name + args) : (type + " " + name);
+        if (ToLower(suggestion).find(lowerInput) != std::string::npos)
+        {
+            uniqueSuggestions.insert(suggestion);
+            if (uniqueSuggestions.size() >= 10) break;
+        }
+
+        it = match.suffix().first;
+    }
+
+    // ‡B #include "..." ‚Ü‚½‚Í <...> ‚Ìƒtƒ@ƒCƒ‹ƒpƒX‚ğg‚Á‚Äƒtƒ@ƒCƒ‹“à—e‚©‚çƒTƒWƒFƒXƒg
+    std::regex reInclude(R"(#include\s*[<"]([^">]+)[>"])");
+    std::smatch includeMatch;
+    auto it2 = source.cbegin();
+
+    while (std::regex_search(it2, source.cend(), includeMatch, reInclude))
+    {
+        std::string filePath = includeMatch[1].str();
+
+        // ƒTƒWƒFƒXƒg‚Æ‚µ‚Äƒtƒ@ƒCƒ‹–¼•\¦
+        if (ToLower(filePath).find(lowerInput) != std::string::npos)
+        {
+            uniqueSuggestions.insert(filePath);
+            if (uniqueSuggestions.size() >= 10) break;
+        }
+
+        // ƒtƒ@ƒCƒ‹‚ÌÀİŠm”F‚Æ“Ç‚İ‚İ
+        // C³“_F•Û‘¶æ‚ğw’èi"saved/"ƒfƒBƒŒƒNƒgƒŠj
+        std::string fullPath = g_SaveDir + filePath;
+        if (std::filesystem::exists(fullPath))
+        {
+            std::ifstream file(fullPath);
+            if (file.is_open())
+            {
+                std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+                auto it3 = content.cbegin();
+
+                while (std::regex_search(it3, content.cend(), match, re))
+                {
+                    std::string type = match[1].str();
+                    std::string name = match[2].str();
+                    std::string args = match[3].str();
+
+                    if (std::find(keywords.begin(), keywords.end(), type) != keywords.end())
+                    {
+                        it3 = match.suffix().first;
+                        continue;
+                    }
+
+                    std::string suggestion = (!args.empty()) ? (name + args) : (type + " " + name);
+                    if (ToLower(suggestion).find(lowerInput) != std::string::npos)
+                    {
+                        uniqueSuggestions.insert(suggestion);
+                        if (uniqueSuggestions.size() >= 10) break;
+                    }
+
+                    it3 = match.suffix().first;
+                }
+            }
+        }
+
+        it2 = includeMatch.suffix().first;
+    }
+
+    // ÅI“I‚Èo—Í
+    g_CurrentSuggestions.assign(uniqueSuggestions.begin(), uniqueSuggestions.end());
+}
+
+void DrawFileList()
+{
+    for (int i = 0; i < (int)g_Files.size(); i++)
+    {
+        ImGui::PushID(i);
+
+        bool isSelected = (g_SelectedFileIndex == i);
+        if (ImGui::Selectable(g_Files[i].fileName.c_str(), isSelected))
+            g_SelectedFileIndex = i;
+
+        // =========================
+        // ‰EƒNƒŠƒbƒNƒƒjƒ…[
+        // =========================
+        if (ImGui::BeginPopupContextItem()) // © ‰EƒNƒŠƒbƒN
+        {
+            if (ImGui::MenuItem("Delete"))
+            {
+                RemoveFile(i);
+                ImGui::EndPopup();
+                ImGui::PopID();
+                break;
+            }
+
+            if (ImGui::MenuItem("Rename"))
+            {
+                // Rename ˆ—
+            }
+
+            ImGui::EndPopup();
+        }
+
+        ImGui::PopID();
+    }
+}
+
+void ShowCodeEditorUI()
+{
+    /*ImGui::BeginChild("FileList", ImVec2(200, 0), true);
+    ImGui::Text("Files:");
+    ImGui::Separator();
+
+    for (int i = 0; i < (int)g_Files.size(); i++)
+    {
+        ImGui::PushID(i);
+        bool isSelected = (g_SelectedFileIndex == i);
+        if (ImGui::Selectable(g_Files[i].fileName.c_str(), isSelected))
+            g_SelectedFileIndex = i;
+        ImGui::SameLine();
+        if (ImGui::Button("Del")) { RemoveFile(i); ImGui::PopID(); break; }
+        ImGui::PopID();
+    }
+
+    ImGui::Separator();
+    if (ImGui::Button("Add Header")) OpenAddNewFileWindow(CodeFile::Type::Header);
+    if (ImGui::Button("Add CPP")) OpenAddNewFileWindow(CodeFile::Type::Cpp);
+    ImGui::EndChild();
+
+    ImGui::SameLine();*/
+
+    ImGui::BeginGroup();
+    ImGui::Text("Editor:");
+
+    if (g_SelectedFileIndex >= 0)
+    {
+        auto& file = g_Files[g_SelectedFileIndex];
+        if (g_LastLoadedFileName != file.fileName)
+        {
+            strncpy(buffer, file.content.c_str(), sizeof(buffer) - 1);
+            buffer[sizeof(buffer) - 1] = '\0';
+            g_LastLoadedFileName = file.fileName;
+        }
+
+        ImVec2 availSize = ImGui::GetContentRegionAvail();
+        float editorHeight = availSize.y * 0.6f;
+
+        ImGui::BeginChild("EditorChild", ImVec2(0, editorHeight), true);
+
+        ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
+        if (ImGui::InputTextMultiline("##source", buffer, sizeof(buffer), ImVec2(-1, -1), flags))
+        {
+            file.content = buffer;
+        }
+
+        ImGuiID id = ImGui::GetID("##source");
+        ImGuiInputTextState* state = ImGui::GetInputTextState(id);
+        if (state)
+            g_CursorPos = state->GetCursorPos();
+
+        // === ƒTƒWƒFƒXƒg—“iƒXƒNƒ[ƒ‹•t‚«j ===
+        std::string currentWord = ExtractWordAtCursor(buffer, g_CursorPos);
+        UpdateSuggestions(currentWord);
+
+        if (!g_CurrentSuggestions.empty())
+        {
+            ImVec2 suggestBoxPos = ImGui::GetItemRectMin() + ImVec2(ImGui::GetItemRectSize().x - 220, 0);
+            ImGui::SetCursorScreenPos(suggestBoxPos);
+            ImGui::BeginChild("##SuggestionScroll", ImVec2(200, 150), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
+
+            static int selectedIndex = -1;
+
+            for (int i = 0; i < g_CurrentSuggestions.size(); ++i)
+            {
+                bool isSelected = (i == selectedIndex);
+
+                if (ImGui::Selectable(g_CurrentSuggestions[i].c_str(), isSelected))
+                {
+                    // •âŠ®‘}“üi’Pƒ’Ç‰ÁAƒJ[ƒ\ƒ‹ˆÊ’u‚Ö‚Ì‘}“ü‚É•ÏX‚à‰Â”\j
+                    file.content += g_CurrentSuggestions[i];
+                    strncpy(buffer, file.content.c_str(), sizeof(buffer) - 1);
+                    buffer[sizeof(buffer) - 1] = '\0';
+
+                    selectedIndex = -1;
+                }
+
+                if (isSelected)
+                    ImGui::SetScrollHereY(0.5f);
+            }
+
+            ImGui::EndChild();
+        }
+
+        ImGui::EndChild(); // EditorChild
+
+        if (ImGui::Button("Text Save"))
+            SaveFileContent(g_SaveDir + file.fileName, file.content);
+
+        ImGui::SameLine();
+        if (ImGui::Button("DLL Compile") && file.type == CodeFile::Type::Cpp)
+        {
+            SaveFileContent(g_SaveDir + file.fileName, file.content);
+            std::string dllName = fs::path(file.fileName).replace_extension(".dll").string();
+            ReleaseDo();
+            RunGameRelease("saved/dll/user.dll");
+
+            CompileAllToSingleDll("user");
+
+            LoadGameDll("saved/dll/user.dll");
+
+            GameStartDraw();
+
+            DeleteGameDll();
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Run DLL"))
+        {
+            LoadGameDll("saved/dll/user.dll");
+
+            RunGameInit("saved/dll/user.dll");
+            g_GameRunning = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Stop DLL"))
+        {
+            g_StopDLL = true;
+        }
+
+
+        ImGui::BeginChild("CompileOutput", ImVec2(0, 0), true);
+        ImGui::TextWrapped("%s", ConvertToUTF8(g_CompaileOut.c_str()));
+        ImGui::EndChild();
+    }
+    else
+    {
+        ImGui::TextColored(ImVec4(1, 0, 0, 1), "No file selected");
+    }
+
+    ImGui::EndGroup();
+}
