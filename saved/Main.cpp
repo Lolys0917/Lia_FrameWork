@@ -1,1 +1,0 @@
-A project should have only one Init, Update, Draw, and Release.

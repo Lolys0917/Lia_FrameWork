@@ -75,6 +75,73 @@ static void ShowSolutionExplorer(int WindowPosX, int WindowPosY)
     ImGui::End();
 }
 
+bool VerticalTextButton(
+    const char* label,
+    const ImVec2& size,
+    const ImVec2& pos = ImVec2(-1, -1)   // ← 左回転（90度）
+)
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    if (pos.x >= 0 && pos.y >= 0)
+        ImGui::SetCursorScreenPos(pos);
+
+    ImGui::PushID(label);
+
+    ImVec2 btn_pos = ImGui::GetCursorScreenPos();
+    bool pressed = ImGui::InvisibleButton("##vbtn", size);
+
+    bool hovered = ImGui::IsItemHovered();
+    bool active = ImGui::IsItemActive();
+
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+
+    ImU32 bg_col =
+        active ? IM_COL32(70, 70, 70, 255) :
+        hovered ? IM_COL32(50, 50, 50, 255) :
+        IM_COL32(35, 35, 35, 255);
+
+
+
+    draw->AddRectFilled(
+        btn_pos,
+        ImVec2(btn_pos.x + size.x, btn_pos.y + size.y),
+        bg_col,
+        4.0f
+    );
+
+    //==========================
+    // 縦文字描画（1文字ずつ）
+    //==========================
+    ImFont* font = ImGui::GetFont();
+    float font_size = ImGui::GetFontSize();
+
+    int len = (int)strlen(label);
+    float total_height = len * font_size;
+
+    ImVec2 text_pos(
+        btn_pos.x + size.x * 0.5f - font_size * 0.5f,
+        btn_pos.y + size.y * 0.5f - total_height * 0.5f
+    );
+
+    for (int i = 0; i < len; i++)
+    {
+        char c[2] = { label[i], 0 };
+
+        draw->AddText(
+            font,
+            font_size,
+            ImVec2(text_pos.x, text_pos.y + i * font_size),
+            IM_COL32_WHITE,
+            c
+        );
+    }
+
+    ImGui::PopID();
+    return pressed;
+}
 
 //====================================================
 // 更新
@@ -123,13 +190,13 @@ bool GUIUpdate()
     char buf[64];
 
 
-    if (GetKeyState(VK_RETURN) < 0)
+    /*if (GetKeyState(VK_RETURN) < 0)
     {
         sprintf(buf, "%f", vp->Size.x);
         MessageBoxA(nullptr, "X", buf, NULL);
         sprintf(buf, "%f", vp->Size.y);
         MessageBoxA(nullptr, "Y", buf, NULL);
-    }
+    }*/
 
     ImVec2 avail = ImGui::GetContentRegionAvail();
     float rightWidth = avail.x - g_LeftWidth - g_Splitter - 40.0f;
@@ -183,6 +250,13 @@ bool GUIUpdate()
     ImGui::Separator();
     ImGui::Text("Code Editor");*/
 
+
+    //実装メモ
+    //
+    // コードエディタの下をポップアップに変更
+    // スプリッターで上下サイズ変更可能処理追加
+    // 
+    //
     ShowCodeEditorUI();
 
     ImGui::EndChild();
@@ -193,8 +267,11 @@ bool GUIUpdate()
     ImGui::SameLine(0, 0);
     ImGui::BeginChild("RightTabs", ImVec2(40.0f, avail.y), true);
 
-    if (ImGui::Button("S", ImVec2(20, 30)))
-        g_ShowSolution = !g_ShowSolution;
+    /*if (ImGui::Button("S", ImVec2(20, 30)))
+        g_ShowSolution = !g_ShowSolution;*/
+
+    if(VerticalTextButton("FileList", ImVec2(30, 120)))
+		g_ShowSolution = !g_ShowSolution;
 
     ImGui::EndChild();
 

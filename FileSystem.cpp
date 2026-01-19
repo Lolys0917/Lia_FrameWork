@@ -93,6 +93,8 @@ static std::vector<std::string> g_Suggestions;
 // ここから関数 //============================
 
 // Shift-JISをUTF-8に変換する関数（Windows特有のコードページ変換）
+// 引数: 変換する文字列
+// 戻り値: UTF-8文字列
 const char* ConvertToUTF8(const char* sent)
 {
     static std::string result; // staticで返却用文字列を保持
@@ -889,6 +891,7 @@ void DrawFileList()
             if (ImGui::MenuItem("Rename"))
             {
                 // Rename 処理
+
             }
 
             ImGui::EndPopup();
@@ -938,6 +941,40 @@ void ShowCodeEditorUI()
         ImVec2 availSize = ImGui::GetContentRegionAvail();
         float editorHeight = availSize.y * 0.6f;
 
+        if (ImGui::Button("Text Save"))
+            SaveFileContent(g_SaveDir + file.fileName, file.content);
+
+        ImGui::SameLine();
+        if (ImGui::Button("DLL Compile") && file.type == CodeFile::Type::Cpp)
+        {
+            SaveFileContent(g_SaveDir + file.fileName, file.content);
+            std::string dllName = fs::path(file.fileName).replace_extension(".dll").string();
+            ReleaseDo();
+            RunGameRelease("saved/dll/user.dll");
+
+            CompileAllToSingleDll("user");
+
+            LoadGameDll("saved/dll/user.dll");
+
+            GameStartDraw();
+
+            DeleteGameDll();
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Run DLL"))
+        {
+            LoadGameDll("saved/dll/user.dll");
+
+            RunGameInit("saved/dll/user.dll");
+            g_GameRunning = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Stop DLL"))
+        {
+            g_StopDLL = true;
+        }
+
         ImGui::BeginChild("EditorChild", ImVec2(0, editorHeight), true);
 
         ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
@@ -985,40 +1022,6 @@ void ShowCodeEditorUI()
         }
 
         ImGui::EndChild(); // EditorChild
-
-        if (ImGui::Button("Text Save"))
-            SaveFileContent(g_SaveDir + file.fileName, file.content);
-
-        ImGui::SameLine();
-        if (ImGui::Button("DLL Compile") && file.type == CodeFile::Type::Cpp)
-        {
-            SaveFileContent(g_SaveDir + file.fileName, file.content);
-            std::string dllName = fs::path(file.fileName).replace_extension(".dll").string();
-            ReleaseDo();
-            RunGameRelease("saved/dll/user.dll");
-
-            CompileAllToSingleDll("user");
-
-            LoadGameDll("saved/dll/user.dll");
-
-            GameStartDraw();
-
-            DeleteGameDll();
-        }
-
-        ImGui::SameLine();
-        if (ImGui::Button("Run DLL"))
-        {
-            LoadGameDll("saved/dll/user.dll");
-
-            RunGameInit("saved/dll/user.dll");
-            g_GameRunning = true;
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Stop DLL"))
-        {
-            g_StopDLL = true;
-        }
 
 
         ImGui::BeginChild("CompileOutput", ImVec2(0, 0), true);
