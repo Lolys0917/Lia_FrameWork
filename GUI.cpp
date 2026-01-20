@@ -143,6 +143,125 @@ bool VerticalTextButton(
     return pressed;
 }
 
+
+//
+// コードエディタ
+//
+
+//-------------------------------
+//検索エンジン
+namespace fs = std::filesystem;
+
+//コードエディタでの書き込みを補助する関数変巣検索関数群
+
+//ユーザーの使用しているファイルを列挙
+std::vector<std::string> CollectSourceFiles(const char* dir)
+{
+    std::vector<std::string> files;
+
+    for (auto& p : fs::directory_iterator(dir))
+    {
+        if (!p.is_regular_file()) continue;
+
+        auto ext = p.path().extension().string();
+        if (ext == ".cpp" || ext == ".h")
+        {
+            files.push_back(p.path().string());
+        }
+    }
+    return files;
+}
+//ファイルを読み込み
+std::string LoadTextFile(const char* path)
+{
+    std::ifstream ifs(path);
+    if (!ifs.is_open()) return "";
+
+    std::ostringstream ss;
+    ss << ifs.rdbuf();
+    return ss.str();
+}
+//トークンの定義
+bool IsDelimiter(char c)
+{
+    return
+        c == ' ' || c == '\n' || c == '\r' || c == '\t' ||
+        c == ';' || c == '(' || c == '{' || c == '=' || c== '[';
+}
+//トークン摘出
+void ExtractTokens(const std::string& text, KeyMap* map)
+{
+    const size_t len = text.size();
+    size_t i = 0;
+
+    while (i < len)
+    {
+        // 開始条件：非区切り文字
+        if (IsDelimiter(text[i]))
+        {
+            i++;
+            continue;
+        }
+
+        size_t start = i;
+
+        // 終了条件
+        while (i < len && !IsDelimiter(text[i]))
+            i++;
+
+        size_t word_len = i - start;
+        if (word_len > 0)
+        {
+            std::string token = text.substr(start, word_len);
+
+            // 数字だけは除外（任意）
+            if (!(token[0] >= '0' && token[0] <= '9'))
+            {
+                KeyMap_Add(map, token.c_str());
+            }
+        }
+    }
+}
+//saved/内のすべてを読み取る
+void BuildUserKeyMap(KeyMap* userMap)
+{
+    KeyMap_Init(userMap);
+
+    auto files = CollectSourceFiles("saved");
+
+    for (auto& f : files)
+    {
+        std::string text = LoadTextFile(f.c_str());
+        if (!text.empty())
+        {
+            ExtractTokens(text, userMap);
+        }
+    }
+}
+//検索結果の描画※デバッグ画面用
+void Debug_ShowKeyMap(KeyMap* map)
+{
+    std::string result;
+    result.reserve(4096);
+
+    int count = KeyMap_GetSize(map);
+    for (int i = 0; i < count; i++)
+    {
+        result += KeyMap_GetKey(map, i);
+        result += "\n";
+    }
+
+    MessageBoxA(
+        nullptr,
+        result.c_str(),
+        "UserMap Debug",
+        MB_OK
+    );
+}
+
+static KeyMap g_UserMap;
+static bool g_Built = false;
+
 //====================================================
 // 更新
 //====================================================
@@ -160,6 +279,19 @@ bool GUIUpdate()
         OutputDebugStringA("\n");
         prev = io.DisplaySize;
     }*/
+
+    if (!g_Built)
+    {
+        BuildUserKeyMap(&g_UserMap);
+        g_Built = true;
+    }
+
+    // Shift + Q
+    if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) &&
+        (GetAsyncKeyState('Q') & 0x8000))
+    {
+        Debug_ShowKeyMap(&g_UserMap);
+    }
 
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();

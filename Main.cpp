@@ -235,14 +235,16 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int)
             g_Context->ClearRenderTargetView(rtv, c);
             g_Context->ClearDepthStencilView(g_GameViewDSV.Get(), D3D11_CLEAR_DEPTH, 1, 0);
         
+            //DLL動作
             CoreSceneUpdate();
             CoreSceneDraw();
 
+            //システム動作
             UpdateDo();
             DrawDo();
         }
 
-        // ===== BackBuffer =====
+        // ===== GUIView =====
         {
             ID3D11RenderTargetView* bb = g_BackBufferRTV.Get();
             g_Context->OMSetRenderTargets(1, &bb, nullptr);

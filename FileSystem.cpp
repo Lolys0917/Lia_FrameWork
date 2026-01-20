@@ -522,50 +522,7 @@ bool RunGameUpdate(const std::string& dllName)
 //ゲームの最初のフレームだけ実行
 void GameStartDraw()
 {
-    //bool done = false;
-    //RunGameInit("saved/dll/user.dll");
-
-    //DLL_Module = LoadLibraryA("saved/dll/user.dll");
-    //if (!DLL_Module)
-    //{
-    //    done = true;
-    //    MessageBoxA(nullptr, "DLLのロードに失敗しました", "Error", MB_OK | MB_ICONERROR);
-    //    return;
-    //}
-    //MSG msg = {};
-    //if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-    //    TranslateMessage(&msg);
-    //    DispatchMessage(&msg);
-    //}
-    //if (!done)
-    //{
-    //    for (int i = 0; i < 2; i++)
-    //    {
-    //        MSG msg = {};
-
-    //        AddMessage("Test");
-
-    //        // 画面クリア（青色）
-    //        float clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
-
-    //        GetContext()->ClearRenderTargetView(GetRenderTargetView(), clearColor);
-    //        GetContext()->ClearDepthStencilView(GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-    //        Func = (FuncType)GetProcAddress(DLL_Module, "Draw");
-    //        if (Func)
-    //        {
-    //            Func(); // 実行
-    //        }
-
-    //        //DrawDo();
-    //        GetSwapChain()->Present(1, 0);
-    //    }
-    //}
-
-    //FreeLibrary(DLL_Module);
-
-    ////RunGameRelease("saved/dll/user.dll");
-
+    
 }
 
 
