@@ -188,6 +188,10 @@ bool IsDelimiter(char c)
         c == ' ' || c == '\n' || c == '\r' || c == '\t' ||
         c == ';' || c == '(' || c == '{' || c == '=' || c== '[';
 }
+static int IsEndChar(char c)
+{
+    return (c == ' ' || c == ';' || c == '(' || c == '{' || c == '=' || c == '\n');
+}
 //トークン摘出
 void ExtractTokens(const std::string& text, KeyMap* map)
 {
@@ -258,7 +262,164 @@ void Debug_ShowKeyMap(KeyMap* map)
         MB_OK
     );
 }
+void ParseTokensFromText(
+    const char* text,
+    KeyMap* map,
+    KeyMap* funcMap
+)
+{
+    int len = (int)strlen(text);
 
+    for (int i = 0; i < len; i++)
+    {
+        // 開始条件
+        if (i > 0 && !IsDelimiter(text[i - 1]))
+            continue;
+
+        if (!isalpha(text[i]) && text[i] != '_')
+            continue;
+
+        int start = i;
+        int j = i;
+
+        while (j < len && !IsEndChar(text[j]))
+            j++;
+
+        int wordLen = j - start;
+        if (wordLen <= 0)
+            continue;
+
+        char token[128]{};
+        memcpy(token, &text[start], wordLen);
+        token[wordLen] = '\0';
+
+        // 関数判定
+        if (text[j] == '(')
+            KeyMap_Add(funcMap, token);
+        else
+            KeyMap_Add(map, token);
+
+        i = j;
+    }
+}
+void LoadSavedFiles(KeyMap* varMap, KeyMap* funcMap)
+{
+    WIN32_FIND_DATAA fd;
+    HANDLE hFind = FindFirstFileA("saved\\*.*", &fd);
+
+    if (hFind == INVALID_HANDLE_VALUE)
+        return;
+
+    do {
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            continue;
+
+        const char* ext = strrchr(fd.cFileName, '.');
+        if (!ext) continue;
+
+        if (strcmp(ext, ".cpp") != 0 && strcmp(ext, ".h") != 0)
+            continue;
+
+        char path[260];
+        sprintf(path, "saved\\%s", fd.cFileName);
+
+        FILE* fp = fopen(path, "rb");
+        if (!fp) continue;
+
+        fseek(fp, 0, SEEK_END);
+        long size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+
+        char* buffer = (char*)malloc(size + 1);
+        fread(buffer, 1, size, fp);
+        buffer[size] = '\0';
+
+        fclose(fp);
+
+        ParseTokensFromText(buffer, varMap, funcMap);
+        free(buffer);
+
+    } while (FindNextFileA(hFind, &fd));
+
+    FindClose(hFind);
+}
+int KeyMap_AddUnique(KeyMap* map, const char* key)
+{
+    if (KeyMap_GetIndex(map, key) != -1)
+        return -1;
+
+    return KeyMap_Add(map, key);
+}
+int CalcScore(const char* src, const char* key)
+{
+    int score = 0;
+    int sLen = strlen(src);
+    int kLen = strlen(key);
+
+    if (strcmp(src, key) == 0)
+        return 100;
+
+    int si = 0;
+    for (int ki = 0; ki < kLen && si < sLen; ki++)
+    {
+        if (key[ki] == src[si])
+        {
+            score += 2;
+            si++;
+        }
+        else if (strchr(src, key[ki]))
+        {
+            score += 1;
+        }
+    }
+    return score;
+}
+void DebugSearch(KeyMap* map)
+{
+    char msg[2048] = "";
+    int count = KeyMap_GetSize(map);
+
+    for (int i = 0; i < count; i++)
+    {
+        const char* key = KeyMap_GetKey(map, i);
+        strcat(msg, key);
+        strcat(msg, "\n");
+
+        if (strlen(msg) > 1800)
+            break;
+    }
+
+    MessageBoxA(NULL, msg, "Search Result", MB_OK);
+}
+void UpdateSearch(KeyMap* map)
+{
+    if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) &&
+        (GetAsyncKeyState('Q') & 0x8000))
+    {
+        DebugSearch(map);
+        Sleep(200);
+    }
+}
+static DWORD g_LastUpdate = 0;
+
+void UpdateKeyMapPeriodic(KeyMap* map, KeyMap* funcMap)
+{
+    DWORD now = GetTickCount();
+    if (now - g_LastUpdate < 10000)
+        return;
+
+    g_LastUpdate = now;
+
+    KeyMap_Free(map);
+    KeyMap_Free(funcMap);
+    KeyMap_Init(map);
+    KeyMap_Init(funcMap);
+
+    LoadSavedFiles(map, funcMap);
+}
+
+KeyMap g_UserVarMap;
+KeyMap g_UserFuncMap;
 static KeyMap g_UserMap;
 static bool g_Built = false;
 
@@ -282,16 +443,21 @@ bool GUIUpdate()
 
     if (!g_Built)
     {
-        BuildUserKeyMap(&g_UserMap);
+        KeyMap_Init(&g_UserVarMap);
+        KeyMap_Init(&g_UserFuncMap);
+        LoadSavedFiles(&g_UserVarMap, &g_UserFuncMap);
         g_Built = true;
     }
 
+    UpdateKeyMapPeriodic(&g_UserVarMap, &g_UserFuncMap);
+    UpdateSearch(&g_UserVarMap);
+
     // Shift + Q
-    if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) &&
+    /*if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) &&
         (GetAsyncKeyState('Q') & 0x8000))
     {
         Debug_ShowKeyMap(&g_UserMap);
-    }
+    }*/
 
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
