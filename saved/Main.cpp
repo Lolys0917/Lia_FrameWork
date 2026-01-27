@@ -4,4 +4,6 @@ int main()
 	int test;
 
  int b;
+
+	int c;
 }

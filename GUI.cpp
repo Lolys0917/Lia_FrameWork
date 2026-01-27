@@ -148,276 +148,231 @@ bool VerticalTextButton(
 // コードエディタ
 //
 
-//-------------------------------
-//検索エンジン
-namespace fs = std::filesystem;
-
-//コードエディタでの書き込みを補助する関数変巣検索関数群
-
-//ユーザーの使用しているファイルを列挙
-std::vector<std::string> CollectSourceFiles(const char* dir)
+//----------------------------------------------------
+// Token 定義
+//----------------------------------------------------
+enum TokenKind
 {
-    std::vector<std::string> files;
+    TOKEN_VARIABLE,
+    TOKEN_FUNCTION
+};
 
-    for (auto& p : fs::directory_iterator(dir))
-    {
-        if (!p.is_regular_file()) continue;
+struct Token
+{
+    std::string name;
+    TokenKind type;
+    int defineCount;
+};
 
-        auto ext = p.path().extension().string();
-        if (ext == ".cpp" || ext == ".h")
-        {
-            files.push_back(p.path().string());
-        }
-    }
-    return files;
+struct SearchResult
+{
+    Token token;
+    int score;
+};
+
+//----------------------------------------------------
+// トークン判定ルール
+//----------------------------------------------------
+inline bool IsTokenStartChar(char c)
+{
+    return (c == ' ' || c == '\n' || c == '\r' || c == '\t');
 }
-//ファイルを読み込み
-std::string LoadTextFile(const char* path)
-{
-    std::ifstream ifs(path);
-    if (!ifs.is_open()) return "";
 
-    std::ostringstream ss;
-    ss << ifs.rdbuf();
-    return ss.str();
+inline bool IsTokenEndChar(char c)
+{
+    return (
+        c == ' ' || c == ';' || c == '(' || c == '{' ||
+        c == '=' || c == '\n' || c == '\r' || c == '\t'
+        );
 }
-//トークンの定義
-bool IsDelimiter(char c)
+
+inline bool IsIdentifierHead(char c)
 {
-    return
-        c == ' ' || c == '\n' || c == '\r' || c == '\t' ||
-        c == ';' || c == '(' || c == '{' || c == '=' || c== '[';
+    return (isalpha((unsigned char)c) || c == '_');
 }
-static int IsEndChar(char c)
+
+//----------------------------------------------------
+// saved 内 + Working.tmp をすべて読み取る
+//----------------------------------------------------
+static void LoadAllSourceText(std::string& outText)
 {
-    return (c == ' ' || c == ';' || c == '(' || c == '{' || c == '=' || c == '\n');
-}
-//トークン摘出
-void ExtractTokens(const std::string& text, KeyMap* map)
-{
-    const size_t len = text.size();
-    size_t i = 0;
+    outText.clear();
 
-    while (i < len)
-    {
-        // 開始条件：非区切り文字
-        if (IsDelimiter(text[i]))
-        {
-            i++;
-            continue;
-        }
-
-        size_t start = i;
-
-        // 終了条件
-        while (i < len && !IsDelimiter(text[i]))
-            i++;
-
-        size_t word_len = i - start;
-        if (word_len > 0)
-        {
-            std::string token = text.substr(start, word_len);
-
-            // 数字だけは除外（任意）
-            if (!(token[0] >= '0' && token[0] <= '9'))
-            {
-                KeyMap_Add(map, token.c_str());
-            }
-        }
-    }
-}
-//saved/内のすべてを読み取る
-void BuildUserKeyMap(KeyMap* userMap)
-{
-    KeyMap_Init(userMap);
-
-    auto files = CollectSourceFiles("saved");
-
-    for (auto& f : files)
-    {
-        std::string text = LoadTextFile(f.c_str());
-        if (!text.empty())
-        {
-            ExtractTokens(text, userMap);
-        }
-    }
-}
-//検索結果の描画※デバッグ画面用
-void Debug_ShowKeyMap(KeyMap* map)
-{
-    std::string result;
-    result.reserve(4096);
-
-    int count = KeyMap_GetSize(map);
-    for (int i = 0; i < count; i++)
-    {
-        result += KeyMap_GetKey(map, i);
-        result += "\n";
-    }
-
-    MessageBoxA(
-        nullptr,
-        result.c_str(),
-        "UserMap Debug",
-        MB_OK
-    );
-}
-void ParseTokensFromText(
-    const char* text,
-    KeyMap* map,
-    KeyMap* funcMap
-)
-{
-    int len = (int)strlen(text);
-
-    for (int i = 0; i < len; i++)
-    {
-        // 開始条件
-        if (i > 0 && !IsDelimiter(text[i - 1]))
-            continue;
-
-        if (!isalpha(text[i]) && text[i] != '_')
-            continue;
-
-        int start = i;
-        int j = i;
-
-        while (j < len && !IsEndChar(text[j]))
-            j++;
-
-        int wordLen = j - start;
-        if (wordLen <= 0)
-            continue;
-
-        char token[128]{};
-        memcpy(token, &text[start], wordLen);
-        token[wordLen] = '\0';
-
-        // 関数判定
-        if (text[j] == '(')
-            KeyMap_Add(funcMap, token);
-        else
-            KeyMap_Add(map, token);
-
-        i = j;
-    }
-}
-void LoadSavedFiles(KeyMap* varMap, KeyMap* funcMap)
-{
-    WIN32_FIND_DATAA fd;
-    HANDLE hFind = FindFirstFileA("saved\\*.*", &fd);
-
-    if (hFind == INVALID_HANDLE_VALUE)
+    WIN32_FIND_DATAA fd{};
+    HANDLE h = FindFirstFileA("saved\\*.*", &fd);
+    if (h == INVALID_HANDLE_VALUE)
         return;
 
-    do {
+    do
+    {
         if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             continue;
 
         const char* ext = strrchr(fd.cFileName, '.');
         if (!ext) continue;
 
-        if (strcmp(ext, ".cpp") != 0 && strcmp(ext, ".h") != 0)
+        if (strcmp(ext, ".cpp") != 0 &&
+            strcmp(ext, ".h") != 0 &&
+            strcmp(fd.cFileName, "Working.tmp") != 0)
             continue;
 
-        char path[260];
-        sprintf(path, "saved\\%s", fd.cFileName);
+        std::ifstream ifs("saved\\" + std::string(fd.cFileName));
+        if (!ifs.is_open()) continue;
 
-        FILE* fp = fopen(path, "rb");
-        if (!fp) continue;
+        outText.append(
+            std::string(
+                std::istreambuf_iterator<char>(ifs),
+                std::istreambuf_iterator<char>()
+            )
+        );
+        outText.push_back('\n');
 
-        fseek(fp, 0, SEEK_END);
-        long size = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
+    } while (FindNextFileA(h, &fd));
 
-        char* buffer = (char*)malloc(size + 1);
-        fread(buffer, 1, size, fp);
-        buffer[size] = '\0';
-
-        fclose(fp);
-
-        ParseTokensFromText(buffer, varMap, funcMap);
-        free(buffer);
-
-    } while (FindNextFileA(hFind, &fd));
-
-    FindClose(hFind);
+    FindClose(h);
 }
-int KeyMap_AddUnique(KeyMap* map, const char* key)
+
+//----------------------------------------------------
+// トークン抽出（重複OK・defineCount集計）
+//----------------------------------------------------
+static void ExtractTokensFromText(
+    const char* text,
+    std::vector<Token>& outTokens
+)
 {
-    if (KeyMap_GetIndex(map, key) != -1)
-        return -1;
+    const int len = (int)strlen(text);
 
-    return KeyMap_Add(map, key);
-}
-int CalcScore(const char* src, const char* key)
-{
-    int score = 0;
-    int sLen = strlen(src);
-    int kLen = strlen(key);
-
-    if (strcmp(src, key) == 0)
-        return 100;
-
-    int si = 0;
-    for (int ki = 0; ki < kLen && si < sLen; ki++)
+    for (int i = 0; i < len; i++)
     {
-        if (key[ki] == src[si])
+        if (i != 0 && !IsTokenStartChar(text[i - 1]))
+            continue;
+
+        if (!IsIdentifierHead(text[i]))
+            continue;
+
+        int start = i;
+        while (i < len && !IsTokenEndChar(text[i]))
+            i++;
+
+        int end = i;
+        if (end <= start)
+            continue;
+
+        std::string name(text + start, end - start);
+
+        // 種別判定
+        TokenKind kind = TOKEN_VARIABLE;
+        if (text[end] == '(')
+            kind = TOKEN_FUNCTION;
+
+        // 既存トークンを探す
+        bool found = false;
+        for (auto& t : outTokens)
         {
-            score += 2;
-            si++;
+            if (t.name == name && t.type == kind)
+            {
+                t.defineCount++;
+                found = true;
+                break;
+            }
         }
-        else if (strchr(src, key[ki]))
+
+        if (!found)
         {
-            score += 1;
+            outTokens.push_back({ name, kind, 1 });
         }
     }
+}
+
+//----------------------------------------------------
+// スコア計算
+//----------------------------------------------------
+static int CalcScore(const std::string& src, const std::string& query, int defineCount)
+{
+    if (src == query)
+        return 40 + defineCount;
+
+    int score = 0;
+
+    // 文字一致
+    for (char c : query)
+    {
+        if (src.find(c) != std::string::npos)
+            score += 5;
+    }
+
+    // 順序一致
+    size_t pos = 0;
+    int order = 0;
+    for (char c : query)
+    {
+        pos = src.find(c, pos);
+        if (pos == std::string::npos)
+            break;
+        order++;
+        pos++;
+    }
+    score += order * 20;
+
+    // 定義数
+    score += defineCount;
+
     return score;
 }
-void DebugSearch(KeyMap* map)
+
+//----------------------------------------------------
+// 検索
+//----------------------------------------------------
+static void SearchTokens(
+    const std::vector<Token>& tokens,
+    const std::string& query,
+    std::vector<SearchResult>& outResults
+)
 {
-    char msg[2048] = "";
-    int count = KeyMap_GetSize(map);
+    outResults.clear();
 
-    for (int i = 0; i < count; i++)
+    for (const auto& t : tokens)
     {
-        const char* key = KeyMap_GetKey(map, i);
-        strcat(msg, key);
-        strcat(msg, "\n");
-
-        if (strlen(msg) > 1800)
-            break;
+        int score = CalcScore(t.name, query, t.defineCount);
+        if (score > 0)
+        {
+            outResults.push_back({ t, score });
+        }
     }
 
-    MessageBoxA(NULL, msg, "Search Result", MB_OK);
+    std::sort(outResults.begin(), outResults.end(),
+        [](const SearchResult& a, const SearchResult& b)
+        {
+            return a.score > b.score;
+        });
 }
-void UpdateSearch(KeyMap* map)
+
+//----------------------------------------------------
+// デバッグ検索（Shift + Q）
+//----------------------------------------------------
+static void DebugSearch()
 {
-    if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) &&
-        (GetAsyncKeyState('Q') & 0x8000))
+    std::string allText;
+    LoadAllSourceText(allText);
+
+    std::vector<Token> tokens;
+    ExtractTokensFromText(allText.c_str(), tokens);
+
+    std::vector<SearchResult> results;
+    SearchTokens(tokens, "test", results); // 仮検索語
+
+    std::string msg;
+    for (const auto& r : results)
     {
-        DebugSearch(map);
-        Sleep(200);
+        msg += r.token.name;
+        msg += (r.token.type == TOKEN_FUNCTION) ? " [Func] " : " [Var] ";
+        msg += "Score:";
+        msg += std::to_string(r.score);
+        msg += "\n";
     }
+
+    MessageBoxA(nullptr, msg.c_str(), "Search Debug", MB_OK);
 }
-static DWORD g_LastUpdate = 0;
-
-void UpdateKeyMapPeriodic(KeyMap* map, KeyMap* funcMap)
-{
-    DWORD now = GetTickCount();
-    if (now - g_LastUpdate < 10000)
-        return;
-
-    g_LastUpdate = now;
-
-    KeyMap_Free(map);
-    KeyMap_Free(funcMap);
-    KeyMap_Init(map);
-    KeyMap_Init(funcMap);
-
-    LoadSavedFiles(map, funcMap);
-}
-
 KeyMap g_UserVarMap;
 KeyMap g_UserFuncMap;
 static KeyMap g_UserMap;
@@ -445,12 +400,15 @@ bool GUIUpdate()
     {
         KeyMap_Init(&g_UserVarMap);
         KeyMap_Init(&g_UserFuncMap);
-        LoadSavedFiles(&g_UserVarMap, &g_UserFuncMap);
+        //LoadSavedFiles(&g_UserVarMap, &g_UserFuncMap);
         g_Built = true;
     }
 
-    UpdateKeyMapPeriodic(&g_UserVarMap, &g_UserFuncMap);
-    UpdateSearch(&g_UserVarMap);
+    if ((GetAsyncKeyState('Q') & 0x8000) &&
+        (GetAsyncKeyState(VK_SHIFT) & 0x8000))
+    {
+        DebugSearch();
+    }
 
     // Shift + Q
     /*if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) &&
