@@ -350,29 +350,45 @@ static void SearchTokens(
 //----------------------------------------------------
 // デバッグ検索（Shift + Q）
 //----------------------------------------------------
-static void DebugSearch()
+static void DebugSearch(int UpdateFrame)
 {
-    std::string allText;
-    LoadAllSourceText(allText);
+    static int CountFrame = 0;
+    static std::string msg;
 
-    std::vector<Token> tokens;
-    ExtractTokensFromText(allText.c_str(), tokens);
-
-    std::vector<SearchResult> results;
-    SearchTokens(tokens, "test", results); // 仮検索語
-
-    std::string msg;
-    for (const auto& r : results)
+    if (CountFrame >= UpdateFrame)
     {
-        msg += r.token.name;
-        msg += (r.token.type == TOKEN_FUNCTION) ? " [Func] " : " [Var] ";
-        msg += "Score:";
-        msg += std::to_string(r.score);
-        msg += "\n";
+        //MessageBoxA(nullptr, "test", "test", MB_OK);
+        std::string allText;
+        LoadAllSourceText(allText);
+
+        std::vector<Token> tokens;
+        ExtractTokensFromText(allText.c_str(), tokens);
+
+        std::vector<SearchResult> results;
+        SearchTokens(tokens, "test", results); // 仮検索語
+
+        msg.clear();
+
+        for (const auto& r : results)
+        {
+            msg += r.token.name;
+            msg += (r.token.type == TOKEN_FUNCTION) ? " [Func] " : " [Var] ";
+            msg += "Score:";
+            msg += std::to_string(r.score);
+            msg += "\n";
+        }
+        CountFrame = 0;
     }
 
-    MessageBoxA(nullptr, msg.c_str(), "Search Debug", MB_OK);
+    CountFrame++;
+
+    if ((GetAsyncKeyState('Q') & 0x8000) &&
+        (GetAsyncKeyState(VK_SHIFT) & 0x8000))
+    {
+        MessageBoxA(nullptr, msg.c_str(), "Search Debug", MB_OK);
+    }
 }
+
 KeyMap g_UserVarMap;
 KeyMap g_UserFuncMap;
 static KeyMap g_UserMap;
@@ -396,6 +412,9 @@ bool GUIUpdate()
         prev = io.DisplaySize;
     }*/
 
+    //
+    //検索エンジン
+    //
     if (!g_Built)
     {
         KeyMap_Init(&g_UserVarMap);
@@ -404,11 +423,7 @@ bool GUIUpdate()
         g_Built = true;
     }
 
-    if ((GetAsyncKeyState('Q') & 0x8000) &&
-        (GetAsyncKeyState(VK_SHIFT) & 0x8000))
-    {
-        DebugSearch();
-    }
+    DebugSearch(60);
 
     // Shift + Q
     /*if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) &&
