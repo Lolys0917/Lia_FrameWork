@@ -17,3 +17,10 @@ void LoadAllSavedFiles();
 void OpenAddNewFileWindow(CodeFile::Type type);
 void DrawAddNewFileWindow();
 void DrawFileList();
+
+bool LoadGameDll(const std::string& dllName);
+bool DeleteGameDll();
+
+bool RunGameInit(const std::string& dllName);
+bool RunGameRelease(const std::string& dllName);
+bool RunGameUpdate(const std::string& dllName);

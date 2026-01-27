@@ -1,8 +1,6 @@
 **********************************************************************
-** Visual Studio 2022 Developer Command Prompt v17.14.20
-** Copyright (c) 2025 Microsoft Corporation
+** Visual Studio 2022 Developer Command Prompt v17.7.4
+** Copyright (c) 2022 Microsoft Corporation
 **********************************************************************
 [vcvarsall.bat] Environment initialized for: 'x64'
 Main.cpp
-saved/Main.cpp(1): error C4430: 型指定子がありません - int と仮定しました。メモ: C++ は int を既定値としてサポートしていません
-saved/Main.cpp(1): error C2146: 構文エラー: ';' が、識別子 'project' の前に必要です。

@@ -403,7 +403,7 @@ bool CompileAllToSingleDll(const std::string& dllFileName)
         << "@\"" << rspPath << "\" "
         << "/Fe:\"" << outDll << "\" "
         << "/link /INCREMENTAL:NO "
-        << "\"saved/dll/LiaEngine_v1.01.lib\"\"";
+        << "\"saved/dll/Lia_FrameWork.lib\"\"";
 
     std::string command = oss.str();
 
@@ -519,6 +519,34 @@ bool RunGameUpdate(const std::string& dllName)
 
     return true;
 }
+
+static bool RunStart = false;
+static bool Running = false;
+void SetRunStart()
+{
+    RunStart = true;
+    Running = true;
+}
+void SetRunEnd()
+{
+    DeleteGameDll();
+    RunStart = false;
+    Running = false;
+}
+void RunningGame()
+{
+    if (RunStart)
+    {
+        RunGameInit("user.dll");
+        RunStart = false;
+    }
+    
+    if (Running)
+    {
+        RunGameUpdate("user.dll");
+    }
+}
+
 //ゲームの最初のフレームだけ実行
 void GameStartDraw()
 {
@@ -906,7 +934,7 @@ void ShowCodeEditorUI()
         {
             SaveFileContent(g_SaveDir + file.fileName, file.content);
             std::string dllName = fs::path(file.fileName).replace_extension(".dll").string();
-            ReleaseDo();
+            //ReleaseDo();
             RunGameRelease("saved/dll/user.dll");
 
             CompileAllToSingleDll("user");
