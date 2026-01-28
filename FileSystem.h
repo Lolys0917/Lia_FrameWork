@@ -24,3 +24,8 @@ bool DeleteGameDll();
 bool RunGameInit(const std::string& dllName);
 bool RunGameRelease(const std::string& dllName);
 bool RunGameUpdate(const std::string& dllName);
+
+void UpdateSearchAtCursor(
+    const std::string& editorText,
+    int cursorPos
+);

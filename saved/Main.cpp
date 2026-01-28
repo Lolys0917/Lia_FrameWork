@@ -8,4 +8,6 @@ int main()
 	int c;
 
 	int d;
+
+	int e;
 }

@@ -508,13 +508,11 @@ bool RunGameUpdate(const std::string& dllName)
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }*/
-    else
+
+    Func = (FuncType)GetProcAddress(DLL_Module, "Update");
+    if (Func)
     {
-        Func = (FuncType)GetProcAddress(DLL_Module, "Update");
-        if (Func)
-        {
-            Func(); // 実行
-        }
+        Func(); // 実行
     }
 
     return true;
@@ -885,7 +883,21 @@ void DrawFileList()
         ImGui::PopID();
     }
 }
+struct EditorState
+{
+    std::string text;
+    int cursorPos = 0;
+};
 
+static int EditorInputCallback(ImGuiInputTextCallbackData* data)
+{
+    EditorState* state = (EditorState*)data->UserData;
+
+    state->cursorPos = data->CursorPos;
+    state->text = data->Buf;
+
+    return 0;
+}
 void ShowCodeEditorUI()
 {
     /*ImGui::BeginChild("FileList", ImVec2(200, 0), true);
@@ -929,7 +941,20 @@ void ShowCodeEditorUI()
         if (ImGui::Button("Text Save"))
             SaveFileContent(g_SaveDir + file.fileName, file.content);
 
+		// 自動保存処理
+		static int AutoSaveTextCount = 0;
+		static int AutoSaveTextInterval = 300; // 300フレームごとに自動保存
+
+        if(AutoSaveTextCount >= AutoSaveTextInterval)
+        {
+            SaveFileContent(g_SaveDir + file.fileName, file.content);
+            AutoSaveTextCount = 0;
+		}
+		AutoSaveTextCount++;
+
+		// ボタン群
         ImGui::SameLine();
+		// DLLコンパイル＆実行ボタン
         if (ImGui::Button("DLL Compile") && file.type == CodeFile::Type::Cpp)
         {
             SaveFileContent(g_SaveDir + file.fileName, file.content);
@@ -945,8 +970,8 @@ void ShowCodeEditorUI()
 
             DeleteGameDll();
         }
-
         ImGui::SameLine();
+		// DLL実行＆停止ボタン
         if (ImGui::Button("Run DLL"))
         {
             LoadGameDll("saved/dll/user.dll");
@@ -968,43 +993,61 @@ void ShowCodeEditorUI()
             file.content = buffer;
         }
 
+        // --- カーソル位置取得 ---
+        static std::string g_EditorText;
+        int cursorPos = -1;
+        /*if (ImGui::IsItemActive())
+        {
+            ImGuiContext& g = *ImGui::GetCurrentContext();
+            if (g.InputTextState)
+                cursorPos = g.InputTextState->CursorPos;
+        }*/
+
+        UpdateSearchAtCursor(buffer, g_CursorPos);
+
+        // --- 検索更新 ---
+        if (cursorPos >= 0)
+        {
+            
+        }
+        
         ImGuiID id = ImGui::GetID("##source");
         ImGuiInputTextState* state = ImGui::GetInputTextState(id);
         if (state)
             g_CursorPos = state->GetCursorPos();
 
-        // === サジェスト欄（スクロール付き） ===
-        std::string currentWord = ExtractWordAtCursor(buffer, g_CursorPos);
-        UpdateSuggestions(currentWord);
+        //// === サジェスト欄（スクロール付き） ===
+        //std::string currentWord = ExtractWordAtCursor(buffer, g_CursorPos);
+        //UpdateSuggestions(currentWord);
 
-        if (!g_CurrentSuggestions.empty())
-        {
-            ImVec2 suggestBoxPos = ImGui::GetItemRectMin() + ImVec2(ImGui::GetItemRectSize().x - 220, 0);
-            ImGui::SetCursorScreenPos(suggestBoxPos);
-            ImGui::BeginChild("##SuggestionScroll", ImVec2(200, 150), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
+        //if (!g_CurrentSuggestions.empty())
+        //{
+        //    ImVec2 suggestBoxPos = ImGui::GetItemRectMin() + ImVec2(ImGui::GetItemRectSize().x - 220, 0);
+        //    ImGui::SetCursorScreenPos(suggestBoxPos);
+        //    ImGui::BeginChild("##SuggestionScroll", ImVec2(200, 150), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
 
-            static int selectedIndex = -1;
+        //    static int selectedIndex = -1;
 
-            for (int i = 0; i < g_CurrentSuggestions.size(); ++i)
-            {
-                bool isSelected = (i == selectedIndex);
+        //    for (int i = 0; i < g_CurrentSuggestions.size(); ++i)
+        //    {
+        //        bool isSelected = (i == selectedIndex);
 
-                if (ImGui::Selectable(g_CurrentSuggestions[i].c_str(), isSelected))
-                {
-                    // 補完挿入（単純追加、カーソル位置への挿入に変更も可能）
-                    file.content += g_CurrentSuggestions[i];
-                    strncpy(buffer, file.content.c_str(), sizeof(buffer) - 1);
-                    buffer[sizeof(buffer) - 1] = '\0';
+        //        if (ImGui::Selectable(g_CurrentSuggestions[i].c_str(), isSelected))
+        //        {
+        //            // 補完挿入（単純追加、カーソル位置への挿入に変更も可能）
+        //            file.content += g_CurrentSuggestions[i];
+        //            strncpy(buffer, file.content.c_str(), sizeof(buffer) - 1);
+        //            buffer[sizeof(buffer) - 1] = '\0';
 
-                    selectedIndex = -1;
-                }
+        //            selectedIndex = -1;
+        //        }
 
-                if (isSelected)
-                    ImGui::SetScrollHereY(0.5f);
-            }
+        //        if (isSelected)
+        //            ImGui::SetScrollHereY(0.5f);
+        //    }
 
-            ImGui::EndChild();
-        }
+        //    ImGui::EndChild();
+        //}
 
         ImGui::EndChild(); // EditorChild
 
