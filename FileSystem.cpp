@@ -1,4 +1,4 @@
-#define NOMINMAX
+ï»¿#define NOMINMAX
 #include "FileSystem.h"
 #include "Manager.h"
 
@@ -29,84 +29,84 @@
 namespace fs = std::filesystem;
 
 // ______________________________________________________________ //
-// ImVec2 ‰ÁZƒIƒyƒŒ[ƒ^iImGui‚Ì2DƒxƒNƒgƒ‹‚Ì‘«‚µZ‚ğ•Ö—˜‚É‚·‚éj //
+// ImVec2 åŠ ç®—ã‚ªãƒšãƒ¬ãƒ¼ã‚¿ï¼ˆImGuiã®2Dãƒ™ã‚¯ãƒˆãƒ«ã®è¶³ã—ç®—ã‚’ä¾¿åˆ©ã«ã™ã‚‹ï¼‰ //
 inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs)
 {
     return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
 ///////////////////////////////////////////////
-// ƒOƒ[ƒoƒ‹•Ï”
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°
 ///////////////////////////////////////////////
 
-//DLLƒ‚ƒWƒ…[ƒ‹
+//DLLãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
 static HMODULE DLL_Module = nullptr;
 
-//ƒtƒ@ƒ“ƒNƒVƒ‡ƒ“ƒ^ƒCƒv
+//ãƒ•ã‚¡ãƒ³ã‚¯ã‚·ãƒ§ãƒ³ã‚¿ã‚¤ãƒ—
 using FuncType = void(*)();
 FuncType Func;
 
-static std::vector<CodeFile> g_Files;                   // “Ç‚İ‚ñ‚¾ƒtƒ@ƒCƒ‹ˆê——
-static int g_SelectedFileIndex = -1;                    // Œ»İ‘I‘ğ’†‚Ìƒtƒ@ƒCƒ‹‚ÌƒCƒ“ƒfƒbƒNƒX
-static const std::string g_SaveDir = "saved/";          // ƒtƒ@ƒCƒ‹•Û‘¶æƒfƒBƒŒƒNƒgƒŠ
-static const std::string g_DllSaveDir = "saved/dll/";   // DLL•Û‘¶æƒfƒBƒŒƒNƒgƒŠ
-static std::string g_LastLoadedFileName;                // ÅŒã‚Éƒ[ƒh‚µ‚½ƒtƒ@ƒCƒ‹–¼iÄƒ[ƒh–h~—pj
-static std::string g_CompaileOut = "CompaileFiled";     // ƒRƒ“ƒpƒCƒ‹Œ‹‰Ê•¶š—ñ
+static std::vector<CodeFile> g_Files;                   // èª­ã¿è¾¼ã‚“ã ãƒ•ã‚¡ã‚¤ãƒ«ä¸€è¦§
+static int g_SelectedFileIndex = -1;                    // ç¾åœ¨é¸æŠä¸­ã®ãƒ•ã‚¡ã‚¤ãƒ«ã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹
+static const std::string g_SaveDir = "saved/";          // ãƒ•ã‚¡ã‚¤ãƒ«ä¿å­˜å…ˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒª
+static const std::string g_DllSaveDir = "saved/dll/";   // DLLä¿å­˜å…ˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒª
+static std::string g_LastLoadedFileName;                // æœ€å¾Œã«ãƒ­ãƒ¼ãƒ‰ã—ãŸãƒ•ã‚¡ã‚¤ãƒ«åï¼ˆå†ãƒ­ãƒ¼ãƒ‰é˜²æ­¢ç”¨ï¼‰
+static std::string g_CompaileOut = "CompaileFiled";     // ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«çµæœæ–‡å­—åˆ—
 
 static bool g_StopDLL;
 static bool g_GameRunning;
 
-// Šî–{“I‚ÈƒL[ƒ[ƒh‚È‚Ç‚ğŠÜ‚ŞƒTƒWƒFƒXƒg—p’PŒêƒŠƒXƒg
+// åŸºæœ¬çš„ãªã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰ãªã©ã‚’å«ã‚€ã‚µã‚¸ã‚§ã‚¹ãƒˆç”¨å˜èªãƒªã‚¹ãƒˆ
 static std::vector<std::string> g_IntelliSenseWords =
 { "int", "float", "void", "if", "else", "for", "while", "return", "struct", "class",
   "enum", "static", "const", "std::vector", "std::string", "char", "return", "while",
   "std::", "vector", "string", "using", "struct", "typedef", "cout", "cin", "namespase",
   "include", "pragma once", "#include" };
 
-// ƒVƒ“ƒvƒ‹ƒL[ƒ[ƒhƒŠƒXƒgiif‚âfor‚È‚Çj
+// ã‚·ãƒ³ãƒ—ãƒ«ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰ãƒªã‚¹ãƒˆï¼ˆifã‚„forãªã©ï¼‰
 static const std::vector<std::string> keywords =
 { "if", "for", "while", "switch", "return", "else" , ",", "typedef" };
 
 
-//ƒ|ƒbƒvƒAƒbƒv—p‚Ìƒtƒ‰ƒO
+//ãƒãƒƒãƒ—ã‚¢ãƒƒãƒ—ç”¨ã®ãƒ•ãƒ©ã‚°
 static bool show_solution_explorer = false;
 static bool show_properties = false;
 static bool show_project = false;
 
-static std::vector<std::string> g_CurrentSuggestions; // Œ»İ‚ÌƒTƒWƒFƒXƒgŒó•â
+static std::vector<std::string> g_CurrentSuggestions; // ç¾åœ¨ã®ã‚µã‚¸ã‚§ã‚¹ãƒˆå€™è£œ
 
 static std::vector<std::string> g_IncludeFiles = {};
 
-static bool g_ShowSuggestions = false; // ƒTƒWƒFƒXƒg•\¦ƒtƒ‰ƒO
+static bool g_ShowSuggestions = false; // ã‚µã‚¸ã‚§ã‚¹ãƒˆè¡¨ç¤ºãƒ•ãƒ©ã‚°
 
-// ƒOƒ[ƒoƒ‹•Ï”iƒtƒ@ƒCƒ‹ã•”‚È‚Ç‚Å’è‹`j
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°ï¼ˆãƒ•ã‚¡ã‚¤ãƒ«ä¸Šéƒ¨ãªã©ã§å®šç¾©ï¼‰
 int g_SelectedSuggestionIndex = -1;
 
-static char buffer[65536] = { 0 }; // “ü—ÍƒeƒLƒXƒgƒoƒbƒtƒ@
-static int g_CursorPos = 0;        // ƒJ[ƒ\ƒ‹ˆÊ’uiƒoƒbƒtƒ@“àƒCƒ“ƒfƒbƒNƒXj
+static char buffer[65536] = { 0 }; // å…¥åŠ›ãƒ†ã‚­ã‚¹ãƒˆãƒãƒƒãƒ•ã‚¡
+static int g_CursorPos = 0;        // ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ï¼ˆãƒãƒƒãƒ•ã‚¡å†…ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ï¼‰
 
-bool g_DebugMode = false; // ”CˆÓ‚Åtrue‚É‚·‚ê‚ÎƒfƒoƒbƒO•\¦
+bool g_DebugMode = false; // ä»»æ„ã§trueã«ã™ã‚Œã°ãƒ‡ãƒãƒƒã‚°è¡¨ç¤º
 
 static const std::string g_SuggestFile = "saved/suggest.txt";
 static std::vector<std::string> g_Suggestions;
 
-// ‚±‚±‚©‚çŠÖ” //============================
+// ã“ã“ã‹ã‚‰é–¢æ•° //============================
 
-// Shift-JIS‚ğUTF-8‚É•ÏŠ·‚·‚éŠÖ”iWindows“Á—L‚ÌƒR[ƒhƒy[ƒW•ÏŠ·j
-// ˆø”: •ÏŠ·‚·‚é•¶š—ñ
-// –ß‚è’l: UTF-8•¶š—ñ
+// Shift-JISã‚’UTF-8ã«å¤‰æ›ã™ã‚‹é–¢æ•°ï¼ˆWindowsç‰¹æœ‰ã®ã‚³ãƒ¼ãƒ‰ãƒšãƒ¼ã‚¸å¤‰æ›ï¼‰
+// å¼•æ•°: å¤‰æ›ã™ã‚‹æ–‡å­—åˆ—
+// æˆ»ã‚Šå€¤: UTF-8æ–‡å­—åˆ—
 const char* ConvertToUTF8(const char* sent)
 {
-    static std::string result; // static‚Å•Ô‹p—p•¶š—ñ‚ğ•Û
+    static std::string result; // staticã§è¿”å´ç”¨æ–‡å­—åˆ—ã‚’ä¿æŒ
 
-    // ‡@ Shift-JIS ¨ UTF-16•ÏŠ·
+    // â‘  Shift-JIS â†’ UTF-16å¤‰æ›
     int wideLen = MultiByteToWideChar(CP_ACP, 0, sent, -1, NULL, 0);
     if (wideLen == 0) return "";
 
     std::wstring wideStr(wideLen, 0);
     MultiByteToWideChar(CP_ACP, 0, sent, -1, &wideStr[0], wideLen);
 
-    // ‡A UTF-16 ¨ UTF-8•ÏŠ·
+    // â‘¡ UTF-16 â†’ UTF-8å¤‰æ›
     int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wideStr.c_str(), -1, NULL, 0, NULL, NULL);
     if (utf8Len == 0) return "";
 
@@ -116,27 +116,27 @@ const char* ConvertToUTF8(const char* sent)
     return result.c_str();
 }
 ///////////////////////////////////////////////
-// ƒtƒ@ƒCƒ‹‘€ìŠÖ˜A
+// ãƒ•ã‚¡ã‚¤ãƒ«æ“ä½œé–¢é€£
 
-//ƒtƒ@ƒCƒ‹“Ç‚İ‚İ_____________
+//ãƒ•ã‚¡ã‚¤ãƒ«èª­ã¿è¾¼ã¿_____________
 bool LoadCodeFile(const std::string& path, std::string& Content)
 {
-    //ƒtƒ@ƒCƒ‹ƒI[ƒvƒ“
+    //ãƒ•ã‚¡ã‚¤ãƒ«ã‚ªãƒ¼ãƒ—ãƒ³
     std::ifstream file(path);
     if (!file.is_open()) return false;
 
-    //ƒCƒeƒŒ[ƒ^‚Å“Ç‚İ‚İ
+    //ã‚¤ãƒ†ãƒ¬ãƒ¼ã‚¿ã§èª­ã¿è¾¼ã¿
     Content.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     return true;
 }
-//ƒtƒ@ƒCƒ‹•Û‘¶_________________
+//ãƒ•ã‚¡ã‚¤ãƒ«ä¿å­˜_________________
 bool SaveCodeFile(const std::string& fileName, const std::string& content)
 {
     namespace fs = std::filesystem;
 
-    // •Û‘¶ƒfƒBƒŒƒNƒgƒŠ‚ğ—pˆÓ
-    std::string cppDir = g_SaveDir;             // cpp—p
-    std::string headerDir = g_SaveDir + "/dll";      // h—p
+    // ä¿å­˜ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ç”¨æ„
+    std::string cppDir = g_SaveDir;             // cppç”¨
+    std::string headerDir = g_SaveDir + "/dll";      // hç”¨
 
     if (!fs::exists(cppDir)) fs::create_directory(cppDir);
     if (!fs::exists(headerDir)) fs::create_directory(headerDir);
@@ -144,7 +144,7 @@ bool SaveCodeFile(const std::string& fileName, const std::string& content)
     fs::path path(fileName);
     std::string ext = path.extension().string();
 
-    //Šg’£q‚²‚Æ‚É•Û‘¶æ‚ğŠ„‚èU‚é
+    //æ‹¡å¼µå­ã”ã¨ã«ä¿å­˜å…ˆã‚’å‰²ã‚ŠæŒ¯ã‚‹
     std::string savePath;
 
     if (ext == ".h")
@@ -157,7 +157,7 @@ bool SaveCodeFile(const std::string& fileName, const std::string& content)
     }
     else
     {
-        // ‘Î‰‚µ‚Ä‚¢‚È‚¢Šg’£q‚Í cppDir ‚É•Û‘¶
+        // å¯¾å¿œã—ã¦ã„ãªã„æ‹¡å¼µå­ã¯ cppDir ã«ä¿å­˜
         savePath = cppDir + "/" + path.filename().string();
     }
 
@@ -169,35 +169,35 @@ bool SaveCodeFile(const std::string& fileName, const std::string& content)
     file.write(content.c_str(), content.size());
     return true;
 }
-// ƒtƒ@ƒCƒ‹íœˆ—(ƒCƒ“ƒfƒbƒNƒXw’è)
+// ãƒ•ã‚¡ã‚¤ãƒ«å‰Šé™¤å‡¦ç†(ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹æŒ‡å®š)
 void RemoveFile(int index)
 {
-    // ƒCƒ“ƒfƒbƒNƒX‚Ì”ÍˆÍƒ`ƒFƒbƒN
+    // ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã®ç¯„å›²ãƒã‚§ãƒƒã‚¯
     if (index < 0 || index >= (int)g_Files.size()) return;
 
     const CodeFile& file = g_Files[index];
 
-    // ÀÛ‚Ìƒtƒ@ƒCƒ‹ƒpƒX‚ğì¬
+    // å®Ÿéš›ã®ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã‚’ä½œæˆ
     std::string filePath = g_SaveDir + file.fileName;
 
-    // ƒtƒ@ƒCƒ‹‚ª‘¶İ‚·‚ê‚Îíœ
+    // ãƒ•ã‚¡ã‚¤ãƒ«ãŒå­˜åœ¨ã™ã‚Œã°å‰Šé™¤
     if (fs::exists(filePath)) fs::remove(filePath);
 
-    // CPPƒtƒ@ƒCƒ‹‚È‚ç‘Î‰‚·‚éDLL‚àíœ
+    // CPPãƒ•ã‚¡ã‚¤ãƒ«ãªã‚‰å¯¾å¿œã™ã‚‹DLLã‚‚å‰Šé™¤
     if (file.type == CodeFile::Type::Cpp)
     {
         std::string dllName = g_DllSaveDir + fs::path(file.fileName).replace_extension(".dll").string();
         if (fs::exists(dllName)) fs::remove(dllName);
     }
 
-    // ƒƒ‚ƒŠã‚ÌƒŠƒXƒg‚©‚ç‚àíœ
+    // ãƒ¡ãƒ¢ãƒªä¸Šã®ãƒªã‚¹ãƒˆã‹ã‚‰ã‚‚å‰Šé™¤
     g_Files.erase(g_Files.begin() + index);
 
-    // ‘I‘ğƒtƒ@ƒCƒ‹‚ÌƒCƒ“ƒfƒbƒNƒX’²®
+    // é¸æŠãƒ•ã‚¡ã‚¤ãƒ«ã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹èª¿æ•´
     if (g_Files.empty()) g_SelectedFileIndex = -1;
     else if (index <= g_SelectedFileIndex) g_SelectedFileIndex = std::max(0, g_SelectedFileIndex - 1);
 }
-//ƒtƒ@ƒCƒ‹’Ç‰Á________________________
+//ãƒ•ã‚¡ã‚¤ãƒ«è¿½åŠ ________________________
 void AddNewFile(CodeFile::Type type)
 {
     int count = 0;
@@ -205,26 +205,26 @@ void AddNewFile(CodeFile::Type type)
     std::string ext = (type == CodeFile::Type::Header) ? ".h" : ".cpp";
     std::string fileName;
 
-    // “¯–¼ƒtƒ@ƒCƒ‹‚ª‘¶İ‚µ‚È‚¢ƒ†ƒj[ƒN‚Èƒtƒ@ƒCƒ‹–¼‚ğì¬
+    // åŒåãƒ•ã‚¡ã‚¤ãƒ«ãŒå­˜åœ¨ã—ãªã„ãƒ¦ãƒ‹ãƒ¼ã‚¯ãªãƒ•ã‚¡ã‚¤ãƒ«åã‚’ä½œæˆ
     do {
         fileName = baseName + std::to_string(count++) + ext;
     } while (std::any_of(g_Files.begin(), g_Files.end(), [&](const CodeFile& f) { return f.fileName == fileName; }));
 
-    // V‚µ‚¢ƒtƒ@ƒCƒ‹\‘¢‘Ìì¬
+    // æ–°ã—ã„ãƒ•ã‚¡ã‚¤ãƒ«æ§‹é€ ä½“ä½œæˆ
     CodeFile newFile;
     newFile.fileName = fileName;
     newFile.type = type;
 
-    // ƒtƒ@ƒCƒ‹“à—e‰Šú‰»
+    // ãƒ•ã‚¡ã‚¤ãƒ«å†…å®¹åˆæœŸåŒ–
     if (type == CodeFile::Type::Header)
-        newFile.content = "#pragma once\n\n"; // ƒwƒbƒ_[‚È‚çƒvƒ‰ƒOƒ} once ‚Ì‚İ
+        newFile.content = "#pragma once\n\n"; // ãƒ˜ãƒƒãƒ€ãƒ¼ãªã‚‰ãƒ—ãƒ©ã‚°ãƒ once ã®ã¿
     else
-        newFile.content = "#include <stdio.h>\n\nextern \"C\" __declspec(dllexport) void Run()\n{\n    printf(\"Hello from DLL!\\n\");\n}\n"; // CPP‚È‚çŠÈ’P‚ÈDLLƒR[ƒh
+        newFile.content = "#include <stdio.h>\n\nextern \"C\" __declspec(dllexport) void Run()\n{\n    printf(\"Hello from DLL!\\n\");\n}\n"; // CPPãªã‚‰ç°¡å˜ãªDLLã‚³ãƒ¼ãƒ‰
 
-    // •Û‘¶—pƒfƒBƒŒƒNƒgƒŠ‚ª‚È‚¯‚ê‚Îì¬
+    // ä¿å­˜ç”¨ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãŒãªã‘ã‚Œã°ä½œæˆ
     if (!fs::exists(g_SaveDir)) fs::create_directory(g_SaveDir);
 
-    // ƒtƒ@ƒCƒ‹•Û‘¶
+    // ãƒ•ã‚¡ã‚¤ãƒ«ä¿å­˜
     if (type == CodeFile::Type::Header)
     {
         SaveCodeFile("saved/dll/" + fileName, newFile.content);
@@ -234,30 +234,30 @@ void AddNewFile(CodeFile::Type type)
         SaveCodeFile(g_SaveDir + fileName, newFile.content);
     }
 
-    // ƒOƒ[ƒoƒ‹ƒŠƒXƒg‚É’Ç‰Á‚µA‘I‘ğƒtƒ@ƒCƒ‹‚ğV‹K‚ÉØ‚è‘Ö‚¦
+    // ã‚°ãƒ­ãƒ¼ãƒãƒ«ãƒªã‚¹ãƒˆã«è¿½åŠ ã—ã€é¸æŠãƒ•ã‚¡ã‚¤ãƒ«ã‚’æ–°è¦ã«åˆ‡ã‚Šæ›¿ãˆ
     g_Files.push_back(newFile);
     g_SelectedFileIndex = (int)g_Files.size() - 1;
 }
-//‘S‚Ä‚ÌƒR[ƒhƒtƒ@ƒCƒ‹‚ğ•Û‘¶
-//¦ƒtƒ@ƒCƒ‹‚ª‚È‚©‚Á‚½‚Æ‚«‚Íì¬‚·‚éˆ—‚ğŠÜ‚Ş
-//¦ŠO•”‚©‚ç’Ç‰Áƒtƒ@ƒCƒ‹‚ª‚ ‚Á‚½‚Æ‚«—p‚ÉÅ‰‚Éˆê“xˆ—‚·‚é
+//å…¨ã¦ã®ã‚³ãƒ¼ãƒ‰ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä¿å­˜
+//â€»ãƒ•ã‚¡ã‚¤ãƒ«ãŒãªã‹ã£ãŸã¨ãã¯ä½œæˆã™ã‚‹å‡¦ç†ã‚’å«ã‚€
+//â€»å¤–éƒ¨ã‹ã‚‰è¿½åŠ ãƒ•ã‚¡ã‚¤ãƒ«ãŒã‚ã£ãŸã¨ãç”¨ã«æœ€åˆã«ä¸€åº¦å‡¦ç†ã™ã‚‹
 void AllCodeSave()
 {
     g_Files.clear();
 
-    //•Û‘¶—pƒfƒBƒŒƒNƒgƒŠ
+    //ä¿å­˜ç”¨ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒª
     std::string cppDir = g_SaveDir;
     std::string hDir = g_SaveDir + "dll/";
 
-    //ƒfƒBƒŒƒNƒgƒŠ‚ª‚È‚¢ê‡‚Íì¬‚·‚é
+    //ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãŒãªã„å ´åˆã¯ä½œæˆã™ã‚‹
     if (!fs::exists(cppDir)) fs::create_directory(cppDir);
     if (!fs::exists(hDir)) fs::create_directory(hDir);
 
-    // cppDir ‚ğ’Tõ
+    // cppDir ã‚’æ¢ç´¢
     for (const auto& entry : fs::directory_iterator(cppDir))
     {
         if (!entry.is_regular_file()) continue;
-        if (entry.path().extension() != ".cpp") continue; // cpp‚Ì‚İ
+        if (entry.path().extension() != ".cpp") continue; // cppã®ã¿
 
         CodeFile file;
         file.fileName = entry.path().filename().string();
@@ -266,11 +266,11 @@ void AllCodeSave()
         g_Files.push_back(file);
     }
 
-    // headerDir ‚ğ’Tõ
+    // headerDir ã‚’æ¢ç´¢
     for (const auto& entry : fs::directory_iterator(hDir))
     {
         if (!entry.is_regular_file()) continue;
-        if (entry.path().extension() != ".h") continue; // h‚Ì‚İ
+        if (entry.path().extension() != ".h") continue; // hã®ã¿
 
         CodeFile file;
         file.fileName = entry.path().filename().string();
@@ -283,17 +283,17 @@ void AllCodeSave()
         g_SelectedFileIndex = 0;
 }
 
-// ƒRƒ}ƒ“ƒhÀs—pŠÖ”io—Í‚ğ•¶š—ñ‚Æ‚µ‚Äæ“¾j
+// ã‚³ãƒãƒ³ãƒ‰å®Ÿè¡Œç”¨é–¢æ•°ï¼ˆå‡ºåŠ›ã‚’æ–‡å­—åˆ—ã¨ã—ã¦å–å¾—ï¼‰
 std::string ExecCommand(const std::string& command)
 {
     std::array<char, 128> buffer;
     std::string result;
 
-    // ƒpƒCƒv‚ğg‚Á‚ÄƒRƒ}ƒ“ƒh‚ğÀs‚µA“Ç‚İæ‚èê—p‚ÅƒI[ƒvƒ“
+    // ãƒ‘ã‚¤ãƒ—ã‚’ä½¿ã£ã¦ã‚³ãƒãƒ³ãƒ‰ã‚’å®Ÿè¡Œã—ã€èª­ã¿å–ã‚Šå°‚ç”¨ã§ã‚ªãƒ¼ãƒ—ãƒ³
     FILE* pipe = _popen(command.c_str(), "r");
     if (!pipe) throw std::runtime_error("popen() failed!");
 
-    // ƒpƒCƒv‚©‚ç“Ç‚İæ‚ê‚éŒÀ‚è“Ç‚İæ‚è‘±‚¯‚é
+    // ãƒ‘ã‚¤ãƒ—ã‹ã‚‰èª­ã¿å–ã‚Œã‚‹é™ã‚Šèª­ã¿å–ã‚Šç¶šã‘ã‚‹
     while (fgets(buffer.data(), (int)buffer.size(), pipe) != nullptr)
     {
         result += buffer.data();
@@ -303,7 +303,7 @@ std::string ExecCommand(const std::string& command)
     return result;
 }
 
-//DLLƒRƒ“ƒpƒCƒ‹—p‚ÌƒrƒWƒ…ƒAƒ‹ƒXƒ^ƒWƒIƒpƒX‚ğæ“¾
+//DLLã‚³ãƒ³ãƒ‘ã‚¤ãƒ«ç”¨ã®ãƒ“ã‚¸ãƒ¥ã‚¢ãƒ«ã‚¹ã‚¿ã‚¸ã‚ªãƒ‘ã‚¹ã‚’å–å¾—
 std::string g_VcVarsAllPath;
 bool ResolveVcVarsAll()
 {
@@ -313,7 +313,7 @@ bool ResolveVcVarsAll()
     if (!fs::exists(vswhere))
         return false;
 
-    // installationPath ‚ğæ“¾
+    // installationPath ã‚’å–å¾—
     std::string cmd =
         std::string("\"") + vswhere +
         "\" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 "
@@ -321,7 +321,7 @@ bool ResolveVcVarsAll()
 
     std::string installPath = ExecCommand(cmd);
 
-    // ‰üsœ‹
+    // æ”¹è¡Œé™¤å»
     installPath.erase(
         std::remove(installPath.begin(), installPath.end(), '\r'),
         installPath.end());
@@ -347,19 +347,19 @@ bool ResolveVcVarsAll()
 }
 
 
-//DLLƒRƒ“ƒpƒCƒ‰[
-// ‚Ü‚Æ‚ßƒrƒ‹ƒh: saved/*.cpp ‚ğ‘S•”ƒŠƒ“ƒN‚µ‚Ä 1 ‚Â‚Ì DLL ‚ğì‚é
+//DLLã‚³ãƒ³ãƒ‘ã‚¤ãƒ©ãƒ¼
+// ã¾ã¨ã‚ãƒ“ãƒ«ãƒ‰: saved/*.cpp ã‚’å…¨éƒ¨ãƒªãƒ³ã‚¯ã—ã¦ 1 ã¤ã® DLL ã‚’ä½œã‚‹
 bool CompileAllToSingleDll(const std::string& dllFileName)
 {
     ResolveVcVarsAll();
 
     const std::string vcvarsall_path = g_VcVarsAllPath;
 
-    // •Û‘¶æ‚ÌŠm•Û
+    // ä¿å­˜å…ˆã®ç¢ºä¿
     if (!fs::exists(g_SaveDir))    fs::create_directories(g_SaveDir);
     if (!fs::exists(g_DllSaveDir)) fs::create_directories(g_DllSaveDir);
 
-    // ‡@ saved/ ”z‰º‚Ì .cpp ‚ğûW
+    // â‘  saved/ é…ä¸‹ã® .cpp ã‚’åé›†
     std::vector<std::string> sources;
     for (const auto& entry : fs::directory_iterator(g_SaveDir))
     {
@@ -370,13 +370,13 @@ bool CompileAllToSingleDll(const std::string& dllFileName)
 
     if (sources.empty())
     {
-        MessageBoxA(nullptr, "saved/ ‚É .cpp ‚ª‚ ‚è‚Ü‚¹‚ñB", "Build All", MB_OK | MB_ICONWARNING);
+        MessageBoxA(nullptr, "saved/ ã« .cpp ãŒã‚ã‚Šã¾ã›ã‚“ã€‚", "Build All", MB_OK | MB_ICONWARNING);
         return false;
     }
 
-    // ‡A ƒŒƒXƒ|ƒ“ƒXƒtƒ@ƒCƒ‹i@filej‚É .cpp ‚Ìˆê——‚ğ‘‚«o‚µiƒpƒX‚ÉƒXƒy[ƒX‚ª‚ ‚Á‚Ä‚à OKj
-    //    ¦ response file ‚ÌƒpƒX©‘Ì‚ÍƒXƒy[ƒX–³‚µ‚É‚µ‚Ä‚¨‚­
-    std::string rspPath = g_SaveDir + "__all_sources.rsp"; // —á: saved/__all_sources.rsp
+    // â‘¡ ãƒ¬ã‚¹ãƒãƒ³ã‚¹ãƒ•ã‚¡ã‚¤ãƒ«ï¼ˆ@fileï¼‰ã« .cpp ã®ä¸€è¦§ã‚’æ›¸ãå‡ºã—ï¼ˆãƒ‘ã‚¹ã«ã‚¹ãƒšãƒ¼ã‚¹ãŒã‚ã£ã¦ã‚‚ OKï¼‰
+    //    â€» response file ã®ãƒ‘ã‚¹è‡ªä½“ã¯ã‚¹ãƒšãƒ¼ã‚¹ç„¡ã—ã«ã—ã¦ãŠã
+    std::string rspPath = g_SaveDir + "__all_sources.rsp"; // ä¾‹: saved/__all_sources.rsp
     {
         std::ofstream rsp(rspPath, std::ios::binary);
         for (const auto& s : sources)
@@ -385,17 +385,17 @@ bool CompileAllToSingleDll(const std::string& dllFileName)
         }
     }
 
-    // ‡B o—Í DLL ƒpƒX
+    // â‘¢ å‡ºåŠ› DLL ãƒ‘ã‚¹
     std::string outDll = g_DllSaveDir + dllFileName;
 
-    // ‡C cl.exe ƒRƒ}ƒ“ƒh‚ğì¬
-    //  - /LD              : DLL ‚ğ¶¬
-    //  - /EHsc            : —áŠOƒnƒ“ƒhƒŠƒ“ƒO
-    //  - /utf-8           : UTF-8 ƒ\[ƒXi“ú–{ŒêƒRƒƒ“ƒg‘Îôj
-    //  - /I saved         : saved ‚ğƒCƒ“ƒNƒ‹[ƒhŒŸõƒpƒX‚É’Ç‰Áiƒwƒbƒ_[QÆ—pj
-    //  - @saved\*.rsp     : ûW‚µ‚½ .cpp ‚ğˆêŠ‡w’è
-    //  - /Fe:...          : DLL o—Í–¼
-    //  - /link ...        : ƒŠƒ“ƒJƒIƒvƒVƒ‡ƒ“
+    // â‘£ cl.exe ã‚³ãƒãƒ³ãƒ‰ã‚’ä½œæˆ
+    //  - /LD              : DLL ã‚’ç”Ÿæˆ
+    //  - /EHsc            : ä¾‹å¤–ãƒãƒ³ãƒ‰ãƒªãƒ³ã‚°
+    //  - /utf-8           : UTF-8 ã‚½ãƒ¼ã‚¹ï¼ˆæ—¥æœ¬èªã‚³ãƒ¡ãƒ³ãƒˆå¯¾ç­–ï¼‰
+    //  - /I saved         : saved ã‚’ã‚¤ãƒ³ã‚¯ãƒ«ãƒ¼ãƒ‰æ¤œç´¢ãƒ‘ã‚¹ã«è¿½åŠ ï¼ˆãƒ˜ãƒƒãƒ€ãƒ¼å‚ç…§ç”¨ï¼‰
+    //  - @saved\*.rsp     : åé›†ã—ãŸ .cpp ã‚’ä¸€æ‹¬æŒ‡å®š
+    //  - /Fe:...          : DLL å‡ºåŠ›å
+    //  - /link ...        : ãƒªãƒ³ã‚«ã‚ªãƒ—ã‚·ãƒ§ãƒ³
     std::ostringstream oss;
     oss << "cmd /c \"call " << vcvarsall_path << " x64 && "
         << "cl /nologo /LD /EHsc /utf-8 "
@@ -407,12 +407,12 @@ bool CompileAllToSingleDll(const std::string& dllFileName)
 
     std::string command = oss.str();
 
-    // ‡D Às & ƒƒOæ“¾i¡‚Ìd‘g‚İ‚É‡‚í‚¹‚éj
+    // â‘¤ å®Ÿè¡Œ & ãƒ­ã‚°å–å¾—ï¼ˆä»Šã®ä»•çµ„ã¿ã«åˆã‚ã›ã‚‹ï¼‰
     g_CompaileOut = ExecCommand(command);
 
     if (!g_DebugMode)
     {
-        // ¸”sƒƒO‚àE‚¦‚é‚æ‚¤‚Éƒtƒ@ƒCƒ‹‚É‚à“f‚¢‚Ä‚¨‚­
+        // å¤±æ•—æ™‚ãƒ­ã‚°ã‚‚æ‹¾ãˆã‚‹ã‚ˆã†ã«ãƒ•ã‚¡ã‚¤ãƒ«ã«ã‚‚åã„ã¦ãŠã
         std::string redirectCmd = command + " > saved\\__compile_log_all.txt 2>&1";
         STARTUPINFOA si = {};
         PROCESS_INFORMATION pi = {};
@@ -436,7 +436,7 @@ bool CompileAllToSingleDll(const std::string& dllFileName)
                 std::ifstream log("saved\\__compile_log_all.txt");
                 std::ostringstream oss2; oss2 << log.rdbuf();
                 g_CompaileOut = oss2.str();
-                MessageBoxA(nullptr, "‚Ü‚Æ‚ßƒrƒ‹ƒh‚É¸”s‚µ‚Ü‚µ‚½BƒƒO‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢B", "Build All", MB_OK | MB_ICONERROR);
+                MessageBoxA(nullptr, "ã¾ã¨ã‚ãƒ“ãƒ«ãƒ‰ã«å¤±æ•—ã—ã¾ã—ãŸã€‚ãƒ­ã‚°ã‚’ç¢ºèªã—ã¦ãã ã•ã„ã€‚", "Build All", MB_OK | MB_ICONERROR);
                 return false;
             }
         }
@@ -447,7 +447,7 @@ bool CompileAllToSingleDll(const std::string& dllFileName)
 
 bool LoadGameDll(const std::string& dllName)
 {
-    if (g_LastLoadedFileName == dllName) return true; // “¯‚¶DLL‚È‚çÄƒ[ƒh‚µ‚È‚¢
+    if (g_LastLoadedFileName == dllName) return true; // åŒã˜DLLãªã‚‰å†ãƒ­ãƒ¼ãƒ‰ã—ãªã„
     g_LastLoadedFileName = dllName;
     if (DLL_Module)
     {
@@ -457,7 +457,7 @@ bool LoadGameDll(const std::string& dllName)
     DLL_Module = LoadLibraryA(dllName.c_str());
     if (!DLL_Module)
     {
-        MessageBoxA(nullptr, "DLL‚Ìƒ[ƒh‚É¸”s‚µ‚Ü‚µ‚½", "Error", MB_OK | MB_ICONERROR);
+        MessageBoxA(nullptr, "DLLã®ãƒ­ãƒ¼ãƒ‰ã«å¤±æ•—ã—ã¾ã—ãŸ", "Error", MB_OK | MB_ICONERROR);
         return false;
     }
     return true;
@@ -477,7 +477,7 @@ bool RunGameRelease(const std::string& dllName)
     Func = (FuncType)GetProcAddress(DLL_Module, "Release");
     if (Func)
     {
-        Func(); // Às
+        Func(); // å®Ÿè¡Œ
     }
     FreeLibrary(DLL_Module);
     return true;
@@ -488,7 +488,7 @@ bool RunGameInit(const std::string& dllName)
     Func = (FuncType)GetProcAddress(DLL_Module, "Init");
     if (Func)
     {
-        Func(); // Às
+        Func(); // å®Ÿè¡Œ
     }
     return true;
 }
@@ -512,7 +512,7 @@ bool RunGameUpdate(const std::string& dllName)
     Func = (FuncType)GetProcAddress(DLL_Module, "Update");
     if (Func)
     {
-        Func(); // Às
+        Func(); // å®Ÿè¡Œ
     }
 
     return true;
@@ -545,7 +545,7 @@ void RunningGame()
     }
 }
 
-//ƒQ[ƒ€‚ÌÅ‰‚ÌƒtƒŒ[ƒ€‚¾‚¯Às
+//ã‚²ãƒ¼ãƒ ã®æœ€åˆã®ãƒ•ãƒ¬ãƒ¼ãƒ ã ã‘å®Ÿè¡Œ
 void GameStartDraw()
 {
     
@@ -553,13 +553,13 @@ void GameStartDraw()
 
 
 
-// ƒOƒ[ƒoƒ‹/ƒtƒ@ƒCƒ‹“ª‚Å’è‹`
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«/ãƒ•ã‚¡ã‚¤ãƒ«é ­ã§å®šç¾©
 static bool g_ShowNewFileWindow = false;
 static CodeFile::Type g_NewFileType;
 static char g_NewFileName[128] = "";
 
 
-// V‚µ‚¢ƒtƒ@ƒCƒ‹’Ç‰Á‚ÌŒÄ‚Ño‚µiƒ{ƒ^ƒ“‚È‚Ç‚©‚çŒÄ‚Ôj
+// æ–°ã—ã„ãƒ•ã‚¡ã‚¤ãƒ«è¿½åŠ ã®å‘¼ã³å‡ºã—ï¼ˆãƒœã‚¿ãƒ³ãªã©ã‹ã‚‰å‘¼ã¶ï¼‰
 void OpenAddNewFileWindow(CodeFile::Type type)
 {
     g_ShowNewFileWindow = true;
@@ -567,14 +567,14 @@ void OpenAddNewFileWindow(CodeFile::Type type)
     g_NewFileName[0] = '\0';
 }
 
-// ƒtƒ@ƒCƒ‹•Û‘¶ŠÖ”
+// ãƒ•ã‚¡ã‚¤ãƒ«ä¿å­˜é–¢æ•°
 bool SaveFileContent(const std::string& fileName, const std::string& content)
 {
     namespace fs = std::filesystem;
 
-    // •Û‘¶ƒfƒBƒŒƒNƒgƒŠ‚ğ—pˆÓ
-    std::string cppDir = g_SaveDir;             // cpp—p
-    std::string headerDir = g_SaveDir + "/dll";      // h—p
+    // ä¿å­˜ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ç”¨æ„
+    std::string cppDir = g_SaveDir;             // cppç”¨
+    std::string headerDir = g_SaveDir + "/dll";      // hç”¨
 
     if (!fs::exists(cppDir)) fs::create_directory(cppDir);
     if (!fs::exists(headerDir)) fs::create_directory(headerDir);
@@ -582,7 +582,7 @@ bool SaveFileContent(const std::string& fileName, const std::string& content)
     fs::path path(fileName);
     std::string ext = path.extension().string();
 
-    // •Û‘¶æ‚ğŠg’£q‚ÅØ‚è‘Ö‚¦
+    // ä¿å­˜å…ˆã‚’æ‹¡å¼µå­ã§åˆ‡ã‚Šæ›¿ãˆ
     std::string savePath;
     if (ext == ".h")
     {
@@ -594,7 +594,7 @@ bool SaveFileContent(const std::string& fileName, const std::string& content)
     }
     else
     {
-        // ‘Î‰‚µ‚Ä‚¢‚È‚¢Šg’£q‚Í cppDir ‚É•Û‘¶
+        // å¯¾å¿œã—ã¦ã„ãªã„æ‹¡å¼µå­ã¯ cppDir ã«ä¿å­˜
         savePath = cppDir + "/" + path.filename().string();
     }
 
@@ -607,13 +607,13 @@ bool SaveFileContent(const std::string& fileName, const std::string& content)
     return true;
 }
 // ===============================
-// ƒtƒ@ƒCƒ‹“Ç‚İ‚İŠÖ”
+// ãƒ•ã‚¡ã‚¤ãƒ«èª­ã¿è¾¼ã¿é–¢æ•°
 bool LoadFileContent(const std::string& path, std::string& outContent)
 {
     std::ifstream file(path);
-    if (!file.is_open()) return false; // ƒtƒ@ƒCƒ‹ƒI[ƒvƒ“¸”s‚Ífalse‚ğ•Ô‚·
+    if (!file.is_open()) return false; // ãƒ•ã‚¡ã‚¤ãƒ«ã‚ªãƒ¼ãƒ—ãƒ³å¤±æ•—æ™‚ã¯falseã‚’è¿”ã™
 
-    // ƒXƒgƒŠ[ƒ€ƒCƒeƒŒ[ƒ^‚ğg‚Á‚Äˆê‹C‚Éƒtƒ@ƒCƒ‹‘S‘Ì‚ğ•¶š—ñ‚É“Ç‚İ‚İ
+    // ã‚¹ãƒˆãƒªãƒ¼ãƒ ã‚¤ãƒ†ãƒ¬ãƒ¼ã‚¿ã‚’ä½¿ã£ã¦ä¸€æ°—ã«ãƒ•ã‚¡ã‚¤ãƒ«å…¨ä½“ã‚’æ–‡å­—åˆ—ã«èª­ã¿è¾¼ã¿
     outContent.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     return true;
 }
@@ -663,7 +663,7 @@ void DrawAddNewFileWindow()
             g_Files.push_back(newFile);
             g_SelectedFileIndex = static_cast<int>(g_Files.size()) - 1;
 
-            g_ShowNewFileWindow = false; // ƒEƒBƒ“ƒhƒE•Â‚¶‚é
+            g_ShowNewFileWindow = false; // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦é–‰ã˜ã‚‹
         }
 
         ImGui::SameLine();
@@ -679,19 +679,19 @@ void LoadAllSavedFiles()
 {
     g_Files.clear();
 
-    // •Û‘¶ƒfƒBƒŒƒNƒgƒŠ
-    std::string cppDir = g_SaveDir;             // cpp—p (—á: ./saved)
-    std::string headerDir = g_SaveDir + "dll/";   // ƒwƒbƒ_—p (—á: ./saved/h)
+    // ä¿å­˜ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒª
+    std::string cppDir = g_SaveDir;             // cppç”¨ (ä¾‹: ./saved)
+    std::string headerDir = g_SaveDir + "dll/";   // ãƒ˜ãƒƒãƒ€ç”¨ (ä¾‹: ./saved/h)
 
-    // ƒfƒBƒŒƒNƒgƒŠ‚ª‚È‚¯‚ê‚Îì¬
+    // ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãŒãªã‘ã‚Œã°ä½œæˆ
     if (!fs::exists(cppDir)) fs::create_directory(cppDir);
     if (!fs::exists(headerDir)) fs::create_directory(headerDir);
 
-    // cppDir ‚ğ’Tõ
+    // cppDir ã‚’æ¢ç´¢
     for (const auto& entry : fs::directory_iterator(cppDir))
     {
         if (!entry.is_regular_file()) continue;
-        if (entry.path().extension() != ".cpp") continue; // cpp‚Ì‚İ
+        if (entry.path().extension() != ".cpp") continue; // cppã®ã¿
 
         CodeFile file;
         file.fileName = entry.path().filename().string();
@@ -700,11 +700,11 @@ void LoadAllSavedFiles()
         g_Files.push_back(file);
     }
 
-    // headerDir ‚ğ’Tõ
+    // headerDir ã‚’æ¢ç´¢
     for (const auto& entry : fs::directory_iterator(headerDir))
     {
         if (!entry.is_regular_file()) continue;
-        if (entry.path().extension() != ".h") continue; // h‚Ì‚İ
+        if (entry.path().extension() != ".h") continue; // hã®ã¿
 
         CodeFile file;
         file.fileName = entry.path().filename().string();
@@ -718,23 +718,23 @@ void LoadAllSavedFiles()
 }
 
 
-// ƒoƒbƒtƒ@‚ÌƒJ[ƒ\ƒ‹ˆÊ’u‚©‚çŒ»İ‚Ì’PŒê‚ğ’Šo‚·‚éŠÖ”
+// ãƒãƒƒãƒ•ã‚¡ã®ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã‹ã‚‰ç¾åœ¨ã®å˜èªã‚’æŠ½å‡ºã™ã‚‹é–¢æ•°
 std::string ExtractWordAtCursor(const char* buf, int cursorPos)
 {
     if (!buf || cursorPos <= 0) return "";
 
-    // ƒJ[ƒ\ƒ‹ˆÊ’u‚©‚ç¶‚É’PŒê‚ÌŠJnˆÊ’u‚ğ’T‚·
+    // ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã‹ã‚‰å·¦ã«å˜èªã®é–‹å§‹ä½ç½®ã‚’æ¢ã™
     int start = cursorPos - 1;
     while (start >= 0 && (isalnum((unsigned char)buf[start]) || buf[start] == '_')) start--;
-    start++; // ŠJnˆÊ’u‚Í’PŒê‚ÌÅ‰‚É–ß‚·
+    start++; // é–‹å§‹ä½ç½®ã¯å˜èªã®æœ€åˆã«æˆ»ã™
 
-    // ƒJ[ƒ\ƒ‹ˆÊ’u‚©‚ç‰E‚É’PŒê‚ÌI—¹ˆÊ’u‚ğ’T‚·
+    // ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã‹ã‚‰å³ã«å˜èªã®çµ‚äº†ä½ç½®ã‚’æ¢ã™
     int end = cursorPos;
     while (buf[end] && (isalnum((unsigned char)buf[end]) || buf[end] == '_')) end++;
 
     return std::string(buf + start, buf + end);
 }
-// ƒTƒWƒFƒXƒgŒó•â‚ğXV‚·‚éŠÖ”
+// ã‚µã‚¸ã‚§ã‚¹ãƒˆå€™è£œã‚’æ›´æ–°ã™ã‚‹é–¢æ•°
 void UpdateSuggestions(const std::string& input)
 {
     g_CurrentSuggestions.clear();
@@ -750,7 +750,7 @@ void UpdateSuggestions(const std::string& input)
     std::string lowerInput = ToLower(input);
     std::set<std::string> uniqueSuggestions;
 
-    // ‡@ ƒL[ƒ[ƒhˆê——‚©‚ç
+    // â‘  ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰ä¸€è¦§ã‹ã‚‰
     for (const auto& word : g_IntelliSenseWords)
     {
         if (ToLower(word).find(lowerInput) == 0)
@@ -760,7 +760,7 @@ void UpdateSuggestions(const std::string& input)
         }
     }
 
-    // ‡A buffer“à‚©‚çŠÖ”E•Ï”‚ğ’Šo
+    // â‘¡ bufferå†…ã‹ã‚‰é–¢æ•°ãƒ»å¤‰æ•°ã‚’æŠ½å‡º
     std::string source(buffer);
     std::regex re(R"(\b([a-zA-Z_][a-zA-Z0-9_]*)[ \t]+([a-zA-Z_][a-zA-Z0-9_]*)(\s*\([^;{]*\))?)");
     std::smatch match;
@@ -790,7 +790,7 @@ void UpdateSuggestions(const std::string& input)
         it = match.suffix().first;
     }
 
-    // ‡B #include "..." ‚Ü‚½‚Í <...> ‚Ìƒtƒ@ƒCƒ‹ƒpƒX‚ğg‚Á‚Äƒtƒ@ƒCƒ‹“à—e‚©‚çƒTƒWƒFƒXƒg
+    // â‘¢ #include "..." ã¾ãŸã¯ <...> ã®ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã‚’ä½¿ã£ã¦ãƒ•ã‚¡ã‚¤ãƒ«å†…å®¹ã‹ã‚‰ã‚µã‚¸ã‚§ã‚¹ãƒˆ
     std::regex reInclude(R"(#include\s*[<"]([^">]+)[>"])");
     std::smatch includeMatch;
     auto it2 = source.cbegin();
@@ -799,15 +799,15 @@ void UpdateSuggestions(const std::string& input)
     {
         std::string filePath = includeMatch[1].str();
 
-        // ƒTƒWƒFƒXƒg‚Æ‚µ‚Äƒtƒ@ƒCƒ‹–¼•\¦
+        // ã‚µã‚¸ã‚§ã‚¹ãƒˆã¨ã—ã¦ãƒ•ã‚¡ã‚¤ãƒ«åè¡¨ç¤º
         if (ToLower(filePath).find(lowerInput) != std::string::npos)
         {
             uniqueSuggestions.insert(filePath);
             if (uniqueSuggestions.size() >= 10) break;
         }
 
-        // ƒtƒ@ƒCƒ‹‚ÌÀİŠm”F‚Æ“Ç‚İ‚İ
-        // C³“_F•Û‘¶æ‚ğw’èi"saved/"ƒfƒBƒŒƒNƒgƒŠj
+        // ãƒ•ã‚¡ã‚¤ãƒ«ã®å®Ÿåœ¨ç¢ºèªã¨èª­ã¿è¾¼ã¿
+        // ä¿®æ­£ç‚¹ï¼šä¿å­˜å…ˆã‚’æŒ‡å®šï¼ˆ"saved/"ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªï¼‰
         std::string fullPath = g_SaveDir + filePath;
         if (std::filesystem::exists(fullPath))
         {
@@ -844,7 +844,7 @@ void UpdateSuggestions(const std::string& input)
         it2 = includeMatch.suffix().first;
     }
 
-    // ÅI“I‚Èo—Í
+    // æœ€çµ‚çš„ãªå‡ºåŠ›
     g_CurrentSuggestions.assign(uniqueSuggestions.begin(), uniqueSuggestions.end());
 }
 
@@ -859,9 +859,9 @@ void DrawFileList()
             g_SelectedFileIndex = i;
 
         // =========================
-        // ‰EƒNƒŠƒbƒNƒƒjƒ…[
+        // å³ã‚¯ãƒªãƒƒã‚¯ãƒ¡ãƒ‹ãƒ¥ãƒ¼
         // =========================
-        if (ImGui::BeginPopupContextItem()) // © ‰EƒNƒŠƒbƒN
+        if (ImGui::BeginPopupContextItem()) // â† å³ã‚¯ãƒªãƒƒã‚¯
         {
             if (ImGui::MenuItem("Delete"))
             {
@@ -873,7 +873,7 @@ void DrawFileList()
 
             if (ImGui::MenuItem("Rename"))
             {
-                // Rename ˆ—
+                // Rename å‡¦ç†
 
             }
 
@@ -899,28 +899,27 @@ static int EditorInputCallback(ImGuiInputTextCallbackData* data)
     return 0;
 }
 //----------------------------------------------------
-// ƒTƒWƒFƒXƒg•`‰æi‰EãŒÅ’èj
+// ã‚µã‚¸ã‚§ã‚¹ãƒˆæç”»ï¼ˆå³ä¸Šå›ºå®šï¼‰
 //----------------------------------------------------
 void DrawSearchSuggestWindow(
     const std::vector<SearchResult>& results,
     int maxDisplay = 5
 )
 {
-    if (results.empty())
-        return;
+    //if (results.empty())
+    //    return;
 
     ImGuiIO& io = ImGui::GetIO();
 
     //==============================
-    // ‰EãŒÅ’è
+    // å³ä¸Šå›ºå®š
     //==============================
-    const float padding = 10.0f;
+    const float paddingX = 50.0f;
+    const float paddingY = 60.0f;
     ImVec2 windowSize(320.0f, 220.0f);
 
     ImVec2 pos(
-        io.DisplaySize.x - windowSize.x - padding,
-        padding
-    );
+        io.DisplaySize.x - windowSize.x - paddingX, paddingY);
 
     ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
     ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
@@ -931,7 +930,6 @@ void DrawSearchSuggestWindow(
     ImGui::Begin(
         "Suggest",
         nullptr,
-        ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoSavedSettings |
@@ -939,13 +937,13 @@ void DrawSearchSuggestWindow(
     );
 
     //==============================
-    // ƒwƒbƒ_
+    // ãƒ˜ãƒƒãƒ€
     //==============================
     ImGui::TextUnformatted("type | No / name");
     ImGui::Separator();
 
     //==============================
-    // “à—e
+    // å†…å®¹
     //==============================
     int count = (int)results.size();
     if (count > maxDisplay)
@@ -955,20 +953,22 @@ void DrawSearchSuggestWindow(
     {
         const SearchResult& r = results[i];
 
-        // í•Ê•\¦
+        // ç¨®åˆ¥è¡¨ç¤º
         const char* typeStr =
             (r.token.type == TOKEN_FUNCTION) ? "Func" : "Var ";
 
-        // ”Ô† (01, 02...)
+        // ç•ªå· (01, 02...)
         char noBuf[8];
         sprintf_s(noBuf, "%02d", i + 1);
-
-        ImGui::Text(
-            "%s | %s / %s",
-            typeStr,
-            noBuf,
-            r.token.name.c_str()
-        );
+        if(!results.empty())
+        {
+            ImGui::Text(
+                "%s | %s / %s",
+                typeStr,
+                noBuf,
+                r.token.name.c_str()
+            );
+        }
     }
 
     ImGui::End();
@@ -976,7 +976,7 @@ void DrawSearchSuggestWindow(
     ImGui::PopStyleVar(2);
 }
 //----------------------------------------------------
-// ƒg[ƒNƒ“’ŠoidefineCount WŒvEd•¡“‡j
+// ãƒˆãƒ¼ã‚¯ãƒ³æŠ½å‡ºï¼ˆdefineCount é›†è¨ˆãƒ»é‡è¤‡çµ±åˆï¼‰
 //----------------------------------------------------
 static void ExtractTokensFromText(
     const char* text,
@@ -1026,7 +1026,7 @@ static void ExtractTokensFromText(
     }
 }
 //----------------------------------------------------
-// ƒJ[ƒ\ƒ‹ˆÊ’uƒg[ƒNƒ“’Šo
+// ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ãƒˆãƒ¼ã‚¯ãƒ³æŠ½å‡º
 //----------------------------------------------------
 static bool ExtractTokenAtCursor(
     const std::string& text,
@@ -1062,7 +1062,7 @@ static bool ExtractTokenAtCursor(
     return true;
 }
 //----------------------------------------------------
-// saved “à + Working.tmp ‚ğ‚·‚×‚Ä“Ç‚İæ‚é
+// saved å†… + Working.tmp ã‚’ã™ã¹ã¦èª­ã¿å–ã‚‹
 //----------------------------------------------------
 static void LoadAllSourceText(std::string& outText)
 {
@@ -1104,7 +1104,7 @@ static void LoadAllSourceText(std::string& outText)
     FindClose(h);
 }
 //----------------------------------------------------
-// ƒXƒRƒAŒvZiw’èƒ‹[ƒ‹j
+// ã‚¹ã‚³ã‚¢è¨ˆç®—ï¼ˆæŒ‡å®šãƒ«ãƒ¼ãƒ«ï¼‰
 //----------------------------------------------------
 static int CalcScore(
     const std::string& src,
@@ -1117,14 +1117,14 @@ static int CalcScore(
 
     int score = 0;
 
-    // •¶šˆê’v +5
+    // æ–‡å­—ä¸€è‡´ +5
     for (char c : query)
     {
         if (src.find(c) != std::string::npos)
             score += 5;
     }
 
-    // ‡˜ˆê’v +20
+    // é †åºä¸€è‡´ +20
     size_t pos = 0;
     int order = 0;
     for (char c : query)
@@ -1137,14 +1137,14 @@ static int CalcScore(
     }
     score += order * 20;
 
-    // ’è‹`”
+    // å®šç¾©æ•°
     score += defineCount;
 
     return score;
 }
 
 //----------------------------------------------------
-// ŒŸõ
+// æ¤œç´¢
 //----------------------------------------------------
 static void SearchTokens(
     const std::vector<Token>& tokens,
@@ -1169,7 +1169,7 @@ static void SearchTokens(
 }
 
 //----------------------------------------------------
-// ƒfƒoƒbƒOFƒJ[ƒ\ƒ‹ŒŸõiShift + Qj
+// ãƒ‡ãƒãƒƒã‚°ï¼šã‚«ãƒ¼ã‚½ãƒ«æ¤œç´¢ï¼ˆShift + Qï¼‰
 //----------------------------------------------------
 static void DebugSearchAtCursor(
     const std::string& editorText,
@@ -1203,8 +1203,167 @@ static void DebugSearchAtCursor(
 
     MessageBoxA(nullptr, msg.c_str(), "Search Debug", MB_OK);
 }
+//====================================================
+// ã‚µã‚¸ã‚§ã‚¹ãƒˆã‚’ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã«æŒ¿å…¥
+//====================================================
+static void InsertSuggestionAtCursor(
+    char* buffer,
+    int bufferSize,
+    int& cursorPos,
+    const std::string& insertText
+)
+{
+    std::string text = buffer;
+
+    // å·¦å´ã®å˜èªé–‹å§‹ã‚’æ¢ã™
+    int start = cursorPos;
+    while (start > 0 && (isalnum((unsigned char)text[start - 1]) || text[start - 1] == '_'))
+        start--;
+
+    // ç½®æ›
+    text.replace(start, cursorPos - start, insertText);
+
+    // ãƒãƒƒãƒ•ã‚¡ã¸åæ˜ 
+    strncpy(buffer, text.c_str(), bufferSize - 1);
+    buffer[bufferSize - 1] = '\0';
+
+    cursorPos = start + (int)insertText.size();
+}
+//====================================================
+// Ctrl + æ•°å­—ã‚­ãƒ¼ã§ã‚µã‚¸ã‚§ã‚¹ãƒˆç¢ºå®š
+//====================================================
+static void HandleSuggestConfirm(
+    char* buffer,
+    int bufferSize,
+    int& cursorPos,
+    const std::vector<SearchResult>& results,
+    int maxCount = 5
+)
+{
+    if (!(GetAsyncKeyState(VK_CONTROL) & 0x8000))
+        return;
+
+    int count = std::min((int)results.size(), maxCount);
+    
+    for (int i = 0; i < count; i++)
+    {
+        int key = '1' + i;
+        if (GetAsyncKeyState(key) & 0x8000)
+        {
+            InsertSuggestionAtCursor(
+                buffer,
+                bufferSize,
+                cursorPos,
+                results[i].token.name
+            );
+            break;
+        }
+    }
+}
+static void ReplaceTokenAtCursor(
+    char* buffer,
+    int bufferSize,
+    int& cursorPos,
+    const std::string& newWord
+)
+{
+    if (!buffer) return;
+
+    int len = (int)strlen(buffer);
+    if (cursorPos <= 0 || cursorPos > len) return;
+
+    // å·¦ã¸
+    int start = cursorPos - 1;
+    while (start >= 0 &&
+        (isalnum((unsigned char)buffer[start]) || buffer[start] == '_'))
+        start--;
+    start++;
+
+    // å³ã¸
+    int end = cursorPos;
+    while (end < len &&
+        (isalnum((unsigned char)buffer[end]) || buffer[end] == '_'))
+        end++;
+
+    std::string before(buffer, start);
+    std::string after(buffer + end);
+
+    std::string result = before + newWord + after;
+
+    strncpy_s(buffer, bufferSize, result.c_str(), _TRUNCATE);
+
+    cursorPos = start + (int)newWord.size();
+}
+struct WordRange
+{
+    int start;
+    int end;
+};
+
+static bool GetWordRangeAtCursor(
+    const char* buf,
+    int cursorPos,
+    WordRange& outRange
+)
+{
+    if (!buf || cursorPos <= 0)
+        return false;
+
+    int len = (int)strlen(buf);
+    if (cursorPos > len)
+        cursorPos = len;
+
+    int start = cursorPos - 1;
+    while (start >= 0 &&
+        (isalnum((unsigned char)buf[start]) || buf[start] == '_'))
+    {
+        start--;
+    }
+    start++;
+
+    int end = cursorPos;
+    while (end < len &&
+        (isalnum((unsigned char)buf[end]) || buf[end] == '_'))
+    {
+        end++;
+    }
+
+    if (start >= end)
+        return false;
+
+    outRange.start = start;
+    outRange.end = end;
+    return true;
+}
+static void ApplySuggestionByIndex(
+    int index,
+    const std::vector<SearchResult>& results,
+    char* buffer,
+    int& cursorPos
+)
+{
+    if (index < 0 || index >= (int)results.size())
+        return;
+
+    WordRange range;
+    if (!GetWordRangeAtCursor(buffer, cursorPos, range))
+        return;
+
+    std::string before(buffer, buffer + range.start);
+    std::string after(buffer + range.end);
+
+    const std::string& insert = results[index].token.name;
+
+    std::string newText = before + insert + after;
+
+    strncpy(buffer, newText.c_str(), 65535);
+    buffer[65535] = '\0';
+
+    cursorPos = range.start + (int)insert.size();
+}
+
 //----------------------------------------------------
-// GUI Update —pƒGƒ“ƒgƒŠ
+// GUI Update ç”¨ã‚¨ãƒ³ãƒˆãƒª
 //----------------------------------------------------
 void UpdateSearchAtCursor(
     const std::string& editorText,
@@ -1260,9 +1419,9 @@ void ShowCodeEditorUI()
         if (ImGui::Button("Text Save"))
             SaveFileContent(g_SaveDir + file.fileName, file.content);
 
-		// ©“®•Û‘¶ˆ—
+		// è‡ªå‹•ä¿å­˜å‡¦ç†
 		static int AutoSaveTextCount = 0;
-		static int AutoSaveTextInterval = 300; // 300ƒtƒŒ[ƒ€‚²‚Æ‚É©“®•Û‘¶
+		static int AutoSaveTextInterval = 300; // 300ãƒ•ãƒ¬ãƒ¼ãƒ ã”ã¨ã«è‡ªå‹•ä¿å­˜
 
         if(AutoSaveTextCount >= AutoSaveTextInterval)
         {
@@ -1271,9 +1430,9 @@ void ShowCodeEditorUI()
 		}
 		AutoSaveTextCount++;
 
-		// ƒ{ƒ^ƒ“ŒQ
+		// ãƒœã‚¿ãƒ³ç¾¤
         ImGui::SameLine();
-		// DLLƒRƒ“ƒpƒCƒ‹•Àsƒ{ƒ^ƒ“
+		// DLLã‚³ãƒ³ãƒ‘ã‚¤ãƒ«ï¼†å®Ÿè¡Œãƒœã‚¿ãƒ³
         if (ImGui::Button("DLL Compile") && file.type == CodeFile::Type::Cpp)
         {
             SaveFileContent(g_SaveDir + file.fileName, file.content);
@@ -1290,7 +1449,7 @@ void ShowCodeEditorUI()
             DeleteGameDll();
         }
         ImGui::SameLine();
-		// DLLÀs•’â~ƒ{ƒ^ƒ“
+		// DLLå®Ÿè¡Œï¼†åœæ­¢ãƒœã‚¿ãƒ³
         if (ImGui::Button("Run DLL"))
         {
             LoadGameDll("saved/dll/user.dll");
@@ -1304,7 +1463,7 @@ void ShowCodeEditorUI()
             g_StopDLL = true;
         }
 
-        ImGui::BeginChild("EditorChild", ImVec2(0, editorHeight), true);
+        ImGui::BeginChild("EditorChild", ImVec2(0, editorHeight), true, ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoNavInputs);
 
         ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
         if (ImGui::InputTextMultiline("##source", buffer, sizeof(buffer), ImVec2(-1, -1), flags))
@@ -1312,7 +1471,7 @@ void ShowCodeEditorUI()
             file.content = buffer;
         }
 
-        // --- ƒJ[ƒ\ƒ‹ˆÊ’uŒŸõæ“¾ ---
+        // --- ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®æ¤œç´¢å–å¾— ---
         static std::vector<Token> tokens;
         static std::vector<SearchResult> results;
 
@@ -1332,9 +1491,55 @@ void ShowCodeEditorUI()
         }
 
         //==============================
-        // ƒTƒWƒFƒXƒg•`‰æ
+        // ã‚µã‚¸ã‚§ã‚¹ãƒˆæç”»
         //==============================
-        DrawSearchSuggestWindow(results, 5);
+        //for (int i = 0; i < (int)results.size() && i < 5; i++)
+        //{
+        //    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) &&
+        //        (GetAsyncKeyState('1' + i) & 0x8000))
+        //    {
+        //        ReplaceTokenAtCursor(
+        //            buffer,
+        //            sizeof(buffer),
+        //            g_CursorPos,
+        //            results[i].token.name
+        //        );
+
+        //        // file.content ã«ã‚‚åæ˜ 
+        //        g_Files[g_SelectedFileIndex].content = buffer;
+        //        break;
+        //    }
+        //}
+        //HandleSuggestConfirm(                   //ã‚µã‚¸ã‚§ã‚¹ãƒˆé©å¿œ
+        //    buffer,
+        //    sizeof(buffer),
+        //    g_CursorPos,
+        //    results,
+        //    5
+        //);
+
+        DrawSearchSuggestWindow(results, 5);    //æç”»
+
+        // Ctrl + 1ã€œ5 ã§ç¢ºå®š
+        if (ImGui::GetIO().KeyCtrl)
+        {
+            bool TokenAdd = false;
+
+            //if (ImGui::IsKeyPressed(ImGuiKey_1)) { ApplySuggestionByIndex(0, results, buffer, g_CursorPos); TokenAdd = true; }
+            //if (ImGui::IsKeyPressed(ImGuiKey_2)) { ApplySuggestionByIndex(1, results, buffer, g_CursorPos); TokenAdd = true; }
+            //if (ImGui::IsKeyPressed(ImGuiKey_3)) { ApplySuggestionByIndex(2, results, buffer, g_CursorPos); TokenAdd = true; }
+            //if (ImGui::IsKeyPressed(ImGuiKey_4)) { ApplySuggestionByIndex(3, results, buffer, g_CursorPos); TokenAdd = true; }
+            //if (ImGui::IsKeyPressed(ImGuiKey_5)) { ApplySuggestionByIndex(4, results, buffer, g_CursorPos); TokenAdd = true; }
+
+            if(TokenAdd)
+            {
+                ImGui::SetKeyboardFocusHere(-1);
+                g_Files[g_SelectedFileIndex].content = buffer; // â† å¿˜ã‚Œãšåæ˜ 
+                ImGui::ClearActiveID();
+                TokenAdd = false;
+            }
+        }
+
 
         //UpdateSearchAtCursor(buffer, g_CursorPos);
 
@@ -1345,7 +1550,7 @@ void ShowCodeEditorUI()
         if (state)
             g_CursorPos = state->GetCursorPos();
 
-        //// === ƒTƒWƒFƒXƒg—“iƒXƒNƒ[ƒ‹•t‚«j ===
+        //// === ã‚µã‚¸ã‚§ã‚¹ãƒˆæ¬„ï¼ˆã‚¹ã‚¯ãƒ­ãƒ¼ãƒ«ä»˜ãï¼‰ ===
         //std::string currentWord = ExtractWordAtCursor(buffer, g_CursorPos);
         //UpdateSuggestions(currentWord);
 
@@ -1363,7 +1568,7 @@ void ShowCodeEditorUI()
 
         //        if (ImGui::Selectable(g_CurrentSuggestions[i].c_str(), isSelected))
         //        {
-        //            // •âŠ®‘}“üi’Pƒ’Ç‰ÁAƒJ[ƒ\ƒ‹ˆÊ’u‚Ö‚Ì‘}“ü‚É•ÏX‚à‰Â”\j
+        //            // è£œå®ŒæŒ¿å…¥ï¼ˆå˜ç´”è¿½åŠ ã€ã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã¸ã®æŒ¿å…¥ã«å¤‰æ›´ã‚‚å¯èƒ½ï¼‰
         //            file.content += g_CurrentSuggestions[i];
         //            strncpy(buffer, file.content.c_str(), sizeof(buffer) - 1);
         //            buffer[sizeof(buffer) - 1] = '\0';
