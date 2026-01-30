@@ -1517,7 +1517,7 @@ void ShowCodeEditorUI()
         //    results,
         //    5
         //);
-
+        
         DrawSearchSuggestWindow(results, 5);    //描画
 
         // Ctrl + 1〜5 で確定
@@ -1525,11 +1525,11 @@ void ShowCodeEditorUI()
         {
             bool TokenAdd = false;
 
-            //if (ImGui::IsKeyPressed(ImGuiKey_1)) { ApplySuggestionByIndex(0, results, buffer, g_CursorPos); TokenAdd = true; }
-            //if (ImGui::IsKeyPressed(ImGuiKey_2)) { ApplySuggestionByIndex(1, results, buffer, g_CursorPos); TokenAdd = true; }
-            //if (ImGui::IsKeyPressed(ImGuiKey_3)) { ApplySuggestionByIndex(2, results, buffer, g_CursorPos); TokenAdd = true; }
-            //if (ImGui::IsKeyPressed(ImGuiKey_4)) { ApplySuggestionByIndex(3, results, buffer, g_CursorPos); TokenAdd = true; }
-            //if (ImGui::IsKeyPressed(ImGuiKey_5)) { ApplySuggestionByIndex(4, results, buffer, g_CursorPos); TokenAdd = true; }
+            if (ImGui::IsKeyPressed(ImGuiKey_1)) { ApplySuggestionByIndex(0, results, buffer, g_CursorPos); TokenAdd = true; }
+            if (ImGui::IsKeyPressed(ImGuiKey_2)) { ApplySuggestionByIndex(1, results, buffer, g_CursorPos); TokenAdd = true; }
+            if (ImGui::IsKeyPressed(ImGuiKey_3)) { ApplySuggestionByIndex(2, results, buffer, g_CursorPos); TokenAdd = true; }
+            if (ImGui::IsKeyPressed(ImGuiKey_4)) { ApplySuggestionByIndex(3, results, buffer, g_CursorPos); TokenAdd = true; }
+            if (ImGui::IsKeyPressed(ImGuiKey_5)) { ApplySuggestionByIndex(4, results, buffer, g_CursorPos); TokenAdd = true; }
 
             if(TokenAdd)
             {
