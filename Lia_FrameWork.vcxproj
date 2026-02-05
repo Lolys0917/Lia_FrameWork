@@ -172,6 +172,7 @@
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MotionManager.cpp" />
+    <ClCompile Include="NetManager.cpp" />
     <ClCompile Include="ObjectManager.cpp" />
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="ShaderManager.cpp" />

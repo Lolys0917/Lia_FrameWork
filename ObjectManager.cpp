@@ -826,7 +826,7 @@ void UpdateDo()
         s->Play();
         first = false;
     }
-    if (GetInputState(Input::Key_2, 0))
+    /*if (GetInputState(Input::Key_2, 0))
     {
         s->Stop();
 		MessageBox(NULL, "Stop", "Debug", MB_OK);
@@ -839,7 +839,7 @@ void UpdateDo()
     {
         MessageBox(NULL, "ReStart", "Debug", MB_OK);
         s->ReStart();
-    }
+    }*/
 
     ShaderManager_Update();
     UpdateInput();

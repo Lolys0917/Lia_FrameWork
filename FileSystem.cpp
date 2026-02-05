@@ -1376,6 +1376,14 @@ void UpdateSearchAtCursor(
         DebugSearchAtCursor(editorText, cursorPos);
     }
 }
+
+static bool  g_ShowNamePopup = false;
+static bool  g_netStart = false;
+static char  g_NameInput[128] = "";
+bool GetNetStart()
+{
+    return g_netStart;
+}
 void ShowCodeEditorUI()
 {
     /*ImGui::BeginChild("FileList", ImVec2(200, 0), true);
@@ -1462,7 +1470,64 @@ void ShowCodeEditorUI()
         {
             g_StopDLL = true;
         }
+        /////
+		//
+        if (ImGui::Button("Host start"))
+        {
+            g_netStart = true;
+            InitNet(1);
+			MessageBoxA(NULL, GetLocalIP().c_str(), "Hosting Start", MB_OK);
+            Net_AddSendStruct("player", { 0,0,0,0 });
+        }
 
+        if (ImGui::Button("Input IP"))
+        {
+			g_netStart = true;
+            g_ShowNamePopup = true;
+            ImGui::OpenPopup("NameInputPopup");
+            Net_AddSendStruct("player", { 0,0,0,0 });
+        }
+        if (ImGui::BeginPopupModal("NameInputPopup",
+            NULL,
+            ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("プレイヤー名を入力してください");
+
+            // 入力欄
+            ImGui::InputText(
+                "##PlayerName",
+                g_NameInput,
+                sizeof(g_NameInput)
+            );
+
+            ImGui::Spacing();
+
+            //----------------------------------------
+            // OKボタン
+            //----------------------------------------
+            if (ImGui::Button("OK", ImVec2(120, 0)))
+            {
+                printf("input: %s\n", g_NameInput);
+                SetIP(g_NameInput);
+                InitNet(2);
+                
+                g_ShowNamePopup = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine();
+
+            //----------------------------------------
+            // キャンセル
+            //----------------------------------------
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
+            {
+                g_ShowNamePopup = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
         ImGui::BeginChild("EditorChild", ImVec2(0, editorHeight), true, ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoNavInputs);
 
         ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;

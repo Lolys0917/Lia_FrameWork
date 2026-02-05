@@ -132,6 +132,9 @@
     <ClCompile Include="imgui-1.92.2\backends\imgui_impl_win32.cpp">
       <Filter>ソース ファイル\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="NetManager.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ComponentCamera.h">

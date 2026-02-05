@@ -9,6 +9,8 @@ static float g_LeftWidth = 400.0f;
 static float g_Splitter = 5.0f;
 static bool  g_ShowSolution = false;
 
+static bool g_GameFullScreen = false;
+
 // GameView 情報（外部連携用）
 static ImVec2 g_GameViewPos{};
 static ImVec2 g_GameViewSize{};
@@ -146,6 +148,8 @@ static bool g_Built = false;
 //====================================================
 bool GUIUpdate()
 {
+    if (GetKeyState(VK_F1) < 0)
+        g_GameFullScreen = !g_GameFullScreen;
     /*ImGuiIO& io = ImGui::GetIO();
     static ImVec2 prev = { 0,0 };
 
@@ -178,7 +182,6 @@ bool GUIUpdate()
     {
         Debug_ShowKeyMap(&g_UserMap);
     }*/
-
 
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -231,6 +234,7 @@ bool GUIUpdate()
     //GameView 情報取得
     g_GameViewPos = ImGui::GetCursorScreenPos();
     g_GameViewSize = ImGui::GetContentRegionAvail();
+
 
     ImGui::Image(
         (ImTextureID)GetGameViewSRV().Get(),

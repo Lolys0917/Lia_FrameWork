@@ -193,10 +193,10 @@ void CoreStartUp()
     SetGridPos("GridTest", 2, 0, 0);
     SetGridSides("GridTest", 6);
 
-    AddSpriteCylinder("SwTest", "asset/test.png");
-    SetSpriteCylinderPos("SwTest", 4, 0, 0);
-    SetSpriteCylinderAngle("SwTest", 0, 0, 3.14f);
-    SetSpriteCylinderSize("SwTest", 2, 2, 2);
+    AddSpriteWorld("SwTest", "asset/UIDemo.png");
+    SetSpriteWorldPos("SwTest", 4, 0, 0);
+    SetSpriteWorldAngle("SwTest", 0, 0, 3.14f);
+    SetSpriteWorldSize("SwTest", 2, 2, 2);
     
     AddSpriteScreen("SsTest", "asset/UIDemo.png");
     SetSpriteScreenSize("SsTest", 150, 150);
@@ -232,81 +232,34 @@ void CoreStartUp()
 }
 void CoreSceneUpdate()
 {
-	static float rot = 0.0f;
-	rot += 0.0025f;
-    SetModelAngle("Model01", -3.14f / 2, 3.14f + rot, 0);
+	static float X, Y, Z;
+	static float X1, Y1, Z1;
 
-    if (HitToTag("player", "enemyTag"))
+    if(GetNetStart())
     {
-        MessageBoxA(NULL, "Hit", "Hit", S_OK);
+
+        GetKeyState(VK_UP) & 0x8000 ? Z += 0.1f : 0;
+        GetKeyState(VK_DOWN) & 0x8000 ? Z -= 0.1f : 0;
+        GetKeyState(VK_LEFT) & 0x8000 ? X -= 0.1f : 0;
+        GetKeyState(VK_RIGHT) & 0x8000 ? X += 0.1f : 0;
+
+        GetObjectDataPool()->g_SendValues.data[0].X = X;
+        GetObjectDataPool()->g_SendValues.data[0].Y = Y;
+        GetObjectDataPool()->g_SendValues.data[0].Z = Z;
+        SetGridPos("GridBoxTest", X, Y, Z);
+
+        Vec4 r = GetObjectDataPool()->g_RecvValues.data[0];
+        SetModelPos("ModelTest", 
+            r.X,
+            r.Y,
+            r.Z);
+        SetGridPos("GridTest",
+            r.X,
+            r.Y,
+            r.Z);
+
+        UpdateNet();
     }
-
-    static float pos = -3.0f;
-	pos += 0.01f;
-    SetGridPos("BoxA", pos, 0, 0);
-
-    SetCameraPos("SubCamera", 5, 6, -7);
-
-    static float Reel = 0.0f;
-    static float Reel1 = 0.0f;
-    static float Reel2 = 0.0f;
-    static float angle = 0;
-    static float angle1 = 0;
-    static float angle2 = 0;
-    static bool moveF = false;
-    static bool moveF1 = false;
-    static bool moveF2 = false;
-    
-    if (GetKeyState('A') < 0)
-        moveF = false;
-
-    if (GetInputState(Input::Key_1, 0))
-    {
-        moveF = false;
-    }
-
-    if (GetKeyState('S') < 0)
-        moveF1 = false;
-
-    if (GetKeyState('D') < 0)
-        moveF2 = false;
-
-    if (GetKeyState(VK_SPACE) < 0)
-    {
-        moveF = true;
-        moveF1 = true;
-        moveF2 = true;
-    }
-
-
-    if (moveF)
-        Reel = 0.1f;
-    else
-        Reel = 0.0f;
-
-    if (moveF1)
-        Reel1 = 0.1f;
-    else
-        Reel1 = 0.0f;
-
-    if (moveF2)
-        Reel2 = 0.1f;
-    else
-        Reel2 = 0.0f;
-
-
-    angle += Reel;
-    angle1 += Reel1;
-    angle2 += Reel2;
-
-    SetSpriteCylinderAngle("Cylinder01", angle, 0, 1.56);
-    SetSpriteCylinderSize("Cylinder01", 2, 1, 2);
-
-    SetSpriteCylinderAngle("Cylinder02", angle1, 0, 1.56);
-    SetSpriteCylinderSize("Cylinder02", 2, 1, 2);
-
-    SetSpriteCylinderAngle("Cylinder03", angle2, 0, 1.56);
-    SetSpriteCylinderSize("Cylinder03", 2, 1, 2);
 }
 void CoreSceneDraw()
 {
