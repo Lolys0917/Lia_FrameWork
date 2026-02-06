@@ -206,6 +206,12 @@ void CoreStartUp()
     SetModelSize("ModelTest", 0.022f, 0.022f, 0.022f);
     SetModelAngle("ModelTest", -3.14f / 2, 3.14f, 0);
 
+    AddModel("ModelTest1", "asset/Alicia_solid_Unity.FBX");
+    SetModelPos("ModelTest1", -2.0f, 0, -2);
+    SetModelSize("ModelTest1", 0.022f, 0.022f, 0.022f);
+    SetModelAngle("ModelTest1", -3.14f / 2, 3.14f, 0);
+
+
     // --- ƒV[ƒ“‚²‚Æ‚ÌƒJƒƒ‰Š„“– ---
     SetSceneCamera("Scene3", "SubCamera");
     SetSceneCamera("Scene1", "MainCamera");
@@ -248,6 +254,9 @@ void CoreSceneUpdate()
         GetObjectDataPool()->g_SendValues.data[0].Z = Z;
         SetGridPos("GridBoxTest", X, Y, Z);
 
+        SetModelPos("ModelTest1", X, Y, Z);
+
+
         Vec4 r = GetObjectDataPool()->g_RecvValues.data[0];
         SetModelPos("ModelTest", 
             r.X,
@@ -257,6 +266,11 @@ void CoreSceneUpdate()
             r.X,
             r.Y,
             r.Z);
+
+        if (r.X > 3)
+        {
+            MessageBoxA(NULL, "AA", "AA", MB_OK);
+        }
 
         UpdateNet();
     }

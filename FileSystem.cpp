@@ -1476,8 +1476,8 @@ void ShowCodeEditorUI()
         {
             g_netStart = true;
             InitNet(1);
-			MessageBoxA(NULL, GetLocalIP().c_str(), "Hosting Start", MB_OK);
             Net_AddSendStruct("player", { 0,0,0,0 });
+			MessageBoxA(NULL, GetLocalIP().c_str(), "Hosting Start", MB_OK);
         }
 
         if (ImGui::Button("Input IP"))
