@@ -861,7 +861,7 @@ void DrawFileList()
         // =========================
         // 右クリックメニュー
         // =========================
-        if (ImGui::BeginPopupContextItem()) // ← 右クリック
+        if (ImGui::BeginPopupContextItem()) //右クリック
         {
             if (ImGui::MenuItem("Delete"))
             {
@@ -988,19 +988,15 @@ static void ExtractTokensFromText(
 
     for (int i = 0; i < len; i++)
     {
-        if (i != 0 && !IsTokenStartChar(text[i - 1]))
-            continue;
-
         if (!IsIdentifierHead(text[i]))
             continue;
 
         int start = i;
+
         while (i < len && !IsTokenEndChar(text[i]))
             i++;
 
         int end = i;
-        if (end <= start)
-            continue;
 
         std::string name(text + start, end - start);
 
@@ -1008,21 +1004,14 @@ static void ExtractTokensFromText(
         if (end < len && text[end] == '(')
             kind = TOKEN_FUNCTION;
 
-        bool found = false;
-        for (auto& t : outTokens)
-        {
-            if (t.name == name && t.type == kind)
+        outTokens.push_back(
             {
-                t.defineCount++;
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-        {
-            outTokens.push_back({ name, kind, 1 });
-        }
+                name,
+                kind,
+                1,
+                start,
+                end
+            });
     }
 }
 //----------------------------------------------------
@@ -1384,36 +1373,109 @@ bool GetNetStart()
 {
     return g_netStart;
 }
+
+//
+//シンタックスハイライト
+//
+struct HighlightToken
+{
+    std::string text;
+    ImU32 color;
+};
+
+bool IsKeyword(const std::string& s)
+{
+    static const char* keywords[] =
+    {
+        "int","float","double","if","else","for","while",
+        "return","class","struct","void","static","const"
+    };
+
+    for (auto& k : keywords)
+        if (s == k) return true;
+
+    return false;
+}
+
+void TokenizeHighlight(const char* src, std::vector<HighlightToken>& out)
+{
+    out.clear();
+
+    std::string buf;
+
+    for (const char* p = src; *p; ++p)
+    {
+        char c = *p;
+
+        if (isalnum(c) || c == '_')
+        {
+            buf += c;
+        }
+        else
+        {
+            if (!buf.empty())
+            {
+                HighlightToken t;
+
+                t.text = buf;
+
+                if (IsKeyword(buf))
+                    t.color = IM_COL32(80, 160, 255, 255); // 青
+                else
+                    t.color = IM_COL32(220, 220, 220, 255);
+
+                out.push_back(t);
+
+                buf.clear();
+            }
+
+            HighlightToken t;
+            t.text = std::string(1, c);
+            t.color = IM_COL32(200, 200, 200, 255);
+
+            out.push_back(t);
+        }
+    }
+}
+void DrawSyntaxHighlight(const char* text)
+{
+    static std::vector<HighlightToken> tokens;
+
+    TokenizeHighlight(text, tokens);
+
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+
+    ImVec2 start = ImGui::GetItemRectMin();
+
+    float x = start.x + 5;
+    float y = start.y + 5;
+
+    for (auto& t : tokens)
+    {
+        draw->AddText(ImVec2(x, y), t.color, t.text.c_str());
+
+        x += ImGui::CalcTextSize(t.text.c_str()).x;
+
+        if (t.text == "\n")
+        {
+            x = start.x + 5;
+            y += ImGui::GetTextLineHeight();
+        }
+    }
+}
+
+//
+//ウィンドウ右部分実装
+//
 void ShowCodeEditorUI()
 {
-    /*ImGui::BeginChild("FileList", ImVec2(200, 0), true);
-    ImGui::Text("Files:");
-    ImGui::Separator();
-
-    for (int i = 0; i < (int)g_Files.size(); i++)
-    {
-        ImGui::PushID(i);
-        bool isSelected = (g_SelectedFileIndex == i);
-        if (ImGui::Selectable(g_Files[i].fileName.c_str(), isSelected))
-            g_SelectedFileIndex = i;
-        ImGui::SameLine();
-        if (ImGui::Button("Del")) { RemoveFile(i); ImGui::PopID(); break; }
-        ImGui::PopID();
-    }
-
-    ImGui::Separator();
-    if (ImGui::Button("Add Header")) OpenAddNewFileWindow(CodeFile::Type::Header);
-    if (ImGui::Button("Add CPP")) OpenAddNewFileWindow(CodeFile::Type::Cpp);
-    ImGui::EndChild();
-
-    ImGui::SameLine();*/
-
     ImGui::BeginGroup();
     ImGui::Text("Editor:");
 
     if (g_SelectedFileIndex >= 0)
     {
         auto& file = g_Files[g_SelectedFileIndex];
+        //ファイル切り替え時に読込
         if (g_LastLoadedFileName != file.fileName)
         {
             strncpy(buffer, file.content.c_str(), sizeof(buffer) - 1);
@@ -1528,25 +1590,43 @@ void ShowCodeEditorUI()
 
             ImGui::EndPopup();
         }
-        ImGui::BeginChild("EditorChild", ImVec2(0, editorHeight), true, ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoNavInputs);
 
-        ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
-        if (ImGui::InputTextMultiline("##source", buffer, sizeof(buffer), ImVec2(-1, -1), flags))
+        static CodeEditorState editor;
+
+        if (g_LastLoadedFileName != file.fileName)
         {
-            file.content = buffer;
+            editor.text = file.content;
+            editor.cursor = 0;
+
+            strncpy(buffer, editor.text.c_str(), sizeof(buffer) - 1);
+            buffer[sizeof(buffer) - 1] = '\0';
+
+            g_LastLoadedFileName = file.fileName;
         }
+
+        ImGui::BeginChild("EditorChild", ImVec2(0, editorHeight), true);
+
+        CodeEditorInput(editor);
+        CodeEditorDraw(editor);
+
+        file.content = editor.text;
+
+        strncpy(buffer, editor.text.c_str(), sizeof(buffer) - 1);
+        buffer[sizeof(buffer) - 1] = '\0';
+
+        g_CursorPos = editor.cursor;
 
         // --- カーソル位置検索取得 ---
         static std::vector<Token> tokens;
         static std::vector<SearchResult> results;
 
         tokens.clear();
-        ExtractTokensFromText(buffer, tokens);
+        ExtractTokensFromText(editor.text.c_str(), tokens);
 
         std::string query;
         TokenKind kind;
 
-        if (ExtractTokenAtCursor(buffer, g_CursorPos - 1, query, kind))
+        if (ExtractTokenAtCursor(editor.text, editor.cursor - 1, query, kind))
         {
             SearchTokens(tokens, query, results);
         }
@@ -1554,34 +1634,6 @@ void ShowCodeEditorUI()
         {
             results.clear();
         }
-
-        //==============================
-        // サジェスト描画
-        //==============================
-        //for (int i = 0; i < (int)results.size() && i < 5; i++)
-        //{
-        //    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) &&
-        //        (GetAsyncKeyState('1' + i) & 0x8000))
-        //    {
-        //        ReplaceTokenAtCursor(
-        //            buffer,
-        //            sizeof(buffer),
-        //            g_CursorPos,
-        //            results[i].token.name
-        //        );
-
-        //        // file.content にも反映
-        //        g_Files[g_SelectedFileIndex].content = buffer;
-        //        break;
-        //    }
-        //}
-        //HandleSuggestConfirm(                   //サジェスト適応
-        //    buffer,
-        //    sizeof(buffer),
-        //    g_CursorPos,
-        //    results,
-        //    5
-        //);
         
         DrawSearchSuggestWindow(results, 5);    //描画
 
@@ -1604,49 +1656,11 @@ void ShowCodeEditorUI()
                 TokenAdd = false;
             }
         }
-
-
-        //UpdateSearchAtCursor(buffer, g_CursorPos);
-
-
         
         ImGuiID id = ImGui::GetID("##source");
         ImGuiInputTextState* state = ImGui::GetInputTextState(id);
         if (state)
             g_CursorPos = state->GetCursorPos();
-
-        //// === サジェスト欄（スクロール付き） ===
-        //std::string currentWord = ExtractWordAtCursor(buffer, g_CursorPos);
-        //UpdateSuggestions(currentWord);
-
-        //if (!g_CurrentSuggestions.empty())
-        //{
-        //    ImVec2 suggestBoxPos = ImGui::GetItemRectMin() + ImVec2(ImGui::GetItemRectSize().x - 220, 0);
-        //    ImGui::SetCursorScreenPos(suggestBoxPos);
-        //    ImGui::BeginChild("##SuggestionScroll", ImVec2(200, 150), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
-
-        //    static int selectedIndex = -1;
-
-        //    for (int i = 0; i < g_CurrentSuggestions.size(); ++i)
-        //    {
-        //        bool isSelected = (i == selectedIndex);
-
-        //        if (ImGui::Selectable(g_CurrentSuggestions[i].c_str(), isSelected))
-        //        {
-        //            // 補完挿入（単純追加、カーソル位置への挿入に変更も可能）
-        //            file.content += g_CurrentSuggestions[i];
-        //            strncpy(buffer, file.content.c_str(), sizeof(buffer) - 1);
-        //            buffer[sizeof(buffer) - 1] = '\0';
-
-        //            selectedIndex = -1;
-        //        }
-
-        //        if (isSelected)
-        //            ImGui::SetScrollHereY(0.5f);
-        //    }
-
-        //    ImGui::EndChild();
-        //}
 
         ImGui::EndChild(); // EditorChild
 
