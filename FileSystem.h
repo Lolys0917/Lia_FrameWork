@@ -29,3 +29,5 @@ void UpdateSearchAtCursor(
     const std::string& editorText,
     int cursorPos
 );
+void RunningGame();
+bool GetGameRunning();

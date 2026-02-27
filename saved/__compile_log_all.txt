@@ -1,6 +1,7 @@
 **********************************************************************
-** Visual Studio 2022 Developer Command Prompt v17.7.4
-** Copyright (c) 2022 Microsoft Corporation
+** Visual Studio 2022 Developer Command Prompt v17.14.26
+** Copyright (c) 2025 Microsoft Corporation
 **********************************************************************
 [vcvarsall.bat] Environment initialized for: 'x64'
 Main.cpp
+   ライブラリ saved/dll/user.lib とオブジェクト saved/dll/user.exp を作成中

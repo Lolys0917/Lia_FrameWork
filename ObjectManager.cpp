@@ -6,6 +6,7 @@
 // Manager.h経由でSceneManagerと連携し、シーンごとのオブジェクト管理を行う
 // ObjectManagerはシーン内のオブジェクトを管理し、必要に応じて生成・削除を行う。
 
+#define SYSTEM_EXPORTS
 #include "Manager.h"
 #include "ComponentCamera.h"
 #include "ComponentSpriteScreen.h"
@@ -58,7 +59,7 @@ int GetUseCamera() { return UseCamera; }
 //-----------------------------------------
 // Camera管理
 //-----------------------------------------
-void AddCamera(const char* name) {
+extern "C" SYSTEM_API void AddCamera(const char* name) {
     int typeIdx = ct.CT_Camera;
     Vec4_PushBack(&g_ObjectPool.CameraInfo, {
         (float)GetCurrentSceneIndex(),
@@ -75,22 +76,22 @@ void AddCamera(const char* name) {
     // 初回カメラはルート使用カメラにしておく（安全）
     if (UseCamera < 0) UseCamera = 0;
 }
-void SetCameraPos(const char* name, float x, float y, float z) {
+extern "C" SYSTEM_API void SetCameraPos(const char* name, float x, float y, float z) {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CameraMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetCameraPos: camera not found: ", name)); return; }
     Vec4_Set(&g_ObjectPool.CameraPos, idx, { x,y,z,0 });
 }
-void SetCameraLook(const char* name, float x, float y, float z) {
+extern "C" SYSTEM_API void SetCameraLook(const char* name, float x, float y, float z) {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CameraMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetCameraLook: camera not found: ", name)); return; }
     Vec4_Set(&g_ObjectPool.CameraLook, idx, { x,y,z,0 });
 }
-void UseCameraSet(const char* name) {
+extern "C" SYSTEM_API void UseCameraSet(const char* name) {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CameraMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("UseCameraSet: camera not found: ", name)); return; }
     UseCamera = idx;
 }
-void SetUseCamera(int index) {
+extern "C" SYSTEM_API void SetUseCamera(int index) {
     if (index < 0) { UseCamera = index; return; }
     if (index >= CameraIndex) {
         AddMessage(ConcatCStr("SetUseCamera: invalid index ", std::to_string(index).c_str()));
@@ -102,7 +103,7 @@ void SetUseCamera(int index) {
 //-----------------------------------------
 // SpriteWorld
 //-----------------------------------------
-void AddSpriteWorld(const char* name, const char* pathName)
+extern "C" SYSTEM_API void AddSpriteWorld(const char* name, const char* pathName)
 {
     int typeIdx = ct.CT_SpriteWorld;
     Vec4_PushBack(&g_ObjectPool.SpriteWorldInfo, {
@@ -119,25 +120,25 @@ void AddSpriteWorld(const char* name, const char* pathName)
     SpriteWorldIndex++;
     ObjectIdx.SpriteWorldIndex = SpriteWorldIndex;
 }
-void SetSpriteWorldPos(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetSpriteWorldPos(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteWorldMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteWorldPos : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteWorldPos, idx, { x,y,z,0 });
 }
-void SetSpriteWorldSize(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetSpriteWorldSize(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteWorldMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteWorldSize : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteWorldSize, idx, { x,y,z,0 });
 }
-void SetSpriteWorldAngle(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetSpriteWorldAngle(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteWorldMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteWorldAngle : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteWorldAngle, idx, { x,y,z,0 });
 }
-void SetSpriteWorldColor(const char* name, float r, float g, float b, float a)
+extern "C" SYSTEM_API void SetSpriteWorldColor(const char* name, float r, float g, float b, float a)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteWorldMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteWorldAngle : sprite not found", name)); return; }
@@ -147,7 +148,7 @@ void SetSpriteWorldColor(const char* name, float r, float g, float b, float a)
 //-----------------------------------------
 // SpriteScreen
 //-----------------------------------------
-void AddSpriteScreen(const char* name, const char* pathName)
+extern "C" SYSTEM_API void AddSpriteScreen(const char* name, const char* pathName)
 {
     int typeIdx = ct.CT_SpriteScreen;
     Vec4_PushBack(&g_ObjectPool.SpriteScreenInfo, {
@@ -164,26 +165,26 @@ void AddSpriteScreen(const char* name, const char* pathName)
     SpriteScreenIndex++;
     ObjectIdx.SpriteScreenIndex = SpriteScreenIndex;
 }
-void SetSpriteScreenPos(const char* name, float x, float y)
+extern "C" SYSTEM_API void SetSpriteScreenPos(const char* name, float x, float y)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteScreenMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteScreenPos : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteScreenPos, idx, { x, y, 0, 0 });
 }
 
-void SetSpriteScreenSize(const char* name, float x, float y)
+extern "C" SYSTEM_API void SetSpriteScreenSize(const char* name, float x, float y)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteScreenMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteScreenSize : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteScreenSize, idx, { x, y, 1, 1 });
 }
-void SetSpriteScreenAngle(const char* name, float angle)
+extern "C" SYSTEM_API void SetSpriteScreenAngle(const char* name, float angle)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteScreenMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteScreenAngle : sprite not found", name)); return; }
     VecInt_Set(&g_ObjectPool.SpriteScreenAngle, idx, angle);
 }
-void SetSpriteScreenColor(const char* name, float r, float g, float b, float a)
+extern "C" SYSTEM_API void SetSpriteScreenColor(const char* name, float r, float g, float b, float a)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteScreenMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteScreenColor : sprite not found", name)); return; }
@@ -192,7 +193,7 @@ void SetSpriteScreenColor(const char* name, float r, float g, float b, float a)
 //-----------------------------------------
 // SpriteBox
 //-----------------------------------------
-void AddSpriteBox(const char* name, const char* pathName)
+extern "C" SYSTEM_API void AddSpriteBox(const char* name, const char* pathName)
 {
     int typeIdx = ct.CT_SpriteBox;
     Vec4_PushBack(&g_ObjectPool.SpriteBoxInfo, {
@@ -214,67 +215,67 @@ void AddSpriteBox(const char* name, const char* pathName)
     SpriteBoxIndex++;
     ObjectIdx.SpriteBoxIndex = SpriteBoxIndex;
 }
-void SetSpriteBoxPos(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetSpriteBoxPos(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if(idx < 0){ return; }
     Vec4_Set(&g_ObjectPool.SpriteBoxPos, idx, { x,y,z,0 });
 }
-void SetSpriteBoxSize(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetSpriteBoxSize(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if (idx < 0) { return; }
     Vec4_Set(&g_ObjectPool.SpriteBoxSize, idx, { x,y,z,0 });
 }
-void SetSpriteBoxAngle(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetSpriteBoxAngle(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if (idx < 0) { return; }
     Vec4_Set(&g_ObjectPool.SpriteBoxAngle, idx, { x,y,z,0 });
 }
-void SetSpriteBoxColor(const char* name, float r, float g, float b, float a)
+extern "C" SYSTEM_API void SetSpriteBoxColor(const char* name, float r, float g, float b, float a)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if (idx < 0) { return; }
     Vec4_Set(&g_ObjectPool.SpriteBoxColor, idx, { r,g,b,a });
 }
-void SetSpriteBoxTextureTop(const char* name, const char* pathName)
+extern "C" SYSTEM_API void SetSpriteBoxTextureTop(const char* name, const char* pathName)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if (idx < 0) { return; }
     KeyMap_SetKey(&g_ObjectPool.SpriteBoxTopTexturePathMap, idx, pathName);
 }
-void SetSpriteBoxTextureBottom(const char* name, const char* pathName)
+extern "C" SYSTEM_API void SetSpriteBoxTextureBottom(const char* name, const char* pathName)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if (idx < 0) { return; }
     KeyMap_SetKey(&g_ObjectPool.SpriteBoxBottomTexturePathMap, idx, pathName);
 }
-void SetSpriteBoxTextureFront(const char* name, const char* pathName)
+extern "C" SYSTEM_API void SetSpriteBoxTextureFront(const char* name, const char* pathName)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if (idx < 0) { return; }
     KeyMap_SetKey(&g_ObjectPool.SpriteBoxFrontTexturePathMap, idx, pathName);
 }
-void SetSpriteBoxTextureRear(const char* name, const char* pathName)
+extern "C" SYSTEM_API void SetSpriteBoxTextureRear(const char* name, const char* pathName)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if (idx < 0) { return; }
     KeyMap_SetKey(&g_ObjectPool.SpriteBoxRearTexturePathMap, idx, pathName);
 }
-void SetSpriteBoxTextureLeft(const char* name, const char* pathName)
+extern "C" SYSTEM_API void SetSpriteBoxTextureLeft(const char* name, const char* pathName)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if (idx < 0) { return; }
     KeyMap_SetKey(&g_ObjectPool.SpriteBoxLeftTexturePathMap, idx, pathName);
 }
-void SetSpriteBoxTextureRight(const char* name, const char* pathName)
+extern "C" SYSTEM_API void SetSpriteBoxTextureRight(const char* name, const char* pathName)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteBoxMap, name);
     if (idx < 0) { return; }
     KeyMap_SetKey(&g_ObjectPool.SpriteBoxRightTexturePathMap, idx, pathName);
 }
-void SetSpriteBoxTexture(const char* name, const char* pathName)
+extern "C" SYSTEM_API void SetSpriteBoxTexture(const char* name, const char* pathName)
 {
     SetSpriteBoxTextureTop(name, pathName);
     SetSpriteBoxTextureBottom(name, pathName);
@@ -287,7 +288,7 @@ void SetSpriteBoxTexture(const char* name, const char* pathName)
 //-----------------------------------------
 // SpriteCylinder
 //-----------------------------------------
-void AddSpriteCylinder(const char* name, const char* pathName)
+extern "C" SYSTEM_API void AddSpriteCylinder(const char* name, const char* pathName)
 {
     int typeIdx = ct.CT_SpriteCylinder;
     Vec4_PushBack(
@@ -308,49 +309,49 @@ void AddSpriteCylinder(const char* name, const char* pathName)
     SpriteCylinderIndex++;
     ObjectIdx.SpriteCylinderIndex = SpriteCylinderIndex;
 }
-void SetSpriteCylinderPos(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetSpriteCylinderPos(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderPos : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteCylinderPos, idx, { x,y,z,0 });
 }
-void SetSpriteCylinderSize(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetSpriteCylinderSize(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderSize : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteCylinderSize, idx, { x,y,z,0 });
 }
-void SetSpriteCylinderAngle(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetSpriteCylinderAngle(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderAngle : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteCylinderAngle, idx, { x,y,z,0 });
 }
-void SetSpriteCylinderColor(const char* name, float r, float g, float b, float a)
+extern "C" SYSTEM_API void SetSpriteCylinderColor(const char* name, float r, float g, float b, float a)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderColor : sprite not found", name)); return; }
     Vec4_Set(&g_ObjectPool.SpriteCylinderColor, idx, { r,g,b,a });
 }
-void SetSpriteCylinderSegment(const char* name, int segment)
+extern "C" SYSTEM_API void SetSpriteCylinderSegment(const char* name, int segment)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
     if (idx < 0) { AddMessage(ConcatCStr("SetSpriteCylinderSegment : sprite not found", name)); return; }
     VecInt_Set(&g_ObjectPool.SpriteCylinderSegment, idx, segment);
 }
-void SetSpriteCylinderTextureSide(const char* name, const char* pathName){
+extern "C" SYSTEM_API void SetSpriteCylinderTextureSide(const char* name, const char* pathName){
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
     if (idx < 0) { AddMessage("SetSpriteCylinderSideTexture : sprite not found"); return; }
 
     KeyMap_SetKey(&g_ObjectPool.SpriteCylinderSideTexturePathMap, idx, pathName);
 }
-void SetSpriteCylinderTextureTop(const char* name, const char* pathName){
+extern "C" SYSTEM_API void SetSpriteCylinderTextureTop(const char* name, const char* pathName){
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
     if (idx < 0) { AddMessage("SetSpriteCylinderTopTexture : sprite not found"); return; }
 
     KeyMap_SetKey(&g_ObjectPool.SpriteCylinderTopTexturePathMap, idx, pathName);
 }
-void SetSpriteCylinderTextureBottom(const char* name, const char* pathName){
+extern "C" SYSTEM_API void SetSpriteCylinderTextureBottom(const char* name, const char* pathName){
     int idx = KeyMap_GetIndex(&g_ObjectPool.SpriteCylinderMap, name);
     if (idx < 0) { AddMessage("SetSpriteCylinderBottomTexture : sprite not found"); return; }
 
@@ -360,7 +361,7 @@ void SetSpriteCylinderTextureBottom(const char* name, const char* pathName){
 //-----------------------------------------
 // Grid管理
 //-----------------------------------------
-void AddGrid(const char* name, GridType type)
+extern "C" SYSTEM_API void AddGrid(const char* name, GridType type)
 {
     int typeIdx = ct.CT_Grid;
     Vec4_PushBack(&g_ObjectPool.GridInfo, { 
@@ -383,31 +384,31 @@ void AddGrid(const char* name, GridType type)
 
     //NotifyAddObject(IndexType::Grid);
 }
-void SetGridPos(const char* Name, float x, float y, float z)
+extern "C" SYSTEM_API void SetGridPos(const char* Name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxPos: not found ", Name)); return; }
     Vec4_Set(&g_ObjectPool.GridPos, idx, { x,y,z,0 });
 }
-void SetGridSize(const char* Name, float x, float y, float z)
+extern "C" SYSTEM_API void SetGridSize(const char* Name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxSize: not found ", Name)); return; }
     Vec4_Set(&g_ObjectPool.GridSize, idx, { x,y,z,0 });
 }
-void SetGridAngle(const char* Name, float x, float y, float z)
+extern "C" SYSTEM_API void SetGridAngle(const char* Name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxAngle: not found ", Name)); return; }
     Vec4_Set(&g_ObjectPool.GridAngle, idx, { x,y,z,0 });
 }
-void SetGridColor(const char* Name, float R, float G, float B, float A)
+extern "C" SYSTEM_API void SetGridColor(const char* Name, float R, float G, float B, float A)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxColor: not found ", Name)); return; }
     Vec4_Set(&g_ObjectPool.GridColor, idx, { R,G,B,A });
 }
-void SetGridSides(const char* Name, int sides)
+extern "C" SYSTEM_API void SetGridSides(const char* Name, int sides)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.GridMap, Name);
     if (idx < 0) { AddMessage(ConcatCStr("SetGridBoxSides: not found ", Name)); return; }
@@ -417,7 +418,7 @@ void SetGridSides(const char* Name, int sides)
 //==================================
 // Model
 //==================================
-void AddModel(const char* name, const char* pathName)
+extern "C" SYSTEM_API void AddModel(const char* name, const char* pathName)
 {
     int typeIdx = ct.CT_Model;
     Vec4_PushBack(&g_ObjectPool.ModelInfo, {
@@ -435,22 +436,22 @@ void AddModel(const char* name, const char* pathName)
     ModelIndex++;
     ObjectIdx.ModelIndex = ModelIndex;
 }
-void SetModelPos(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetModelPos(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.ModelMap, name);
     Vec4_Set(&g_ObjectPool.ModelPos, idx, {x,y,z,0});
 }
-void SetModelSize(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetModelSize(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.ModelMap, name);
     Vec4_Set(&g_ObjectPool.ModelSize, idx, { x,y,z,1 });
 }
-void SetModelAngle(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetModelAngle(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.ModelMap, name);
     Vec4_Set(&g_ObjectPool.ModelAngle, idx, { x,y,z,0 });
 }
-void SetModelTexture(const char* name, const char* pathName)
+extern "C" SYSTEM_API void SetModelTexture(const char* name, const char* pathName)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.ModelMap, name);
     KeyMap_SetKey(&g_ObjectPool.ModelTextureMap, idx, pathName);
@@ -460,7 +461,7 @@ void SetModelTexture(const char* name, const char* pathName)
 //========================================
 // Collision
 //========================================
-void AddCollision(const char* name, const char* tag)
+extern "C" SYSTEM_API void AddCollision(const char* name, const char* tag)
 {
     KeyMap_Add(&g_ObjectPool.CollisionMap, name);
     KeyMap_Add(&g_ObjectPool.CollisionTagMap, tag);
@@ -474,19 +475,19 @@ void AddCollision(const char* name, const char* tag)
     ObjectIdx.CollisionIndex = CollisionIndex;
 }
 //内部機能性関数------------------------------
-int Collision_GetIndexByName(const char* name)
+extern "C" SYSTEM_API int Collision_GetIndexByName(const char* name)
 {
     return KeyMap_GetIndex(&GetObjectDataPool()->CollisionMap, name);
 }
-int Collision_GetIndexByTag(const char* tag)
+extern "C" SYSTEM_API int Collision_GetIndexByTag(const char* tag)
 {
     return KeyMap_GetIndex(&GetObjectDataPool()->CollisionTagMap, tag);
 }
-const char* Collision_GetTagByIndex(int idx)
+extern "C" SYSTEM_API const char* Collision_GetTagByIndex(int idx)
 {
     return KeyMap_GetKey(&GetObjectDataPool()->CollisionTagMap, idx);
 }
-int Collision_Find(const char* name, const char* tag)
+extern "C" SYSTEM_API int Collision_Find(const char* name, const char* tag)
 {
     ObjectDataPool* p = GetObjectDataPool();
     int total = GetObjectIndex()->CollisionIndex;
@@ -502,7 +503,7 @@ int Collision_Find(const char* name, const char* tag)
     return -1;
 }
 
-bool Collision_TagAllow(int idx1, int idx2)
+extern "C" SYSTEM_API bool Collision_TagAllow(int idx1, int idx2)
 {
     //ALLに入れられたら全てと判定する
     const char* tag1 = Collision_GetTagByIndex(idx1);
@@ -513,7 +514,7 @@ bool Collision_TagAllow(int idx1, int idx2)
 
     return strcmp(tag1, tag2) == 0;
 }
-bool HitJudgeTo(int idx1, int idx2)
+extern "C" SYSTEM_API bool HitJudgeTo(int idx1, int idx2)
 {
     //HitToName用
 
@@ -543,7 +544,7 @@ bool HitJudgeTo(int idx1, int idx2)
     }
     return false;
 }
-void UpdateCollisionFromParent(int colIndex)
+extern "C" SYSTEM_API void UpdateCollisionFromParent(int colIndex)
 {
     ObjectDataPool* p = GetObjectDataPool();
     const char* parentName = KeyMap_GetKey(&p->CollisionParentMap, colIndex);
@@ -555,7 +556,7 @@ void UpdateCollisionFromParent(int colIndex)
 }
 
 //API用関数------------------------
-bool HitToTag(const char* name, const char* tag)
+extern "C" SYSTEM_API bool HitToTag(const char* name, const char* tag)
 {
     ObjectDataPool* p = GetObjectDataPool();
     int total = GetObjectIndex()->CollisionIndex;
@@ -607,7 +608,7 @@ bool HitToTag(const char* name, const char* tag)
 
     return false;
 }
-bool HitToName(const char* name1, const char* name2)
+extern "C" SYSTEM_API bool HitToName(const char* name1, const char* name2)
 {
     int idx1 = Collision_GetIndexByName(name1);
     int idx2 = Collision_GetIndexByName(name2);
@@ -617,27 +618,27 @@ bool HitToName(const char* name1, const char* name2)
 
     return HitJudgeTo(idx1, idx2);
 }
-void SetCollisionParent(const char* name, const char* parent)
+extern "C" SYSTEM_API void SetCollisionParent(const char* name, const char* parent)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
     KeyMap_SetKey(&g_ObjectPool.CollisionParentMap, idx, parent);
 }
-void SetCollisionPos(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetCollisionPos(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
     Vec4_Set(&g_ObjectPool.CollisionPos, idx, { x,y,z,0 });
 }
-void SetCollisionSize(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetCollisionSize(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
     Vec4_Set(&g_ObjectPool.CollisionSize, idx, { x,y,z,1 });
 }
-void SetCollisionAngle(const char* name, float x, float y, float z)
+extern "C" SYSTEM_API void SetCollisionAngle(const char* name, float x, float y, float z)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
     Vec4_Set(&g_ObjectPool.CollisionAngle, idx, { x,y,z,0 });
 }
-void SetCollisionType(const char* name, CollisionType type)
+extern "C" SYSTEM_API void SetCollisionType(const char* name, CollisionType type)
 {
     int idx = KeyMap_GetIndex(&g_ObjectPool.CollisionMap, name);
     VecInt_Set(&g_ObjectPool.CollisionType, idx, type);
@@ -649,7 +650,7 @@ void SetCollisionType(const char* name, CollisionType type)
 //////////////////////
 //
 // オブジェクトの作成・管理
-void CreateObject()
+extern "C" SYSTEM_API void CreateObject()
 {
 	//※ コンポーネント(ObjectClass内)のみ追加する
     if (!object) return;

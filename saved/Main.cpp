@@ -11,3 +11,8 @@ int main()
 
 	int e;
 }
+
+extern "C" __declspec(dllexport) void Init()
+{
+ int item;
+}

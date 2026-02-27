@@ -274,6 +274,11 @@ void CoreSceneUpdate()
 
         UpdateNet();
     }
+    RunningGame();
+    if (GetGameRunning())
+    {
+
+    }
 }
 void CoreSceneDraw()
 {

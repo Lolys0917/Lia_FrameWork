@@ -13,6 +13,13 @@
 
 #pragma once
 
+//API_SETTING ___________________
+#ifdef SYSTEM_EXPORTS
+#define SYSTEM_API __declspec(dllexport)
+#else
+#define SYSTEM_API __declspec(dllimport)
+#endif
+
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 
@@ -371,99 +378,98 @@ ObjectDataPool* GetObjectDataPool();
  // ObjectManager //
 ///////////////////
 //↓API用関数 //////////////////////
-//
 //|| 管理   ||_______________________
 void InitDo();
 void UpdateDo();
 void DrawDo();
 void ReleaseDo();
 //|| Camera ||_______________________
-void AddCamera(const char* name);                                                   //カメラの追加
-void SetCameraPos(const char* name, float x, float y, float z);                     //カメラの座標設定
-void SetCameraLook(const char* name, float x, float y, float z);                    //カメラの注視点設定
-void UseCameraSet(const char* name);                                                //使用するカメラの設定
-int GetUseCamera();                                                                 //使用するカメラのインデックスを取得
-void SetUseCamera(int index);                                                       //使用するカメラをインデックスで指定
+extern "C" SYSTEM_API void AddCamera(const char* name);                                                   //カメラの追加
+extern "C" SYSTEM_API void SetCameraPos(const char* name, float x, float y, float z);                     //カメラの座標設定
+extern "C" SYSTEM_API void SetCameraLook(const char* name, float x, float y, float z);                    //カメラの注視点設定
+extern "C" SYSTEM_API void UseCameraSet(const char* name);                                                //使用するカメラの設定
+extern "C" SYSTEM_API int GetUseCamera();                                                                 //使用するカメラのインデックスを取得
+extern "C" SYSTEM_API void SetUseCamera(int index);                                                       //使用するカメラをインデックスで指定
 //void SettingCameraOnce();
 //|| SpriteWorld ||__________________
-void AddSpriteWorld(const char* name, const char* pathName);                        //板ポリ追加テクスチャ指定
-void SetSpriteWorldPos(const char* name, float x, float y, float z);                //板ポリ座標設定
-void SetSpriteWorldSize(const char* name, float x, float y, float z);               //板ポリサイズ設定
-void SetSpriteWorldAngle(const char* name, float x, float y, float z);              //板ポリ角度設定
-void SetSpriteWorldColor(const char* name, float r, float g, float b, float a);     //板ポリ乗算色設定
+extern "C" SYSTEM_API void AddSpriteWorld(const char* name, const char* pathName);                        //板ポリ追加テクスチャ指定
+extern "C" SYSTEM_API void SetSpriteWorldPos(const char* name, float x, float y, float z);                //板ポリ座標設定
+extern "C" SYSTEM_API void SetSpriteWorldSize(const char* name, float x, float y, float z);               //板ポリサイズ設定
+extern "C" SYSTEM_API void SetSpriteWorldAngle(const char* name, float x, float y, float z);              //板ポリ角度設定
+extern "C" SYSTEM_API void SetSpriteWorldColor(const char* name, float r, float g, float b, float a);     //板ポリ乗算色設定
 //|| SpriteScreen ||_________________                                               //
-void AddSpriteScreen(const char* name, const char* pathName);                       //UIの追加テクスチャ指定
-void SetSpriteScreenPos(const char* name, float x, float y);                        //UI座標設定
-void SetSpriteScreenSize(const char* name, float x, float y);                       //UIサイズ設定
-void SetSpriteScreenAngle(const char* name, float angle);                           //UI角度設定
-void SetSpriteScreenColor(const char* name, float r, float g, float b, float a);    //UI色設定
+extern "C" SYSTEM_API void AddSpriteScreen(const char* name, const char* pathName);                       //UIの追加テクスチャ指定
+extern "C" SYSTEM_API void SetSpriteScreenPos(const char* name, float x, float y);                        //UI座標設定
+extern "C" SYSTEM_API void SetSpriteScreenSize(const char* name, float x, float y);                       //UIサイズ設定
+extern "C" SYSTEM_API void SetSpriteScreenAngle(const char* name, float angle);                           //UI角度設定
+extern "C" SYSTEM_API void SetSpriteScreenColor(const char* name, float r, float g, float b, float a);    //UI色設定
 //|| SpriteBox ||____________________                                               //
-void AddSpriteBox(const char* name, const char* pathName);                          //箱形の追加テクスチャ指定※全体
-void SetSpriteBoxPos(const char* name, float x, float y, float z);                  //箱形の座標設定
-void SetSpriteBoxSize(const char* name, float x, float y, float z);                 //箱形のサイズ設定
-void SetSpriteBoxAngle(const char* name, float x, float y, float z);                //箱形の角度設定
-void SetSpriteBoxColor(const char* name, float r, float g, float b, float a);       //箱形の色設定※乗算
-void SetSpriteBoxTextureTop(const char* name, const char* pathName);                //箱形のテクスチャ設定上面
-void SetSpriteBoxTextureBottom(const char* name, const char* pathName);             //箱形のテクスチャ設定底面
-void SetSpriteBoxTextureFront(const char* name, const char* pathName);              //箱形のテクスチャ設定前面
-void SetSpriteBoxTextureRear(const char* name, const char* pathName);               //箱形のテクスチャ設定後面
-void SetSpriteBoxTextureLeft(const char* name, const char* pathName);               //箱形のテクスチャ設定左面
-void SetSpriteBoxTextureRight(const char* name, const char* pathName);              //箱形のテクスチャ設定右面
-void SetSpriteBoxTexture(const char* name, const char* pathName);                   //箱形のテクスチャ設定全体
+extern "C" SYSTEM_API void AddSpriteBox(const char* name, const char* pathName);                          //箱形の追加テクスチャ指定※全体
+extern "C" SYSTEM_API void SetSpriteBoxPos(const char* name, float x, float y, float z);                  //箱形の座標設定
+extern "C" SYSTEM_API void SetSpriteBoxSize(const char* name, float x, float y, float z);                 //箱形のサイズ設定
+extern "C" SYSTEM_API void SetSpriteBoxAngle(const char* name, float x, float y, float z);                //箱形の角度設定
+extern "C" SYSTEM_API void SetSpriteBoxColor(const char* name, float r, float g, float b, float a);       //箱形の色設定※乗算
+extern "C" SYSTEM_API void SetSpriteBoxTextureTop(const char* name, const char* pathName);                //箱形のテクスチャ設定上面
+extern "C" SYSTEM_API void SetSpriteBoxTextureBottom(const char* name, const char* pathName);             //箱形のテクスチャ設定底面
+extern "C" SYSTEM_API void SetSpriteBoxTextureFront(const char* name, const char* pathName);              //箱形のテクスチャ設定前面
+extern "C" SYSTEM_API void SetSpriteBoxTextureRear(const char* name, const char* pathName);               //箱形のテクスチャ設定後面
+extern "C" SYSTEM_API void SetSpriteBoxTextureLeft(const char* name, const char* pathName);               //箱形のテクスチャ設定左面
+extern "C" SYSTEM_API void SetSpriteBoxTextureRight(const char* name, const char* pathName);              //箱形のテクスチャ設定右面
+extern "C" SYSTEM_API void SetSpriteBoxTexture(const char* name, const char* pathName);                   //箱形のテクスチャ設定全体
 //|| SpriteCylinder ||_______________                                               //
-void AddSpriteCylinder(const char* name, const char* pathName);                     //円柱の追加テクスチャ指定
-void SetSpriteCylinderPos(const char* name, float x, float y, float z);             //円柱の座標設定
-void SetSpriteCylinderSize(const char* name, float x, float y, float z);            //円柱のサイズ設定
-void SetSpriteCylinderAngle(const char* name, float x, float y, float z);           //円柱の角度設定
-void SetSpriteCylinderColor(const char* name, float r, float g, float b, float a);  //円柱の色設定※乗算
-void SetSpriteCylinderSegment(const char* name, int sengment);                      //円柱の角数設定
-void SetSpriteCylinderTextureTop(const char* name, const char* pathName);           //円柱のテクスチャ設定上面
-void SetSpriteCylinderTextureBottom(const char* name, const char* pathName);        //円柱のテクスチャ設定底面
-void SetSpriteCylinderTextureSide(const char* name, const char* pathName);          //円柱のテクスチャ設定周面
+extern "C" SYSTEM_API void AddSpriteCylinder(const char* name, const char* pathName);                     //円柱の追加テクスチャ指定
+extern "C" SYSTEM_API void SetSpriteCylinderPos(const char* name, float x, float y, float z);             //円柱の座標設定
+extern "C" SYSTEM_API void SetSpriteCylinderSize(const char* name, float x, float y, float z);            //円柱のサイズ設定
+extern "C" SYSTEM_API void SetSpriteCylinderAngle(const char* name, float x, float y, float z);           //円柱の角度設定
+extern "C" SYSTEM_API void SetSpriteCylinderColor(const char* name, float r, float g, float b, float a);  //円柱の色設定※乗算
+extern "C" SYSTEM_API void SetSpriteCylinderSegment(const char* name, int sengment);                      //円柱の角数設定
+extern "C" SYSTEM_API void SetSpriteCylinderTextureTop(const char* name, const char* pathName);           //円柱のテクスチャ設定上面
+extern "C" SYSTEM_API void SetSpriteCylinderTextureBottom(const char* name, const char* pathName);        //円柱のテクスチャ設定底面
+extern "C" SYSTEM_API void SetSpriteCylinderTextureSide(const char* name, const char* pathName);          //円柱のテクスチャ設定周面
 //|| Grid   ||_______________________                                               //
 // Grid
-void AddGrid(const char* name, GridType type);                                                  //箱形グリッドの追加
-void SetGridPos(const char* name, float x, float y, float z);                    //箱形グリッドの座標設定
-void SetGridSize(const char* name, float x, float y, float z);                   //箱形グリッドのサイズ設定
-void SetGridColor(const char* name, float R, float G, float B, float A);         //箱形グリッドの色設定
-void SetGridSides(const char* name, int sides);                              //多角グリッドの角数設定
+extern "C" SYSTEM_API void AddGrid(const char* name, GridType type);                                                  //箱形グリッドの追加
+extern "C" SYSTEM_API void SetGridPos(const char* name, float x, float y, float z);                    //箱形グリッドの座標設定
+extern "C" SYSTEM_API void SetGridSize(const char* name, float x, float y, float z);                   //箱形グリッドのサイズ設定
+extern "C" SYSTEM_API void SetGridColor(const char* name, float R, float G, float B, float A);         //箱形グリッドの色設定
+extern "C" SYSTEM_API void SetGridSides(const char* name, int sides);                              //多角グリッドの角数設定
 //|| Sound ||_______________________ 
 //World
-void AddSpeaker(const char* name, const char* pathName);                            //スピーカーの追加音源指定
-void SetSpeakerPos(const char* name, float x, float y, float z);                    //スピーカーの座標設定
-void SetSpeakerSound(const char* name, const char* pathName);                       //スピーカーの音源設定
+extern "C" SYSTEM_API void AddSpeaker(const char* name, const char* pathName);                            //スピーカーの追加音源指定
+extern "C" SYSTEM_API void SetSpeakerPos(const char* name, float x, float y, float z);                    //スピーカーの座標設定
+extern "C" SYSTEM_API void SetSpeakerSound(const char* name, const char* pathName);                       //スピーカーの音源設定
 //Sound
-void AddSound(const char* name, const char* pathName);                              //サウンドの追加音源指定
-void SetSoundPan(const char* name, float pan);                                      //サウンドのパン設定
+extern "C" SYSTEM_API void AddSound(const char* name, const char* pathName);                              //サウンドの追加音源指定
+extern "C" SYSTEM_API void SetSoundPan(const char* name, float pan);                                      //サウンドのパン設定
 //SoundEffect
-void SetSFxDelay(const char* name, int ms, int attenuation);                        //サウンドディレイ
-void SetSFxReverb(const char* name, int ms, int attenuation, int Range);            //サウンドリバーブ
-void SetSFxCompressor(const char* name, int Retio);                                 //サウンドコンプレッサー
-void SetSFxLimiter(const char* name, int Max);                                      //サウンドリミッター
-void SetSFxGate(const char* name, int min);                                         //サウンドゲート
+extern "C" SYSTEM_API void SetSFxDelay(const char* name, int ms, int attenuation);                        //サウンドディレイ
+extern "C" SYSTEM_API void SetSFxReverb(const char* name, int ms, int attenuation, int Range);            //サウンドリバーブ
+extern "C" SYSTEM_API void SetSFxCompressor(const char* name, int Retio);                                 //サウンドコンプレッサー
+extern "C" SYSTEM_API void SetSFxLimiter(const char* name, int Max);                                      //サウンドリミッター
+extern "C" SYSTEM_API void SetSFxGate(const char* name, int min);                                         //サウンドゲート
 //|| Light ||_________________________                                              //
-void AddLight(const char* name, LightType LT);                                      //ライトの追加ライトタイプ指定
-void SetLightPos(const char* name, float x, float y, float z);                      //ライトの座標設定
-void SetLightAngle(const char* name, float x, float y, float z);                    //ライトの角度設定
-void SetLightRange(const char* name, float range);                                  //ライトの範囲設定
-void SetLightLength(const char* name, float length);                                //ライトの長さ設定※ライトが届く距離
-void SetLightColor(const char* name, float r, float g, float b, float a);           //ライトの色設定
-void SetLightAttenuation(const char* name, float attenuation);                      //ライトの減衰度設定
+extern "C" SYSTEM_API void AddLight(const char* name, LightType LT);                                      //ライトの追加ライトタイプ指定
+extern "C" SYSTEM_API void SetLightPos(const char* name, float x, float y, float z);                      //ライトの座標設定
+extern "C" SYSTEM_API void SetLightAngle(const char* name, float x, float y, float z);                    //ライトの角度設定
+extern "C" SYSTEM_API void SetLightRange(const char* name, float range);                                  //ライトの範囲設定
+extern "C" SYSTEM_API void SetLightLength(const char* name, float length);                                //ライトの長さ設定※ライトが届く距離
+extern "C" SYSTEM_API void SetLightColor(const char* name, float r, float g, float b, float a);           //ライトの色設定
+extern "C" SYSTEM_API void SetLightAttenuation(const char* name, float attenuation);                      //ライトの減衰度設定
 //|| Model ||_________________________
-void AddModel(const char* name, const char* pathName);                              //モデルの追加
-void SetModelPos(const char* name, float x, float y, float z);                      //モデルの座標設定
-void SetModelSize(const char* name, float x, float y, float z);                     //モデルのサイズ設定
-void SetModelAngle(const char* name, float x, float y, float z);                    //モデルの角度設定
-void SetModelMotion(const char* name, const char* pathName, int Attack);            //モデルのモーション設定移行速度設定
-void ModelTexture(const char* name, const char* pathName);
+extern "C" SYSTEM_API void AddModel(const char* name, const char* pathName);                              //モデルの追加
+extern "C" SYSTEM_API void SetModelPos(const char* name, float x, float y, float z);                      //モデルの座標設定
+extern "C" SYSTEM_API void SetModelSize(const char* name, float x, float y, float z);                     //モデルのサイズ設定
+extern "C" SYSTEM_API void SetModelAngle(const char* name, float x, float y, float z);                    //モデルの角度設定
+extern "C" SYSTEM_API void SetModelMotion(const char* name, const char* pathName, int Attack);            //モデルのモーション設定移行速度設定
+extern "C" SYSTEM_API void ModelTexture(const char* name, const char* pathName);
 //|| Collision ||_____________________
-void AddCollision(const char* name, const char* tag);
-bool HitToTag(const char* name, const char* tag);
-bool HitToName(const char* name1, const char* name2);
-void SetCollisionParent(const char* name, const char* parent);
-void SetCollisionPos(const char* name, float x, float y, float z);
-void SetCollisionSize(const char* name, float x, float y, float z);
-void SetCollisionAngle(const char* name, float x, float y, float z);
+extern "C" SYSTEM_API void AddCollision(const char* name, const char* tag);
+extern "C" SYSTEM_API bool HitToTag(const char* name, const char* tag);
+extern "C" SYSTEM_API bool HitToName(const char* name1, const char* name2);
+extern "C" SYSTEM_API void SetCollisionParent(const char* name, const char* parent);
+extern "C" SYSTEM_API void SetCollisionPos(const char* name, float x, float y, float z);
+extern "C" SYSTEM_API void SetCollisionSize(const char* name, float x, float y, float z);
+extern "C" SYSTEM_API void SetCollisionAngle(const char* name, float x, float y, float z);
 //void SetCollisionType(const char* name, CollisionType type);
 
 ///////////////////////////////////
@@ -478,19 +484,19 @@ KeyMap* GetCameraKeyMap();
   //////////////////
  // SceneManager //
 //////////////////
-void AddScene(const char* name);
+extern "C" SYSTEM_API void AddScene(const char* name);
 //void SceneEndPoint();
-void ChangeScene(const char* name);
-void InitScene(const char* name);
-void DeleteScene(const char* name);
-void CopyScene(const char* src, const char* dest);
-void SetSceneCamera(const char* scene, const char* camera);
-void UpdateScene();
-void DrawScene();
-const char* GetCurrentSceneName();
+extern "C" SYSTEM_API void ChangeScene(const char* name);
+extern "C" SYSTEM_API void InitScene(const char* name);
+extern "C" SYSTEM_API void DeleteScene(const char* name);
+extern "C" SYSTEM_API void CopyScene(const char* src, const char* dest);
+extern "C" SYSTEM_API void SetSceneCamera(const char* scene, const char* camera);
+extern "C" SYSTEM_API void UpdateScene();
+extern "C" SYSTEM_API void DrawScene();
+extern "C" SYSTEM_API const char* GetCurrentSceneName();
 //void NotifyAddObject(IndexType type);
 
-int GetCurrentSceneIndex();
+extern "C" SYSTEM_API int GetCurrentSceneIndex();
 
   //////////////////
  // AssetManager //

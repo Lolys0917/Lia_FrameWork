@@ -527,6 +527,7 @@ void SetRunStart()
 }
 void SetRunEnd()
 {
+    RunGameRelease("saved/dll/user.dll");
     DeleteGameDll();
     RunStart = false;
     Running = false;
@@ -537,6 +538,8 @@ void RunningGame()
     {
         RunGameInit("user.dll");
         RunStart = false;
+
+		MessageBoxA(nullptr, "ゲームを開始します。終了するにはESCキーを押すか、Stopボタンを押してください。", "Game Start", MB_OK | MB_ICONINFORMATION);
     }
     
     if (Running)
@@ -550,8 +553,6 @@ void GameStartDraw()
 {
     
 }
-
-
 
 // グローバル/ファイル頭で定義
 static bool g_ShowNewFileWindow = false;
@@ -1384,6 +1385,10 @@ bool GetNetStart()
 {
     return g_netStart;
 }
+bool GetGameRunning()
+{
+    return g_GameRunning;
+}
 void ShowCodeEditorUI()
 {
     /*ImGui::BeginChild("FileList", ImVec2(200, 0), true);
@@ -1463,11 +1468,14 @@ void ShowCodeEditorUI()
             LoadGameDll("saved/dll/user.dll");
 
             RunGameInit("saved/dll/user.dll");
+
+            SetRunStart();
             g_GameRunning = true;
         }
         ImGui::SameLine();
         if (ImGui::Button("Stop DLL"))
         {
+            SetRunEnd();
             g_StopDLL = true;
         }
         /////
