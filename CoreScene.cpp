@@ -267,12 +267,8 @@ void CoreSceneUpdate()
             r.Y,
             r.Z);
 
-        if (r.X > 3)
-        {
-            MessageBoxA(NULL, "AA", "AA", MB_OK);
-        }
 
-        UpdateNet();
+        UDPUpdate();
     }
 }
 void CoreSceneDraw()

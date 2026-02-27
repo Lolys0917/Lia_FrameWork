@@ -674,3 +674,6 @@ void UpdateNet();
 void Net_AddSendStruct(const char* name, Vec4 init);
 void Net_SetSendStruct(const char* name, Vec4 value);
 Vec4 Net_GetRecvStruct(const char* name);
+
+void UDPInit(int SetSC);
+void UDPUpdate();

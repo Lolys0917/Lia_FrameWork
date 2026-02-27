@@ -1475,7 +1475,7 @@ void ShowCodeEditorUI()
         if (ImGui::Button("Host start"))
         {
             g_netStart = true;
-            InitNet(1);
+            UDPInit(1);
             Net_AddSendStruct("player", { 0,0,0,0 });
 			MessageBoxA(NULL, GetLocalIP().c_str(), "Hosting Start", MB_OK);
         }
@@ -1509,7 +1509,7 @@ void ShowCodeEditorUI()
             {
                 printf("input: %s\n", g_NameInput);
                 SetIP(g_NameInput);
-                InitNet(2);
+                UDPInit(2);
                 
                 g_ShowNamePopup = false;
                 ImGui::CloseCurrentPopup();
