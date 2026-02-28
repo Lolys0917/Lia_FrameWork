@@ -124,39 +124,68 @@ int GetLineLength(const std::string& text, int start)
     return len;
 }
 
+void CursorJump(CodeEditorState& ed, float viewHeight)
+{
+    float lineHeight = ImGui::GetTextLineHeight();
+
+    int line = 0;
+    for (int i = 0; i < ed.cursor && i < ed.text.size(); i++)
+        if (ed.text[i] == '\n')
+            line++;
+
+    float cursorY = line * lineHeight;
+
+    if (cursorY < ed.scrollY)
+        ed.scrollY = cursorY;
+
+    if (cursorY > ed.scrollY + viewHeight - lineHeight)
+        ed.scrollY = cursorY - viewHeight + lineHeight;
+}
+
 void CodeEditorInput(CodeEditorState& ed)
 {
     ImGuiIO& io = ImGui::GetIO();
+
+    bool movedCursor = false;
 
     for (int i = 0; i < io.InputQueueCharacters.Size; i++)
     {
         unsigned int c = io.InputQueueCharacters[i];
 
-        if (c == 8) // backspace
+        if (c == 8)
         {
             if (ed.cursor > 0)
             {
                 ed.text.erase(ed.cursor - 1, 1);
                 ed.cursor--;
+                movedCursor = true;
             }
         }
         else if (c == 13)
         {
             ed.text.insert(ed.cursor, "\n");
             ed.cursor++;
+            movedCursor = true;
         }
         else if (c >= 32)
         {
             ed.text.insert(ed.cursor, 1, (char)c);
             ed.cursor++;
+            movedCursor = true;
         }
     }
 
     if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
+    {
         ed.cursor = std::max(0, ed.cursor - 1);
+        movedCursor = true;
+    }
 
     if (ImGui::IsKeyPressed(ImGuiKey_RightArrow))
+    {
         ed.cursor = std::min((int)ed.text.size(), ed.cursor + 1);
+        movedCursor = true;
+    }
 
     if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
     {
@@ -169,6 +198,7 @@ void CodeEditorInput(CodeEditorState& ed)
             int prevLen = GetLineLength(ed.text, prevStart);
 
             ed.cursor = prevStart + std::min(col, prevLen);
+            movedCursor = true;
         }
     }
 
@@ -182,9 +212,39 @@ void CodeEditorInput(CodeEditorState& ed)
         if (nextStart < ed.text.size())
         {
             int nextLen = GetLineLength(ed.text, nextStart);
-
             ed.cursor = nextStart + std::min(col, nextLen);
+            movedCursor = true;
         }
+    }
+
+    // マウスホイール
+    if (io.MouseWheel != 0.0f)
+    {
+        ed.scrollY -= io.MouseWheel * ImGui::GetTextLineHeight() * 3;
+        ed.scrollY = std::max(0.0f, ed.scrollY);
+    }
+
+    // クリックカーソル移動
+    if (ImGui::IsMouseClicked(0))
+    {
+        ImVec2 mouse = io.MousePos;
+        ImVec2 start = ImGui::GetCursorScreenPos();
+
+        float lineHeight = ImGui::GetTextLineHeight();
+
+        int clickLine = (mouse.y - start.y + ed.scrollY) / lineHeight;
+        int clickCol = (mouse.x - start.x) / ImGui::CalcTextSize(" ").x;
+
+        int lineStart = GetLineStart(ed.text, clickLine);
+        int lineLen = GetLineLength(ed.text, lineStart);
+
+        ed.cursor = lineStart + std::min(clickCol, lineLen);
+    }
+
+    // カーソル移動したらスクロール補正
+    if (movedCursor)
+    {
+        CursorJump(ed, ImGui::GetContentRegionAvail().y);
     }
 }
 
@@ -232,15 +292,15 @@ void CodeEditorDraw(CodeEditorState& ed)
     float viewTop = ed.scrollY;
     float viewBottom = ed.scrollY + ImGui::GetContentRegionAvail().y;
 
-    if (cursorLocalY < viewTop)
-    {
-        ed.scrollY = cursorLocalY;
-    }
+    //if (cursorLocalY < viewTop)
+    //{
+    //    ed.scrollY = cursorLocalY;
+    //}
 
-    if (cursorLocalY > viewBottom - lineHeight)
-    {
-        ed.scrollY = cursorLocalY - ImGui::GetContentRegionAvail().y + lineHeight;
-    }
+    //if (cursorLocalY > viewBottom - lineHeight)
+    //{
+    //    ed.scrollY = cursorLocalY - ImGui::GetContentRegionAvail().y + lineHeight;
+    //}
 
     float cx = start.x + col * ImGui::CalcTextSize(" ").x;
     float cy = start.y + line * lineHeight - ed.scrollY;
