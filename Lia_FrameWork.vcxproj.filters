@@ -31,6 +31,9 @@
     <Filter Include="ソース ファイル\SystemSetUp">
       <UniqueIdentifier>{21c77c0b-0a62-4431-9298-7a09fd3d90f4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\GUI">
+      <UniqueIdentifier>{befde56f-432f-496b-a52c-39da36f9bab9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ComponentSpriteWorld.h">
@@ -90,6 +93,51 @@
     <ClCompile Include="MotionManager.cpp">
       <Filter>ソース ファイル\Manager</Filter>
     </ClCompile>
+    <ClCompile Include="CollisionManager.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="ComponentCollision.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="GUI.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="FileSystem.cpp">
+      <Filter>ソース ファイル\SystemSetUp</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-1.92.2\imgui.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-1.92.2\imgui_demo.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-1.92.2\imgui_draw.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-1.92.2\backends\imgui_impl_glfw.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-1.92.2\backends\imgui_impl_opengl3.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-1.92.2\imgui_tables.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-1.92.2\imgui_widgets.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-1.92.2\backends\imgui_impl_dx11.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui-1.92.2\backends\imgui_impl_win32.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="NetManager.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="CodeEditor.cpp">
+      <Filter>ソース ファイル\GUI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ComponentCamera.h">
@@ -131,11 +179,20 @@
     <ClInclude Include="Main.h">
       <Filter>ソース ファイル\SystemSetUp</Filter>
     </ClInclude>
+    <ClInclude Include="ComponentCollision.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="FileSystem.h">
+      <Filter>ソース ファイル\SystemSetUp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ObjectMemo.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="GUI.h">
+      <Filter>ソース ファイル\GUI</Filter>
+    </None>
   </ItemGroup>
 </Project>

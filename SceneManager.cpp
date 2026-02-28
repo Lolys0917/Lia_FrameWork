@@ -93,7 +93,7 @@ void UpdateScene()
         {
             //MessageBoxA(NULL, ConcatCStr("UseCameraIndexGo:", std::to_string(i).c_str()), "Debug", MB_OK);
             //Camera
-            GetObjectClass()->GetComponent<Camera>(i)->SetCameraProjection(70.0f, 800, 600);
+            GetObjectClass()->GetComponent<Camera>(i)->SetCameraProjection(70.0f, 1920, 1080);
             Vec4 pos = Vec4_Get(&pool->CameraPos, i);
             Vec4 look = Vec4_Get(&pool->CameraLook, i);
 			GetObjectClass()->GetComponent<Camera>(i)->SetCameraView({ pos.X,pos.Y,pos.Z,0 }, { look.X,look.Y,look.Z,0 });

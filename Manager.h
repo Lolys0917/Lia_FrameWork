@@ -360,6 +360,10 @@ struct ObjectDataPool {
     KeyMap SpriteCylinderTopTexturePathMap;
     KeyMap SpriteCylinderBottomTexturePathMap;
     KeyMap SpriteCylinderSideTexturePathMap;
+
+    KeyMap g_StructKeys;
+    Vec4Vector g_SendValues;
+    Vec4Vector g_RecvValues;
 };
 ObjectDataPool* GetObjectDataPool();
 
@@ -658,3 +662,18 @@ int MM_GetMotionCount(int packageIndex);
 
 /// パッケージ内のモーション情報取得（nullptr なら無効）
 const MotionRange* MM_GetMotionRange(int packageIndex, int motionIndex);
+
+  ////////////////////
+ // NetworkManager //
+////////////////////
+bool GetNetStart();
+std::string GetLocalIP();
+void InitNet(int SetSC);
+void SetIP(const char* SetIP);
+void UpdateNet();
+void Net_AddSendStruct(const char* name, Vec4 init);
+void Net_SetSendStruct(const char* name, Vec4 value);
+Vec4 Net_GetRecvStruct(const char* name);
+
+void UDPInit(int SetSC);
+void UDPUpdate();
