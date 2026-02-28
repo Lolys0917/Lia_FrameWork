@@ -198,23 +198,10 @@ void CodeEditorDraw(CodeEditorState& ed)
 
     ImVec2 start = ImGui::GetCursorScreenPos();
 
-    float x = start.x + 5;
-    float y = start.y + 5;
+    float x = start.x;
+    float y = start.y;
 
     float lineHeight = ImGui::GetTextLineHeight();
-
-    for (auto& t : tokens)
-    {
-        draw->AddText(ImVec2(x, y), t.color, t.text.c_str());
-
-        x += ImGui::CalcTextSize(t.text.c_str()).x;
-
-        if (t.text == "\n")
-        {
-            x = start.x + 5;
-            y += lineHeight;
-        }
-    }
 
     // カーソル描画
     int line = 0;
@@ -233,15 +220,55 @@ void CodeEditorDraw(CodeEditorState& ed)
         }
     }
 
+    //画面スクロール調整
+	//１．下限で自動スクロールするように調整
+    //２．上限で自動スクロールするように調整
+	//※エディタの描画範囲をポインタが超えたときにスクロールするように調整
+	//※動作はビジュアルスタジオのエディタを参考にする
+	//※カーソル位置は常にエディタの描画範囲内に収まるようにする
+    
+    float cursorLocalY = line * lineHeight;
+
+    float viewTop = ed.scrollY;
+    float viewBottom = ed.scrollY + ImGui::GetContentRegionAvail().y;
+
+    if (cursorLocalY < viewTop)
+    {
+        ed.scrollY = cursorLocalY;
+    }
+
+    if (cursorLocalY > viewBottom - lineHeight)
+    {
+        ed.scrollY = cursorLocalY - ImGui::GetContentRegionAvail().y + lineHeight;
+    }
+
     float cx = start.x + col * ImGui::CalcTextSize(" ").x;
-    float cy = start.y + line * lineHeight;
+    float cy = start.y + line * lineHeight - ed.scrollY;
 
     draw->AddLine(
         ImVec2(cx, cy),
         ImVec2(cx, cy + lineHeight),
         IM_COL32(255, 255, 255, 255),
-        1.0f
+        2.0f
     );
+    // テキスト描画
+    lineHeight = ImGui::GetTextLineHeight();
+
+    y = start.y - ed.scrollY;
+    x = start.x;
+
+    for (auto& t : tokens)
+    {
+        draw->AddText(ImVec2(x, y), t.color, t.text.c_str());
+
+        x += ImGui::CalcTextSize(t.text.c_str()).x;
+
+        if (t.text == "\n")
+        {
+            x = start.x;
+            y += lineHeight;
+        }
+    }
 }
 
 void SetCodeText(std::string inText)

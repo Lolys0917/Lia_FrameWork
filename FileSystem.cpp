@@ -1591,7 +1591,8 @@ void ShowCodeEditorUI()
             ImGui::EndPopup();
         }
 
-        static CodeEditorState editor;
+        static CodeEditorState editor = { file.content, 0 };
+        static bool editorActive = false;
 
         if (g_LastLoadedFileName != file.fileName)
         {
@@ -1604,9 +1605,21 @@ void ShowCodeEditorUI()
             g_LastLoadedFileName = file.fileName;
         }
 
-        ImGui::BeginChild("EditorChild", ImVec2(0, editorHeight), true);
+        ImGui::BeginChild("EditorChild", ImVec2(0, editorHeight), true,
+            ImGuiWindowFlags_HorizontalScrollbar);
 
-        CodeEditorInput(editor);
+        //エディタアクティブ判定
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0))
+            editorActive = true;
+
+        if (!ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0))
+            editorActive = false;
+
+        if (editorActive)
+        {
+            CodeEditorInput(editor);
+        }
+        //エディタ描画
         CodeEditorDraw(editor);
 
         file.content = editor.text;
