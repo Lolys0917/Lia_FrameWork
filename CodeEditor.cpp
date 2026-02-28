@@ -4,6 +4,7 @@
 #include "Main.h"
 
 std::string CodeText;
+float lineNumberWidth = 40;
 
 bool Keyword(const std::string& s)
 {
@@ -126,6 +127,13 @@ int GetLineLength(const std::string& text, int start)
 
 void CursorJump(CodeEditorState& ed, float viewHeight)
 {
+    //画面スクロール調整
+    //１．下限で自動スクロールするように調整
+    //２．上限で自動スクロールするように調整
+    //※エディタの描画範囲をポインタが超えたときにスクロールするように調整
+    //※動作はビジュアルスタジオのエディタを参考にする
+    //※カーソル位置は常にエディタの描画範囲内に収まるようにする
+
     float lineHeight = ImGui::GetTextLineHeight();
 
     int line = 0;
@@ -154,12 +162,24 @@ void CodeEditorInput(CodeEditorState& ed)
 
         if (c == 8)
         {
-            if (ed.cursor > 0)
+            if (ed.selectStart != ed.selectEnd)
+            {
+                int startPos = std::min(ed.selectStart, ed.selectEnd);
+                int end = std::max(ed.selectStart, ed.selectEnd);
+
+                ed.text.erase(startPos, end - startPos);
+                ed.cursor = startPos;
+
+                ed.selectStart = -1;
+                ed.selectEnd = -1;
+            }
+            else if (ed.cursor > 0)
             {
                 ed.text.erase(ed.cursor - 1, 1);
                 ed.cursor--;
-                movedCursor = true;
             }
+
+            movedCursor = true;
         }
         else if (c == 13)
         {
@@ -218,22 +238,52 @@ void CodeEditorInput(CodeEditorState& ed)
     }
 
     // マウスホイール
+	// ※Shift + マウスホイールで横スクロール
+    // 下に行き過ぎないようにする
+    float lineHeight = ImGui::GetTextLineHeight();
+
+    // 総行数
+    int totalLines = 1;
+    for (char c : ed.text)
+        if (c == '\n')
+            totalLines++;
+
+    float contentHeight = totalLines * lineHeight;
+    float viewHeight = ImGui::GetContentRegionAvail().y;
+
+    float maxScroll = std::max(0.0f, contentHeight - viewHeight);
+
     if (io.MouseWheel != 0.0f)
     {
         ed.scrollY -= io.MouseWheel * ImGui::GetTextLineHeight() * 3;
-        ed.scrollY = std::max(0.0f, ed.scrollY);
+        ed.scrollY = std::clamp(ed.scrollY, 0.0f, maxScroll);
     }
-
+    if (io.MouseWheel != 0.0f)
+    {
+        if (ImGui::IsKeyDown(ImGuiKey_LeftShift))
+        {
+            ed.scrollX -= io.MouseWheel * 40;
+            ed.scrollX = std::max(0.0f, ed.scrollX);
+        }
+        else
+        {
+            ed.scrollY -= io.MouseWheel * ImGui::GetTextLineHeight() * 3;
+            ed.scrollY = std::max(0.0f, ed.scrollY);
+        }
+    }
+	// マウスポインタ座標計算
+    ImVec2 mouse = io.MousePos;
+    ImVec2 start = ImGui::GetCursorScreenPos();
+    int clickCol =
+        (mouse.x - start.x - lineNumberWidth + ed.scrollX)
+        / ImGui::CalcTextSize(" ").x;
     // クリックカーソル移動
     if (ImGui::IsMouseClicked(0))
     {
-        ImVec2 mouse = io.MousePos;
-        ImVec2 start = ImGui::GetCursorScreenPos();
 
         float lineHeight = ImGui::GetTextLineHeight();
 
         int clickLine = (mouse.y - start.y + ed.scrollY) / lineHeight;
-        int clickCol = (mouse.x - start.x) / ImGui::CalcTextSize(" ").x;
 
         int lineStart = GetLineStart(ed.text, clickLine);
         int lineLen = GetLineLength(ed.text, lineStart);
@@ -246,6 +296,100 @@ void CodeEditorInput(CodeEditorState& ed)
     {
         CursorJump(ed, ImGui::GetContentRegionAvail().y);
     }
+
+    //マウス範囲選択を追加
+    if (ImGui::IsMouseClicked(0))
+    {
+        ed.selecting = true;
+        ed.selectStart = ed.cursor;
+        ed.selectEnd = ed.cursor;
+    }
+    else if (ed.selecting)
+    {
+        float lineHeight = ImGui::GetTextLineHeight();
+        int clickLine = (mouse.y - start.y + ed.scrollY) / lineHeight;
+        int lineStart = GetLineStart(ed.text, clickLine);
+        int lineLen = GetLineLength(ed.text, lineStart);
+        ed.selectEnd = lineStart + std::min(clickCol, lineLen);
+	}
+    if (ImGui::IsMouseReleased(0))
+    {
+        ed.selecting = false;
+    }
+    
+	//Shift + 矢印キーで選択範囲を拡大縮小
+    if (ImGui::IsKeyDown(ImGuiKey_LeftShift))
+    {
+        if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
+        {
+            if (ed.selectStart == -1)
+                ed.selectStart = ed.cursor;
+            ed.selectEnd = ed.cursor;
+            movedCursor = true;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_RightArrow))
+        {
+            if (ed.selectStart == -1)
+                ed.selectStart = ed.cursor;
+            ed.selectEnd = ed.cursor;
+            movedCursor = true;
+        }
+	}
+    else
+    {
+        //カーソルが動いたら選択範囲を削除
+        if (movedCursor)
+        {
+            ed.selectStart = -1;
+            ed.selectEnd = -1;
+        }
+    }
+
+    //デリーと
+    if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+    {
+        if (ed.selectStart != ed.selectEnd)
+        {
+            int startPos = std::min(ed.selectStart, ed.selectEnd);
+            int end = std::max(ed.selectStart, ed.selectEnd);
+
+            ed.text.erase(startPos, end - startPos);
+            ed.cursor = startPos;
+        }
+        else if (ed.cursor < ed.text.size())
+        {
+            ed.text.erase(ed.cursor, 1);
+        }
+
+        ed.selectStart = -1;
+        ed.selectEnd = -1;
+
+        movedCursor = true;
+    }
+
+	//コピー
+    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_C))
+    {
+        if (ed.selectStart != ed.selectEnd)
+        {
+            int startPos = std::min(ed.selectStart, ed.selectEnd);
+            int end = std::max(ed.selectStart, ed.selectEnd);
+            std::string selectedText = ed.text.substr(startPos, end - startPos);
+            ImGui::SetClipboardText(selectedText.c_str());
+        }
+	}
+    //ペースト
+	if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::
+        IsKeyPressed(ImGuiKey_V))
+    {
+        const char* clipboard = ImGui::GetClipboardText();
+        if (clipboard)
+        {
+            ed.text.insert(ed.cursor, clipboard);
+            ed.cursor += strlen(clipboard);
+            CursorJump(ed, ImGui::GetContentRegionAvail().y);
+        }
+	}
 }
 
 void CodeEditorDraw(CodeEditorState& ed)
@@ -262,6 +406,11 @@ void CodeEditorDraw(CodeEditorState& ed)
     float y = start.y;
 
     float lineHeight = ImGui::GetTextLineHeight();
+
+    int totalLines = 1;
+    for (char c : ed.text)
+        if (c == '\n')
+            totalLines++;
 
     // カーソル描画
     int line = 0;
@@ -280,37 +429,70 @@ void CodeEditorDraw(CodeEditorState& ed)
         }
     }
 
-    //画面スクロール調整
-	//１．下限で自動スクロールするように調整
-    //２．上限で自動スクロールするように調整
-	//※エディタの描画範囲をポインタが超えたときにスクロールするように調整
-	//※動作はビジュアルスタジオのエディタを参考にする
-	//※カーソル位置は常にエディタの描画範囲内に収まるようにする
-    
-    float cursorLocalY = line * lineHeight;
-
-    float viewTop = ed.scrollY;
-    float viewBottom = ed.scrollY + ImGui::GetContentRegionAvail().y;
-
-    //if (cursorLocalY < viewTop)
-    //{
-    //    ed.scrollY = cursorLocalY;
-    //}
-
-    //if (cursorLocalY > viewBottom - lineHeight)
-    //{
-    //    ed.scrollY = cursorLocalY - ImGui::GetContentRegionAvail().y + lineHeight;
-    //}
-
     float cx = start.x + col * ImGui::CalcTextSize(" ").x;
     float cy = start.y + line * lineHeight - ed.scrollY;
 
+	//選択範囲描画※背景色変化
+    //選択範囲の開始位置と終了位置を取得
+    //選択範囲内のテキストをループして、背景色を変える矩形を描画
+	//矩形の位置は、テキストの行と列から計算する
+    if( ed.selectStart != ed.selectEnd )
+    {
+        int startPos = std::min(ed.selectStart, ed.selectEnd);
+        int end = std::max(ed.selectStart, ed.selectEnd);
+        int index = 0;
+        int line = 0;
+        int col = 0;
+        for (char c : ed.text)
+        {
+            if (index >= startPos && index < end)
+            {
+                float x = start.x + (col * ImGui::CalcTextSize(" ").x);
+                float y = start.y + line * lineHeight - ed.scrollY;
+                draw->AddRectFilled(
+                    ImVec2(x + lineNumberWidth - ed.scrollX, y),
+                    ImVec2(x + lineNumberWidth - ed.scrollX + ImGui::CalcTextSize(" ").x, y + lineHeight),
+                    IM_COL32(30, 60, 100, 120)
+                );
+            }
+            if (c == '\n')
+            {
+                line++;
+                col = 0;
+            }
+            else
+            {
+                col++;
+            }
+            index++;
+        }
+	}
+
+    int lineIndex = 0;
+    float lineY = start.y - ed.scrollY;
+
+    for (int i = 0; i < totalLines; i++)
+    {
+        char buf[16];
+        sprintf(buf, "%d", i + 1);
+
+        draw->AddText(
+            ImVec2(start.x, lineY),
+            IM_COL32(150, 150, 150, 255),
+            buf
+        );
+
+        lineY += lineHeight;
+    }
+
+	//かーそる描画
     draw->AddLine(
-        ImVec2(cx, cy),
-        ImVec2(cx, cy + lineHeight),
+        ImVec2(cx + lineNumberWidth - ed.scrollX, cy),
+        ImVec2(cx + lineNumberWidth - ed.scrollX, cy + lineHeight),
         IM_COL32(255, 255, 255, 255),
         2.0f
     );
+
     // テキスト描画
     lineHeight = ImGui::GetTextLineHeight();
 
@@ -319,7 +501,7 @@ void CodeEditorDraw(CodeEditorState& ed)
 
     for (auto& t : tokens)
     {
-        draw->AddText(ImVec2(x, y), t.color, t.text.c_str());
+        draw->AddText(ImVec2(x + lineNumberWidth - ed.scrollX, y), t.color, t.text.c_str());
 
         x += ImGui::CalcTextSize(t.text.c_str()).x;
 
@@ -329,6 +511,21 @@ void CodeEditorDraw(CodeEditorState& ed)
             y += lineHeight;
         }
     }
+
+    float contentHeight = totalLines * lineHeight;
+    float viewHeight = ImGui::GetContentRegionAvail().y;
+
+    float scrollbarHeight = viewHeight * (viewHeight / contentHeight);
+
+    float scrollRatio = ed.scrollY / contentHeight;
+
+    float scrollbarY = start.y + scrollRatio * viewHeight;
+
+    draw->AddRectFilled(
+        ImVec2(start.x + ImGui::GetContentRegionAvail().x - 6, scrollbarY),
+        ImVec2(start.x + ImGui::GetContentRegionAvail().x, scrollbarY + scrollbarHeight),
+        IM_COL32(120, 120, 120, 200)
+    );
 }
 
 void SetCodeText(std::string inText)

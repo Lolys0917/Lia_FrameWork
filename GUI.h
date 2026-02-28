@@ -70,6 +70,13 @@ struct CodeEditorState
     int cursor = 0;
 
     float scrollY = 0.0f;
+	float scrollX = 0.0f;
+
+    // ‘I‘ð”ÍˆÍ
+    int selectStart = -1;
+    int selectEnd = -1;
+
+    bool selecting = false;
 };
 
 struct HLToken
