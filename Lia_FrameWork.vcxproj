@@ -158,6 +158,7 @@
     <ClCompile Include="ComponentSpriteWorld.cpp" />
     <ClCompile Include="ComponentSpriteWorld.h" />
     <ClCompile Include="CoreScene.cpp" />
+    <ClCompile Include="DebugManager.cpp" />
     <ClCompile Include="FileSystem.cpp" />
     <ClCompile Include="Grid.cpp" />
     <ClCompile Include="GUI.cpp" />
@@ -195,6 +196,7 @@
     <ClInclude Include="Manager.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="ComponentSpriteScreen.h" />
+    <ClInclude Include="SystemAPI.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ObjectMemo.txt" />

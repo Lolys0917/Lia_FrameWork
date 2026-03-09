@@ -6,6 +6,10 @@
 std::string CodeText;
 float lineNumberWidth = 40;
 
+// キーワード判定
+// 概要：単純なキーワード判定関数。実際のエディタではもっと複雑なルールが必要だが、ここでは簡略化している。
+// 引数：string s - 判定する文字列
+// 戻り値：bool 
 bool Keyword(const std::string& s)
 {
     static const char* kw[] =
@@ -21,12 +25,18 @@ bool Keyword(const std::string& s)
     return false;
 }
 
+// トークン化関数
+// 概要：入力されたテキストをトークンに分割し、各トークンに色を割り当てる関数。キーワードは青、その他の単語は白、記号は灰色で表示する。
+// 引数： string src - トークン化する文字列
+//        vector<HLToken>& out - トークン化された結果を格納するベクター
+// 戻り値：なし
 void Tokenize(const std::string& src, std::vector<HLToken>& out)
 {
     out.clear();
 
     std::string buf;
 
+	// 文字列をループして、英数字とアンダースコアをバッファに溜める。その他の文字が出てきたら、バッファの内容をトークンとして出力し、記号もトークンとして出力する。
     for (char c : src)
     {
         if (isalnum(c) || c == '_')
@@ -60,6 +70,7 @@ void Tokenize(const std::string& src, std::vector<HLToken>& out)
         }
     }
 
+	// 最後にバッファに残っている単語をトークンとして出力する。
     if (!buf.empty())
     {
         HLToken t;
@@ -125,6 +136,127 @@ int GetLineLength(const std::string& text, int start)
     return len;
 }
 
+bool IsWord(char c)
+{
+    return isalnum(c) || c == '_';
+}
+
+// Undoスタックに現在の状態を保存する関数
+// 概要：編集操作の種類に応じて、現在のテキストとカーソル位置をUndoスタックに保存する関数。一定時間が経過したり、異なる種類の編集操作が行われた場合に新しいアクションとして保存する。
+// 引数：CodeEditorState& ed - エディタの状態を表す構造体への参照
+// 	     int type - 編集操作の種類を表す整数（例：EDIT_CHAR、EDIT_BACKSPACEなど）
+// 戻り値：なし
+void EditorPushUndo(CodeEditorState& ed,
+    int pos,
+    const std::string& removed,
+    const std::string& inserted,
+    int type)
+{
+    double now = ImGui::GetTime();
+
+    bool newAction = false;
+
+    switch (type)
+    {
+    case EDIT_CHAR:
+    case EDIT_BACKSPACE:
+    case EDIT_ENTER:
+
+        if (ed.lastEditType != type)
+            newAction = true;
+
+        if (now - ed.lastEditTime > 0.5)
+            newAction = true;
+
+        break;
+
+    case EDIT_PASTE:
+    case EDIT_CUT:
+    case EDIT_SUGGEST:
+    case EDIT_MOUSE:
+
+        newAction = true;
+        break;
+
+    default:
+        newAction = true;
+    }
+
+    if (newAction || ed.undoPos.empty())
+    {
+        if (ed.undoPos.size() >= ed.undoMax)
+        {
+            ed.undoPos.erase(ed.undoPos.begin());
+            ed.undoRemoved.erase(ed.undoRemoved.begin());
+            ed.undoInserted.erase(ed.undoInserted.begin());
+        }
+
+        ed.undoPos.push_back(pos);
+        ed.undoRemoved.push_back(removed);
+        ed.undoInserted.push_back(inserted);
+    }
+    else
+    {
+        ed.undoInserted.back() += inserted;
+        ed.undoRemoved.back() += removed;
+    }
+
+    ed.redoPos.clear();
+    ed.redoRemoved.clear();
+    ed.redoInserted.clear();
+
+    ed.lastEditType = type;
+    ed.lastEditTime = now;
+}
+void EditorUndo(CodeEditorState& ed)
+{
+    if (ed.undoPos.empty())
+        return;
+
+    int pos = ed.undoPos.back();
+    std::string removed = ed.undoRemoved.back();
+    std::string inserted = ed.undoInserted.back();
+
+    ed.undoPos.pop_back();
+    ed.undoRemoved.pop_back();
+    ed.undoInserted.pop_back();
+
+    ed.text.erase(pos, inserted.size());
+    ed.text.insert(pos, removed);
+
+    ed.cursor = pos + removed.size();
+
+    ed.redoPos.push_back(pos);
+    ed.redoRemoved.push_back(removed);
+    ed.redoInserted.push_back(inserted);
+}
+void EditorRedo(CodeEditorState& ed)
+{
+    if (ed.redoPos.empty())
+        return;
+
+    int pos = ed.redoPos.back();
+    std::string removed = ed.redoRemoved.back();
+    std::string inserted = ed.redoInserted.back();
+
+    ed.redoPos.pop_back();
+    ed.redoRemoved.pop_back();
+    ed.redoInserted.pop_back();
+
+    ed.text.erase(pos, removed.size());
+    ed.text.insert(pos, inserted);
+
+    ed.cursor = pos + inserted.size();
+
+    ed.undoPos.push_back(pos);
+    ed.undoRemoved.push_back(removed);
+    ed.undoInserted.push_back(inserted);
+}
+void EditorSetUndoLimit(CodeEditorState& ed, int limit)
+{
+    ed.undoMax = limit;
+}
+
 void CursorJump(CodeEditorState& ed, float viewHeight)
 {
     //画面スクロール調整
@@ -156,12 +288,29 @@ void CodeEditorInput(CodeEditorState& ed)
 
     bool movedCursor = false;
 
+	// キーボード入力処理
     for (int i = 0; i < io.InputQueueCharacters.Size; i++)
     {
         unsigned int c = io.InputQueueCharacters[i];
-
+		// バックスペース
         if (c == 8)
         {
+			// Undoスタックに現在の状態を保存
+            if (ed.cursor > 0)
+            {
+                char removed = ed.text[ed.cursor - 1];
+
+                EditorPushUndo(
+                    ed,
+                    ed.cursor - 1,
+                    std::string(1, removed),
+                    "",
+                    EDIT_BACKSPACE
+                );
+
+                ed.text.erase(ed.cursor - 1, 1);
+                ed.cursor--;
+            }
             if (ed.selectStart != ed.selectEnd)
             {
                 int startPos = std::min(ed.selectStart, ed.selectEnd);
@@ -173,6 +322,7 @@ void CodeEditorInput(CodeEditorState& ed)
                 ed.selectStart = -1;
                 ed.selectEnd = -1;
             }
+			// カーソルの前の文字を削除
             else if (ed.cursor > 0)
             {
                 ed.text.erase(ed.cursor - 1, 1);
@@ -181,14 +331,39 @@ void CodeEditorInput(CodeEditorState& ed)
 
             movedCursor = true;
         }
+		// エンター
         else if (c == 13)
         {
+            EditorPushUndo(
+                ed,
+                ed.cursor,
+                "",
+                std::string(1, c),
+				EDIT_ENTER
+            );
+
             ed.text.insert(ed.cursor, "\n");
             ed.cursor++;
             movedCursor = true;
         }
+        // タブ
+        else if (c == 9)
+        {
+            ed.text.insert(ed.cursor, "    ");
+            ed.cursor += 4;
+            movedCursor = true;
+		}
+		// その他の印刷可能な文字
         else if (c >= 32)
         {
+            EditorPushUndo(
+                ed,
+                ed.cursor,
+                "",
+                std::string(1, c),
+                EDIT_CHAR
+            );
+
             ed.text.insert(ed.cursor, 1, (char)c);
             ed.cursor++;
             movedCursor = true;
@@ -390,6 +565,16 @@ void CodeEditorInput(CodeEditorState& ed)
             CursorJump(ed, ImGui::GetContentRegionAvail().y);
         }
 	}
+	//Ctrl + ZでUndo
+    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_Z))
+    {
+        EditorUndo(ed);
+    }
+	//Ctrl + YでRedo
+    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_Y))
+    {
+        EditorRedo(ed);
+    }
 }
 
 void CodeEditorDraw(CodeEditorState& ed)
@@ -452,7 +637,7 @@ void CodeEditorDraw(CodeEditorState& ed)
                 draw->AddRectFilled(
                     ImVec2(x + lineNumberWidth - ed.scrollX, y),
                     ImVec2(x + lineNumberWidth - ed.scrollX + ImGui::CalcTextSize(" ").x, y + lineHeight),
-                    IM_COL32(30, 60, 100, 120)
+                    IM_COL32(30, 60, 100, 200)
                 );
             }
             if (c == '\n')
