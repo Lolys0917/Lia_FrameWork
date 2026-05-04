@@ -7,6 +7,7 @@
 // ObjectManagerはシーン内のオブジェクトを管理し、必要に応じて生成・削除を行う。
 
 #include "Manager.h"
+#include "SystemAPI.h"
 #include "ComponentCamera.h"
 #include "ComponentSpriteScreen.h"
 #include "ComponentSpriteWorld.h"
@@ -799,7 +800,7 @@ void InitDo()
     KeyMap_Init(&p->SpriteWorldTexturePathMap);
     KeyMap_Init(&p->SpriteScreenTexturePathMap);
 
-    
+	InitDebugManager();
 
     ShaderManager_Init();
     InitInput();
@@ -852,6 +853,7 @@ void UpdateDo()
 void DrawDo()
 {
     DrawScene();
+    DrawMessageBox();
     //object->Draw();
     //object->GetComponent<Model>(0)->Draw();
 }

@@ -138,6 +138,9 @@
     <ClCompile Include="CodeEditor.cpp">
       <Filter>ソース ファイル\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="DebugManager.cpp">
+      <Filter>ソース ファイル\Manager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ComponentCamera.h">
@@ -184,6 +187,9 @@
     </ClInclude>
     <ClInclude Include="FileSystem.h">
       <Filter>ソース ファイル\SystemSetUp</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemAPI.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

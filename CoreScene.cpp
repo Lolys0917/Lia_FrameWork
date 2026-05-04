@@ -8,6 +8,7 @@
 #include "CoreScene.h"
 #include "Manager.h"
 #include "AssetLoad.h"
+#include "SystemAPI.h"
 
 void CoreStartUp()
 {
@@ -79,6 +80,8 @@ void CoreStartUp()
     AL_LoadFromPackageByName("Alicia_rod.tga");
     AL_LoadFromPackageByName("Alicia_wear.tga");*/
 
+
+
     // --- ƒJƒƒ‰‰Šú‰» ---
     AddCamera("MainCamera");
     SetCameraPos("MainCamera", 0.0f, 3.0f, -7.0f);
@@ -113,6 +116,7 @@ void CoreStartUp()
 
     //SceneEndPoint();
 
+	
 
     AddScene("Scene3");
     AddSpriteWorld("TestSprite01", "asset/test.png");

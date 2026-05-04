@@ -74,19 +74,16 @@ static bool show_properties = false;
 static bool show_project = false;
 
 static std::vector<std::string> g_CurrentSuggestions; // 現在のサジェスト候補
-
 static std::vector<std::string> g_IncludeFiles = {};
-
 static bool g_ShowSuggestions = false; // サジェスト表示フラグ
+
 
 // グローバル変数（ファイル上部などで定義）
 int g_SelectedSuggestionIndex = -1;
 
 static char buffer[65536] = { 0 }; // 入力テキストバッファ
 static int g_CursorPos = 0;        // カーソル位置（バッファ内インデックス）
-
 bool g_DebugMode = false; // 任意でtrueにすればデバッグ表示
-
 static const std::string g_SuggestFile = "saved/suggest.txt";
 static std::vector<std::string> g_Suggestions;
 
@@ -98,37 +95,34 @@ static std::vector<std::string> g_Suggestions;
 const char* ConvertToUTF8(const char* sent)
 {
     static std::string result; // staticで返却用文字列を保持
-
     // ① Shift-JIS → UTF-16変換
     int wideLen = MultiByteToWideChar(CP_ACP, 0, sent, -1, NULL, 0);
     if (wideLen == 0) return "";
-
     std::wstring wideStr(wideLen, 0);
     MultiByteToWideChar(CP_ACP, 0, sent, -1, &wideStr[0], wideLen);
 
     // ② UTF-16 → UTF-8変換
     int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wideStr.c_str(), -1, NULL, 0, NULL, NULL);
     if (utf8Len == 0) return "";
-
     result.resize(utf8Len);
     WideCharToMultiByte(CP_UTF8, 0, wideStr.c_str(), -1, &result[0], utf8Len, NULL, NULL);
-
     return result.c_str();
 }
+
+
 ///////////////////////////////////////////////
 // ファイル操作関連
-
 //ファイル読み込み_____________
 bool LoadCodeFile(const std::string& path, std::string& Content)
 {
     //ファイルオープン
     std::ifstream file(path);
     if (!file.is_open()) return false;
-
-    //イテレータで読み込み
+    //イテレータ読み込み
     Content.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     return true;
 }
+
 //ファイル保存_________________
 bool SaveCodeFile(const std::string& fileName, const std::string& content)
 {
@@ -137,7 +131,6 @@ bool SaveCodeFile(const std::string& fileName, const std::string& content)
     // 保存ディレクトリを用意
     std::string cppDir = g_SaveDir;             // cpp用
     std::string headerDir = g_SaveDir + "/dll";      // h用
-
     if (!fs::exists(cppDir)) fs::create_directory(cppDir);
     if (!fs::exists(headerDir)) fs::create_directory(headerDir);
 
@@ -146,7 +139,6 @@ bool SaveCodeFile(const std::string& fileName, const std::string& content)
 
     //拡張子ごとに保存先を割り振る
     std::string savePath;
-
     if (ext == ".h")
     {
         savePath = headerDir + "/" + path.filename().string();
@@ -162,7 +154,6 @@ bool SaveCodeFile(const std::string& fileName, const std::string& content)
     }
 
     std::cout << savePath << " : Save" << std::endl;
-
     std::ofstream file(savePath);
     if (!file.is_open()) return false;
 
@@ -445,21 +436,31 @@ bool CompileAllToSingleDll(const std::string& dllFileName)
     return fs::exists(outDll);
 }
 
-bool LoadGameDll(const std::string& dllName)
+bool LoadGameDll(const std::string& path)
 {
-    if (g_LastLoadedFileName == dllName) return true; // 同じDLLなら再ロードしない
-    g_LastLoadedFileName = dllName;
     if (DLL_Module)
     {
         FreeLibrary(DLL_Module);
         DLL_Module = nullptr;
     }
-    DLL_Module = LoadLibraryA(dllName.c_str());
+
+    DLL_Module = LoadLibraryA(path.c_str());
+
     if (!DLL_Module)
     {
-        MessageBoxA(nullptr, "DLLのロードに失敗しました", "Error", MB_OK | MB_ICONERROR);
+        DWORD err = GetLastError();
+
+        char msg[256];
+        sprintf_s(msg,
+            "LoadLibrary failed\n\npath = %s\nerror = %lu",
+            path.c_str(),
+            err);
+
+        MessageBoxA(nullptr, msg, "DLL Load Error", MB_OK);
+
         return false;
     }
+
     return true;
 }
 bool DeleteGameDll()
@@ -484,12 +485,28 @@ bool RunGameRelease(const std::string& dllName)
 }
 bool RunGameInit(const std::string& dllName)
 {
-    //InitDo();
-    Func = (FuncType)GetProcAddress(DLL_Module, "Init");
-    if (Func)
+    if (!DLL_Module)
     {
-        Func(); // 実行
+        MessageBoxA(nullptr, "DLL_Module is null", "RunGameInit", MB_OK);
+        return false;
     }
+
+    FuncType func = (FuncType)GetProcAddress(DLL_Module, "Init");
+
+    if (!func)
+    {
+        DWORD err = GetLastError();
+
+        char msg[256];
+        sprintf_s(msg,
+            "Init not found\n\nGetLastError = %lu",
+            err);
+
+        MessageBoxA(nullptr, msg, "GetProcAddress Error", MB_OK);
+        return false;
+    }
+
+    func();
     return true;
 }
 bool RunGameUpdate(const std::string& dllName)
@@ -1511,6 +1528,16 @@ void ShowCodeEditorUI()
             RunGameRelease("saved/dll/user.dll");
 
             CompileAllToSingleDll("user");
+
+            //メッセージボックスでファイル名一覧表示
+			//cppとh両方のファイル名を表示
+			std::string msg = "Compiled DLL: user.dll\n\nIncluded Files:\n";
+			for (const auto& f : g_Files)
+			{
+				msg += "- " + f.fileName + "\n";
+			}
+			MessageBoxA(NULL, msg.c_str(), "DLL Compiled", MB_OK);
+
 
             LoadGameDll("saved/dll/user.dll");
 

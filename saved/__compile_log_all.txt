@@ -1,6 +1,8 @@
 **********************************************************************
-** Visual Studio 2022 Developer Command Prompt v17.7.4
-** Copyright (c) 2022 Microsoft Corporation
+** Visual Studio 2022 Developer Command Prompt v17.14.28
+** Copyright (c) 2025 Microsoft Corporation
 **********************************************************************
 [vcvarsall.bat] Environment initialized for: 'x64'
 Main.cpp
+saved/Main.cpp(1): warning C4335: Mac ファイル形式が検出されました: ソース ファイルを DOS または UNIX 形式に変換してください
+saved/Main.cpp(6): error C3861: 'AddSpriteWorld': 識別子が見つかりませんでした

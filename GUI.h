@@ -66,12 +66,45 @@ struct SearchResult
 
 struct CodeEditorState
 {
+    //テキスト
     std::string text;
     int cursor = 0;
-
+	//スクロール位置
     float scrollY = 0.0f;
+	float scrollX = 0.0f;
+    // 選択範囲
+    int selectStart = -1;
+    int selectEnd = -1;
+    bool selecting = false;
+	// Undo/Redo
+    // 差分情報
+    std::vector<int> undoPos;
+    std::vector<std::string> undoRemoved;
+    std::vector<std::string> undoInserted;
+    std::vector<int> redoPos;
+    std::vector<std::string> redoRemoved;
+    std::vector<std::string> redoInserted;
+	// Undo/Redoのインデックスと最大数
+    int undoIndex = -1;
+    int undoMax = 100;
+    int lastEditType = 0;
+    double lastEditTime = 0.0;
 };
 
+//Undo/Redoの動作タイプ
+enum EditType
+{
+    EDIT_NONE,
+    EDIT_CHAR,
+    EDIT_BACKSPACE,
+    EDIT_ENTER,
+    EDIT_PASTE,
+    EDIT_CUT,
+    EDIT_SUGGEST,
+    EDIT_MOUSE
+};
+
+//シンタックスハイライト用のトークン
 struct HLToken
 {
     std::string text;

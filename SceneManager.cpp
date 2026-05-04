@@ -7,6 +7,7 @@
 //
 
 #include "Manager.h"
+#include "SystemAPI.h"
 #include "Component.h"
 #include <vector>
 
