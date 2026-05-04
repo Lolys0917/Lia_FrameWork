@@ -8,6 +8,7 @@
 #include "CoreScene.h"
 #include "Manager.h"
 #include "AssetLoad.h"
+#include "SystemAPI.h"
 
 void CoreStartUp()
 {
